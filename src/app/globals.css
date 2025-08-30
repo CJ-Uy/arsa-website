@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+	font-family: "Lexend Deca"; /* This is the name you'll use in your CSS */
+	src: url("/Lexend_Deca/LexendDeca-VariableFont_wght.ttf") format("truetype");
+	font-weight: 100 900; /* Define the weight range for the variable font */
+	font-display: swap; /* Improves performance by showing fallback font first */
+	font-style: normal;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -36,7 +44,7 @@
 	--sidebar-accent-foreground: oklch(0.3322 0.0906 254.3304);
 	--sidebar-border: oklch(0.917 0.0069 247.9008);
 	--sidebar-ring: oklch(0.4829 0.11 247.9208);
-	--font-sans: Inter;
+	--font-sans: "Lexend Deca", sans-serif;
 	--font-serif: serif;
 	--font-mono: monospace;
 	--radius: 0.5rem;
@@ -92,7 +100,7 @@
 	--sidebar-accent-foreground: oklch(0.3322 0.0906 254.3304);
 	--sidebar-border: oklch(0.2687 0.0258 265.3864);
 	--sidebar-ring: oklch(0.8279 0.1545 82.94);
-	--font-sans: Inter;
+	--font-sans: "Lexend Deca", sans-serif;
 	--font-serif: serif;
 	--font-mono: monospace;
 	--radius: 0.5rem;
@@ -148,7 +156,7 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	--font-sans: Inter;
+	--font-sans: "Lexend Deca", sans-serif;
 	--font-mono: monospace;
 	--font-serif: serif;
 
@@ -185,6 +193,7 @@
 
 body {
 	letter-spacing: var(--tracking-normal);
+	font: "Lexend Deca";
 }
 
 @layer base {
