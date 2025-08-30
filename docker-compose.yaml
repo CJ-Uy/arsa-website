@@ -1,0 +1,10 @@
+services:
+  arsa-website:
+    build:
+      context: .
+      dockerfile: dockerfile
+    env_file:
+      - ./.env
+    ports:
+      - "${PORT}:${PORT}"
+    restart: unless-stopped

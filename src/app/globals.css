@@ -3,7 +3,7 @@
 
 @font-face {
 	font-family: "Lexend Deca"; /* This is the name you'll use in your CSS */
-	src: url("/Lexend_Deca/LexendDeca-VariableFont_wght.ttf") format("truetype");
+	src: url("/fonts/Lexend_Deca/LexendDeca-VariableFont_wght.ttf") format("truetype");
 	font-weight: 100 900; /* Define the weight range for the variable font */
 	font-display: swap; /* Improves performance by showing fallback font first */
 	font-style: normal;

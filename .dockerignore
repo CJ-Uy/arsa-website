@@ -1,0 +1,24 @@
+# .dockerignore
+
+# Git files
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+docker-compose.yaml
+.dockerignore
+
+# Dependency directories
+node_modules
+
+# Next.js build output
+.next
+
+# Local environment files
+.env.local
+.env.development.local
+.env.test.local
+
+# Other
+README.md

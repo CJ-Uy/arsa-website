@@ -41,8 +41,13 @@ import {
 
 import { RefreshCw } from "lucide-react";
 
-// Prisma type for our redirects
-import type { Redirects } from "@prisma/client";
+// Type from Prisma for our redirects (idk how to import Prisma Types)
+type Redirects = {
+	id: string,
+	newURL: string,
+	redirectCode: string,
+	clicks: Number,
+}
 
 export function DashboardClient({ initialRedirects }: { initialRedirects: Redirects[] }) {
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -174,7 +179,7 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 										{redirect.newURL}
 									</a>
 								</TableCell>
-								<TableCell className="hidden md:table-cell">{redirect.clicks}</TableCell>
+								<TableCell className="hidden md:table-cell">{redirect.clicks.toString()}</TableCell>
 								<TableCell className="space-x-2 text-right">
 									<Dialog>
 										<DialogTrigger asChild>
