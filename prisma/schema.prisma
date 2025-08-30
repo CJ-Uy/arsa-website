@@ -21,8 +21,8 @@ model Credentials {
 }
 
 model Redirects {
-  id          String @id @default(uuid())
-  newLink     String
-  redirectURL String
-  clicks      Int    @default(0)
+  id           String @id @default(uuid())
+  newURL       String
+  redirectCode String
+  clicks       Int    @default(0)
 }

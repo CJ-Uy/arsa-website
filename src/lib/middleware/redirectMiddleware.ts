@@ -13,7 +13,7 @@ export async function redirectMiddleware(req: NextRequest): Promise<NextResponse
 	try {
 		const redirect = await prisma.redirects.findFirst({
 			where: {
-				redirectURL: code,
+				redirectCode: code,
 			},
 		});
 
@@ -29,7 +29,7 @@ export async function redirectMiddleware(req: NextRequest): Promise<NextResponse
 				},
 			});
 
-			return NextResponse.redirect(new URL(redirect.newLink));
+			return NextResponse.redirect(new URL(redirect.newURL));
 		}
 	} catch (error) {
 		console.error("Redirect middleware database error:", error);

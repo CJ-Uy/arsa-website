@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/main/theme-provider";
 import { Header } from "@/components/main/Header";
 import { Footer } from "@/components/main/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -38,6 +39,7 @@ export default function RootLayout({
 					<div className="flex min-h-screen flex-col">
 						<Header />
 						<main className="flex-1">{children}</main>
+						<Toaster position="top-center" />
 						<Footer />
 					</div>
 				</ThemeProvider>
