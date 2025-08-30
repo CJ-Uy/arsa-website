@@ -3,5 +3,5 @@ export default function Redirects() {
 		<div>
 			<h1>REDIRECTS MANUAL</h1>
 		</div>
-	)
+	);
 }
