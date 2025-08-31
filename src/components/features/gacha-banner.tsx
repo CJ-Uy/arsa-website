@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Gift, Star, Package, Zap, X } from "lucide-react"
+import { Gift, Star, Package, Zap, X, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +33,7 @@ export function GachaBanner() {
   const [pulledItems, setPulledItems] = useState<typeof gachaItems>([])
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState<'pulling' | 'results'>('pulling')
+  const [revealedItems, setRevealedItems] = useState(0)
 
   const getRandomItem = () => {
     const rand = Math.random() * 100
@@ -56,6 +57,7 @@ export function GachaBanner() {
     setIsPulling(true)
     setModalType('pulling')
     setShowModal(true)
+    setRevealedItems(0)
     
     // Simulate gacha animation delay
     setTimeout(() => {
@@ -67,7 +69,27 @@ export function GachaBanner() {
       setPulledItems(newItems)
       setModalType('results')
       setIsPulling(false)
+      
+      // Start revealing items one by one
+      revealItemsSequentially(newItems.length)
     }, 2000)
+  }
+
+  const revealItemsSequentially = (totalItems: number) => {
+    let currentIndex = 0
+    
+    const revealNext = () => {
+      if (currentIndex < totalItems) {
+        setRevealedItems(currentIndex + 1)
+        currentIndex++
+        
+        // Reveal next item after a delay (faster now!)
+        setTimeout(revealNext, 150)
+      }
+    }
+    
+    // Start revealing
+    setTimeout(revealNext, 500)
   }
 
   const getRarityColor = (rarity: number) => {
@@ -86,6 +108,14 @@ export function GachaBanner() {
   const closeModal = () => {
     setShowModal(false)
     setPulledItems([])
+  }
+
+  const pullAgain = () => {
+    // Reset all states completely
+    setShowModal(false)
+    setPulledItems([])
+    setIsPulling(false)
+    setModalType('pulling')
   }
 
   return (
@@ -128,7 +158,7 @@ export function GachaBanner() {
                     <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-3 flex items-center justify-center">
                       <Star className="h-8 w-8 text-primary" />
                     </div>
-                    <h4 className="font-semibold text-foreground mb-1">5★ Rare</h4>
+                    <h4 className="font-semibold text-foreground mb-1">5★ Legendary</h4>
                     <p className="text-sm text-muted-foreground">2% chance</p>
                   </div>
                   <div className="text-center">
@@ -142,7 +172,7 @@ export function GachaBanner() {
                     <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-3 flex items-center justify-center">
                       <Star className="h-8 w-8 text-primary" />
                     </div>
-                    <h4 className="font-semibold text-foreground mb-1">3★ Common</h4>
+                    <h4 className="font-semibold text-foreground mb-1">3★ Rare</h4>
                     <p className="text-sm text-muted-foreground">90% chance</p>
                   </div>
                 </div>
@@ -213,7 +243,7 @@ export function GachaBanner() {
 
       {/* Gacha Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] sm:max-w-xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center">
               {modalType === 'pulling' ? '🎲 Pulling...' : '🎉 Pull Results!'}
@@ -252,39 +282,45 @@ export function GachaBanner() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {/* Mobile-friendly grid layout - single column on mobile for better visibility */}
+              <div className={`grid gap-2 mb-6 ${
+                pulledItems.length === 1 
+                  ? 'grid-cols-1 max-w-md mx-auto' 
+                  : pulledItems.length <= 4 
+                    ? 'grid-cols-1 sm:grid-cols-2' 
+                    : pulledItems.length <= 6 
+                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3' 
+                      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+              }`}>
                 {pulledItems.map((item, index) => (
                   <div 
                     key={`${item.id}-${index}`}
-                    className="bg-muted/50 border rounded-lg p-4 text-center animate-in slide-in-from-bottom-2 duration-500"
-                    style={{ animationDelay: `${index * 100}ms` }}
+                    className={`bg-muted/50 border rounded-lg p-3 text-center transition-all duration-500 hover:bg-muted/70 ${
+                      index < revealedItems 
+                        ? 'opacity-100 scale-100' 
+                        : 'opacity-0 scale-95'
+                    }`}
+                    style={{ 
+                      transform: index < revealedItems ? 'translateY(0)' : 'translateY(20px)'
+                    }}
                   >
-                    <div className="text-4xl mb-3">{item.icon}</div>
-                    <div className={`font-semibold text-lg mb-2 ${item.color}`}>
-                      {getRarityStars(item.rarity)}
-                    </div>
-                    <p className="text-sm text-foreground font-medium">{item.name}</p>
-                    <div className="mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {item.rarity === 5 ? 'Legendary' : item.rarity === 4 ? 'Epic' : 'Common'}
-                      </Badge>
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="text-2xl">{item.icon}</div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm text-foreground font-medium leading-tight">{item.name}</p>
+                      </div>
+                      <div className={`font-semibold text-sm ${item.color}`}>
+                        {getRarityStars(item.rarity)}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
 
               <div className="text-center space-y-4">
-                <div className="flex justify-center space-x-4">
+                <div className="flex justify-center">
                   <Button onClick={closeModal} variant="outline">
                     Close
-                  </Button>
-                  <Button onClick={() => {
-                    setShowModal(false)
-                    setPulledItems([])
-                    // Auto-close after a short delay to allow for another pull
-                    setTimeout(() => setShowModal(false), 100)
-                  }}>
-                    Pull Again!
                   </Button>
                 </div>
               </div>
