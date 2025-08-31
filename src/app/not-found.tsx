@@ -47,13 +47,7 @@ export default function NotFound() {
            </Button>
          </div>
 
-        {/* Back Button */}
-        <div className="mt-8 flex justify-center">
-          <Button variant="ghost" onClick={handleGoBack} className="flex items-center">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
+
       </div>
     </div>
   )
