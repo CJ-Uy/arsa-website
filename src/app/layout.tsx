@@ -20,6 +20,9 @@ export const metadata: Metadata = {
 	title: "ARSA - Dorm System",
 	description: "Official website for ARSA dorm system - Your home away from home",
 	keywords: ["dorm", "university", "student housing", "ARSA"],
+	icons: {
+		icon: '/images/favicon.png', // /public path
+	  },
 };
 
 export default function RootLayout({

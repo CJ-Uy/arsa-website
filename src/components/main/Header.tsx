@@ -29,7 +29,7 @@ export function Header() {
 				{/* Logo */}
 				<div className="flex items-center">
 					<Link href="/" className="flex items-center">
-						<div className="relative h-10 w-10">
+						<div className="relative h-12 w-12">
 							<Image
 								src="/images/logo.png"
 								alt="ARSA Logo"
