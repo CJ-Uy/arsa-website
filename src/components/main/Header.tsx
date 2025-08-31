@@ -16,7 +16,7 @@ const navigation = [
 	{ name: "Publications", href: "/publications" },
 	{ name: "Merch", href: "/merch" },
 	{ name: "Resources", href: "/resources" },
-	{ name: "Contact", href: "/contact" },
+	{ name: "Contact Us", href: "/contact" },
 ];
 
 export function Header() {
