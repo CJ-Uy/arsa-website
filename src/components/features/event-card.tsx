@@ -14,6 +14,7 @@ interface EventCardProps {
     maxCapacity: number
     category: string
     featured?: boolean
+    googleFormUrl?: string
   }
   variant?: "default" | "featured"
 }
@@ -34,6 +35,8 @@ export function EventCard({ event, variant = "default" }: EventCardProps) {
       case 'Academic': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
       case 'Entertainment': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
       case 'Community': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+      case 'Food': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      case 'Meeting': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
     }
   }
@@ -71,7 +74,12 @@ export function EventCard({ event, variant = "default" }: EventCardProps) {
           </div>
         </div>
         <Button className="w-full" asChild>
-          <a href="#" className="flex items-center justify-center">
+          <a 
+            href={event.googleFormUrl || "#"} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center"
+          >
             <span>Join Event</span>
             <ArrowRight className="h-4 w-4 ml-2" />
           </a>
@@ -110,7 +118,12 @@ export function EventCard({ event, variant = "default" }: EventCardProps) {
           </div>
         </div>
         <Button size="sm" className="w-full" asChild>
-          <a href="#" className="flex items-center justify-center">
+          <a 
+            href={event.googleFormUrl || "#"} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center"
+          >
             Join Event
             <ArrowRight className="h-4 w-4 ml-2" />
           </a>
