@@ -50,7 +50,7 @@ export function Footer() {
 									href="/contact"
 									className="text-muted-foreground hover:text-primary transition-colors"
 								>
-									Contact
+									Contact Us
 								</Link>
 							</li>
 						</ul>
