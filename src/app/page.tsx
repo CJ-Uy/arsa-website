@@ -88,14 +88,14 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-white">
               <h1 className="text-5xl font-bold mb-6 drop-shadow-lg">
-                In ARSA, It&apos;s good to be home
+                In ARSA, It&apos;s good to be home.
               </h1>
               <p className="text-xl mb-8 drop-shadow-md">
                 Welcome to your dorm community where every day brings new opportunities 
                 to connect, learn, and grow together.
               </p>
-                                                           <div className="flex flex-col sm:flex-row gap-4">
-                                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+				<div className="flex flex-col sm:flex-row gap-4">
+					<Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
                      <a href="/about" className="flex items-center">
                        <Users className="h-5 w-5 mr-2" />
                        Learn More
