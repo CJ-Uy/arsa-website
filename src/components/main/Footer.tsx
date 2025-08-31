@@ -65,7 +65,7 @@ export function Footer() {
 									href="/publications"
 									className="text-muted-foreground hover:text-primary transition-colors"
 								>
-									Publications
+									BRIDGES
 								</Link>
 							</li>
 							<li>

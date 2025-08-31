@@ -1,359 +1,216 @@
-import { BookOpen, FileText, Newspaper, Calendar, Users, Award, ExternalLink, Download, Eye, Clock, MapPin } from "lucide-react"
+import { BookOpen, Newspaper, Download, Eye, Calendar, Users, FileText, ArrowRight, Star, Award, Globe, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-export default function PublicationsPage() {
+export default function BridgesPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-24 overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: "url('https://placehold.co/1920x1080')"
-            }}
+      <section className="relative py-24">
+        <div className="absolute inset-0">
+          <img
+            src="https://placehold.co/1920x1080"
+            alt="BRIDGES Publication Hero Background"
+            className="w-full h-full object-cover"
           />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
-        
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 z-0 bg-black/60" />
-        
-        {/* Content Overlay */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
-              Publications
-            </h1>
-            <p className="text-xl text-white max-w-3xl mx-auto font-medium drop-shadow-md">
-              Discover ARSA&apos;s official publications and literary works
-            </p>
-          </div>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
+            BRIDGES
+          </h1>
+          <p className="text-xl text-white max-w-3xl mx-auto font-medium drop-shadow-md">
+            ARSA&apos;s official publication - connecting dorm residents through stories, insights, and community voices.
+          </p>
         </div>
       </section>
 
-      {/* Bridges Publication Section */}
+      {/* BRIDGES Overview Section */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto mb-6 flex items-center justify-center">
-              <BookOpen className="h-12 w-12 text-primary" />
-            </div>
-            <h2 className="text-4xl font-bold text-foreground mb-4">
-              Bridges
-            </h2>
-            <p className="text-xl text-muted-foreground mb-4">
-              The Official Publication of ARSA
+            <h2 className="text-3xl font-bold mb-4">What is BRIDGES?</h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              BRIDGES is ARSA&apos;s flagship publication that serves as a bridge between dorm residents, 
+              sharing stories, news, and insights that strengthen our community bonds.
             </p>
-            <div className="flex justify-center space-x-2">
-              <Badge variant="secondary" className="text-sm">
-                <Newspaper className="h-3 w-3 mr-1" />
-                Official Publication
-              </Badge>
-              <Badge variant="outline" className="text-sm">
-                <FileText className="h-3 w-3 mr-1" />
-                Digital & Print
-              </Badge>
-            </div>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <BookOpen className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Community Stories</h3>
+                <p className="text-muted-foreground">
+                  Personal narratives, dorm life experiences, and resident spotlights that showcase our diverse community.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Newspaper className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Dorm News</h3>
+                <p className="text-muted-foreground">
+                  Updates on ARSA events, policy changes, and important announcements affecting dorm residents.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Student Voices</h3>
+                <p className="text-muted-foreground">
+                  Opinion pieces, creative writing, and student perspectives on campus life and current issues.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-          {/* Publication Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+      {/* Digital Transition Section */}
+      <section className="py-16 bg-muted/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">
-                Connecting ARSA Through Words
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Bridges has been ARSA&apos;s cornerstone publication since its inception, serving as a platform 
-                for student voices, creative expression, and community storytelling. What began as a 
-                traditional paper-only publication has now evolved into a comprehensive digital and print 
-                experience, reaching more ARSA members than ever before.
-              </p>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">Published quarterly</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">Student-led editorial team</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Award className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-muted-foreground">Award-winning content</span>
-                </div>
+              <h2 className="text-3xl font-bold mb-6">From Paper to Digital</h2>
+              <div className="space-y-4 text-muted-foreground">
+                <p>
+                  BRIDGES has evolved from its traditional paper format to embrace the digital age, 
+                  making our publication more accessible and environmentally friendly.
+                </p>
+                <p>
+                  While we maintain the quality and depth of our content, the digital format allows us 
+                  to reach more residents, publish more frequently, and include multimedia elements.
+                </p>
+                <p>
+                  Our transition reflects ARSA&apos;s commitment to innovation and sustainability, 
+                  ensuring BRIDGES remains relevant in today&apos;s digital world.
+                </p>
               </div>
             </div>
-            <div className="bg-muted/30 rounded-lg p-8 text-center">
-              <div className="w-32 h-32 bg-primary/10 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <BookOpen className="h-16 w-16 text-primary" />
+            <div className="bg-background rounded-lg p-8 shadow-sm border">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <Globe className="h-12 w-12 text-primary mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground">Digital First</h3>
+                  <p className="text-sm text-muted-foreground">Online Publication</p>
+                </div>
+                <div className="text-center">
+                  <Smartphone className="h-12 w-12 text-primary mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground">Mobile Ready</h3>
+                  <p className="text-sm text-muted-foreground">Read Anywhere</p>
+                </div>
+                <div className="text-center">
+                  <Calendar className="h-12 w-12 text-primary mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground">Monthly Issues</h3>
+                  <p className="text-sm text-muted-foreground">Regular Updates</p>
+                </div>
+                <div className="text-center">
+                  <Users className="h-12 w-12 text-primary mx-auto mb-3" />
+                  <h3 className="font-semibold text-foreground">Open to All</h3>
+                  <p className="text-sm text-muted-foreground">Resident Contributions</p>
+                </div>
               </div>
-              <h4 className="text-lg font-semibold text-foreground mb-2">Current Issue</h4>
-              <p className="text-muted-foreground mb-4">Volume 15, Issue 3</p>
-              <Button className="w-full" asChild>
-                <a href="#" className="flex items-center justify-center space-x-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Read Online</span>
-                </a>
-              </Button>
-            </div>
-          </div>
-
-          {/* Evolution Timeline */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-foreground mb-8 text-center">
-              Evolution of Bridges
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Newspaper className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Paper Era</CardTitle>
-                  <CardDescription>1995 - 2020</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Traditional print publication distributed physically to ARSA members. 
-                    Limited circulation but cherished as a tangible keepsake.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center border-primary/20">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <FileText className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Digital Transition</CardTitle>
-                  <CardDescription>2020 - 2023</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Hybrid approach combining print and digital formats. 
-                    Increased accessibility while maintaining traditional elements.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <BookOpen className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Digital-First</CardTitle>
-                  <CardDescription>2023 - Present</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Modern digital platform with enhanced features. 
-                    Wider reach, interactive content, and environmental sustainability.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Content Categories */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-foreground mb-8 text-center">
-              What We Publish
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Users className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Student Stories</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Personal experiences, dorm life, and student perspectives
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Award className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Creative Writing</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Poetry, short stories, and creative non-fiction
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Calendar className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Event Coverage</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    ARSA events, activities, and community highlights
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <MapPin className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle>Campus Life</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    University news, dorm updates, and student life
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center bg-muted/30 rounded-lg p-8">
-            <h3 className="text-2xl font-bold text-foreground mb-4">
-              Get Involved with Bridges
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Whether you want to contribute content, join the editorial team, or simply stay 
-              updated with ARSA&apos;s latest stories, there are many ways to be part of our 
-              publication community.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <a href="#" className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5" />
-                  <span>Submit Your Work</span>
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <a href="#" className="flex items-center space-x-2">
-                  <Users className="h-5 w-5" />
-                  <span>Join Editorial Team</span>
-                </a>
-              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Archive Section */}
+      {/* Call to Action Section */}
+      <section className="py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold mb-4">Get Involved with BRIDGES</h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Whether you want to contribute content, share your story, or simply stay updated, 
+            BRIDGES welcomes your participation in building our community narrative.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Submit Your Story
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="lg" className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Read Latest Issue
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Publication Archive Section */}
       <section className="py-16 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Publication Archive
-            </h2>
+            <h2 className="text-3xl font-bold mb-4">BRIDGES Archive</h2>
             <p className="text-lg text-muted-foreground">
-              Explore our collection of past issues and special editions
+              Explore our collection of past issues and discover the stories that have shaped our dorm community.
             </p>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Recent Issues */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Volume 15, Issue 3</span>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
                   <Badge variant="secondary">Latest</Badge>
-                </CardTitle>
-                <CardDescription>Fall 2024</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Features student stories, creative writing, and coverage of ARSA&apos;s 
-                  latest community events.
-                </p>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4" />
-                      <span>Read</span>
-                    </a>
-                  </Button>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Download className="h-4 w-4" />
-                      <span>PDF</span>
-                    </a>
-                  </Button>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
+                <h3 className="text-lg font-semibold mb-2">December 2024</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Holiday edition featuring winter activities, year-end reflections, and community highlights.
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Issue
+                </Button>
               </CardContent>
             </Card>
-
+            
             <Card>
-              <CardHeader>
-                <CardTitle>Volume 15, Issue 2</CardTitle>
-                <CardDescription>Summer 2024</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Summer edition featuring vacation stories, internship experiences, 
-                  and creative summer projects.
-                </p>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4" />
-                      <span>Read</span>
-                    </a>
-                  </Button>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Download className="h-4 w-4" />
-                      <span>PDF</span>
-                    </a>
-                  </Button>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge>November 2024</Badge>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
+                <h3 className="text-lg font-semibold mb-2">Fall Semester Special</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Mid-semester updates, academic resources, and student success stories.
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Issue
+                </Button>
               </CardContent>
             </Card>
-
+            
             <Card>
-              <CardHeader>
-                <CardTitle>Volume 15, Issue 1</CardTitle>
-                <CardDescription>Spring 2024</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Spring awakening edition with new beginnings, academic insights, 
-                  and community growth stories.
-                </p>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4" />
-                      <span>Read</span>
-                    </a>
-                  </Button>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href="#" className="flex items-center space-x-2">
-                      <Download className="h-4 w-4" />
-                      <span>PDF</span>
-                    </a>
-                  </Button>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge>October 2024</Badge>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
+                <h3 className="text-lg font-semibold mb-2">Welcome Issue</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  New resident orientation, ARSA introduction, and getting started guide.
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Issue
+                </Button>
               </CardContent>
             </Card>
           </div>
-
+          
           <div className="text-center mt-8">
-            <Button variant="outline" asChild>
-              <a href="#" className="flex items-center space-x-2">
-                <BookOpen className="h-4 w-4" />
-                <span>View Full Archive</span>
-              </a>
+            <Button variant="outline">
+              <Eye className="h-4 w-4 mr-2" />
+              View Full Archive
             </Button>
           </div>
         </div>
