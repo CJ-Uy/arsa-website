@@ -65,7 +65,7 @@ export async function updateRedirect(formData: FormData) {
 			where: { id: data.id },
 			data: { newURL: data.newURL, redirectCode: data.redirectCode },
 		});
-		revalidatePath("/dashboard");
+		revalidatePath("/redirects");
 		return { success: true, message: "Redirect updated successfully." };
 	} catch (error) {
 		return { success: false, message: "Failed to update redirect." };
@@ -75,7 +75,7 @@ export async function updateRedirect(formData: FormData) {
 export async function deleteRedirect(id: string) {
 	try {
 		await prisma.redirects.delete({ where: { id } });
-		revalidatePath("/dashboard");
+		revalidatePath("/redirects");
 		return { success: true, message: "Redirect deleted successfully." };
 	} catch (error) {
 		return { success: false, message: "Failed to delete redirect." };

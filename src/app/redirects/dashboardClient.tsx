@@ -46,7 +46,7 @@ type Redirects = {
 	id: string,
 	newURL: string,
 	redirectCode: string,
-	clicks: Number,
+	clicks: number,
 }
 
 export function DashboardClient({ initialRedirects }: { initialRedirects: Redirects[] }) {
