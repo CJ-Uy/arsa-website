@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 // Server Actions
-import { createRedirect, deleteRedirect, updateRedirect, verifyCredentials } from "./actions";
+import { createRedirect, deleteRedirect, updateRedirect } from "./actions";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,70 +42,96 @@ import { RefreshCw } from "lucide-react";
 
 // Type from Prisma for our redirects (idk how to import Prisma Types)
 type Redirects = {
-	id: string,
-	newURL: string,
-	redirectCode: string,
-	clicks: number,
-}
+	id: string;
+	newURL: string;
+	redirectCode: string;
+	clicks: number;
+};
 
 export function DashboardClient({ initialRedirects }: { initialRedirects: Redirects[] }) {
-	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const router = useRouter();
+	const [redirects, setRedirects] = useState<Redirects[]>(initialRedirects);
+	const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-	const handleLogin = async (formData: FormData) => {
-		const result = await verifyCredentials(formData);
+	const handleCreate = async (formData: FormData) => {
+		const newURL = formData.get("newURL") as string;
+		const redirectCode = formData.get("redirectCode") as string;
+
+		// Optimistically add to UI
+		const tempId = `temp-${Date.now()}`;
+		const optimisticRedirect: Redirects = {
+			id: tempId,
+			newURL,
+			redirectCode,
+			clicks: 0,
+		};
+
+		setRedirects((prev) =>
+			[...prev, optimisticRedirect].sort((a, b) => a.redirectCode.localeCompare(b.redirectCode)),
+		);
+		setIsDialogOpen(false);
+
+		// Perform the actual creation
+		const result = await createRedirect(formData);
 
 		if (result.success) {
-			toast.success("Login successful!");
-			setIsLoggedIn(true);
+			toast.success(result.message);
+			router.refresh();
 		} else {
-			toast.error("Login Failed", { description: result.message });
+			// Revert on error
+			setRedirects((prev) => prev.filter((r) => r.id !== tempId));
+			toast.error(result.message);
 		}
 	};
 
-	const handleAction = (promise: Promise<any>) => {
-		toast.promise(promise, {
-			loading: "Processing...",
-			success: (data) => {
-				return data.message;
-			},
-			error: (err) => err.message || "An unexpected error occurred.",
-			finally: () => {
-				router.refresh();
-			},
-		});
+	const handleUpdate = async (formData: FormData) => {
+		const id = formData.get("id") as string;
+		const newURL = formData.get("newURL") as string;
+		const redirectCode = formData.get("redirectCode") as string;
+
+		// Store old values
+		const oldRedirect = redirects.find((r) => r.id === id);
+
+		// Optimistically update UI
+		setRedirects((prev) => prev.map((r) => (r.id === id ? { ...r, newURL, redirectCode } : r)));
+
+		// Perform the actual update
+		const result = await updateRedirect(formData);
+
+		if (result.success) {
+			toast.success(result.message);
+			router.refresh();
+		} else {
+			// Revert on error
+			if (oldRedirect) {
+				setRedirects((prev) => prev.map((r) => (r.id === id ? oldRedirect : r)));
+			}
+			toast.error(result.message);
+		}
 	};
 
-	// --- LOGIN VIEW ---
-	if (!isLoggedIn) {
-		return (
-			<div className="flex items-center justify-center">
-				<Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
-					<CardHeader>
-						<CardTitle className="text-2xl">Admin Credentials Needed</CardTitle>
-						<CardDescription>Enter credentials to manage redirects</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<form action={handleLogin} className="grid gap-4">
-							<div className="grid gap-2">
-								<Label htmlFor="username">Username</Label>
-								<Input id="username" name="username" required />
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="password">Password</Label>
-								<Input id="password" name="password" type="password" required />
-							</div>
-							<Button type="submit" className="w-full">
-								Login
-							</Button>
-						</form>
-					</CardContent>
-				</Card>
-			</div>
-		);
-	}
+	const handleDelete = async (id: string) => {
+		// Store old values
+		const oldRedirect = redirects.find((r) => r.id === id);
 
-	// --- DASHBOARD VIEW (Forms and buttons now use the new handleAction wrapper) ---
+		// Optimistically remove from UI
+		setRedirects((prev) => prev.filter((r) => r.id !== id));
+
+		// Perform the actual deletion
+		const result = await deleteRedirect(id);
+
+		if (result.success) {
+			toast.success(result.message);
+			router.refresh();
+		} else {
+			// Revert on error
+			if (oldRedirect) {
+				setRedirects((prev) => [...prev, oldRedirect]);
+			}
+			toast.error(result.message);
+		}
+	};
+
 	return (
 		<>
 			<div className="mb-6 flex items-center justify-between">
@@ -121,7 +146,7 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 					>
 						<RefreshCw />
 					</Button>
-					<Dialog>
+					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 						<DialogTrigger asChild>
 							<Button>Add New Redirect</Button>
 						</DialogTrigger>
@@ -130,24 +155,30 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 								<DialogTitle>Create New Redirect</DialogTitle>
 							</DialogHeader>
 							<form
-								action={(formData) => handleAction(createRedirect(formData))}
+								onSubmit={(e) => {
+									e.preventDefault();
+									handleCreate(new FormData(e.currentTarget));
+								}}
 								className="space-y-4"
 							>
 								<div>
 									<Label className="mb-2" htmlFor="redirectCode">
 										Short Code (ateneoarsa.org/[code])
 									</Label>
-									<Input id="redirectCode" name="redirectCode" placeholder="e.g., DOGS-Form" />
+									<Input
+										id="redirectCode"
+										name="redirectCode"
+										placeholder="e.g., DOGS-Form"
+										required
+									/>
 								</div>
 								<div>
 									<Label className="mb-2" htmlFor="newURL">
 										Destination URL
 									</Label>
-									<Input id="newURL" name="newURL" placeholder="https://..." />
+									<Input id="newURL" name="newURL" placeholder="https://..." required />
 								</div>
-								<DialogClose asChild>
-									<Button type="submit">Create</Button>
-								</DialogClose>
+								<Button type="submit">Create</Button>
 							</form>
 						</DialogContent>
 					</Dialog>
@@ -166,7 +197,7 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{initialRedirects.map((redirect) => (
+						{redirects.map((redirect) => (
 							<TableRow key={redirect.id}>
 								<TableCell className="font-medium">/{redirect.redirectCode}</TableCell>
 								<TableCell className="max-w-xs truncate">
@@ -192,7 +223,10 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 												<DialogTitle>Edit Redirect</DialogTitle>
 											</DialogHeader>
 											<form
-												action={(formData) => handleAction(updateRedirect(formData))}
+												onSubmit={(e) => {
+													e.preventDefault();
+													handleUpdate(new FormData(e.currentTarget));
+												}}
 												className="space-y-4"
 											>
 												<input type="hidden" name="id" value={redirect.id} />
@@ -202,15 +236,19 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 														id="redirectCode"
 														name="redirectCode"
 														defaultValue={redirect.redirectCode}
+														required
 													/>
 												</div>
 												<div>
 													<Label htmlFor="newURL">Destination URL</Label>
-													<Input id="newURL" name="newURL" defaultValue={redirect.newURL} />
+													<Input
+														id="newURL"
+														name="newURL"
+														defaultValue={redirect.newURL}
+														required
+													/>
 												</div>
-												<DialogClose asChild>
-													<Button type="submit">Save Changes</Button>
-												</DialogClose>
+												<Button type="submit">Save Changes</Button>
 											</form>
 										</DialogContent>
 									</Dialog>
@@ -229,9 +267,7 @@ export function DashboardClient({ initialRedirects }: { initialRedirects: Redire
 											</AlertDialogDescription>
 											<AlertDialogFooter>
 												<AlertDialogCancel>Cancel</AlertDialogCancel>
-												<AlertDialogAction
-													onClick={() => handleAction(deleteRedirect(redirect.id))}
-												>
+												<AlertDialogAction onClick={() => handleDelete(redirect.id)}>
 													Continue
 												</AlertDialogAction>
 											</AlertDialogFooter>

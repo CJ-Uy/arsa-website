@@ -1,36 +1,30 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-// Action to verify credentials
-export async function verifyCredentials(formData: FormData) {
-	const schema = z.object({
-		username: z.string().min(1),
-		password: z.string().min(1),
+async function checkRedirectsAdmin() {
+	const session = await auth.api.getSession({
+		headers: await headers(),
 	});
 
-	try {
-		const data = schema.parse(Object.fromEntries(formData));
-
-		const user = await prisma.credentials.findUnique({
-			where: { username: data.username },
-		});
-
-		if (!user) {
-			return { success: false, message: "Invalid credentials" };
-		}
-
-		const isPasswordValid = data.password == user.password;
-
-		if (!isPasswordValid) {
-			return { success: false, message: "Invalid credentials" };
-		}
-		return { success: true };
-	} catch (error) {
-		return { success: false, message: "An error occurred." };
+	if (!session?.user) {
+		throw new Error("Unauthorized");
 	}
+
+	const user = await prisma.user.findUnique({
+		where: { id: session.user.id },
+		select: { isRedirectsAdmin: true },
+	});
+
+	if (!user?.isRedirectsAdmin) {
+		throw new Error("Forbidden: Redirects admin access required");
+	}
+
+	return session;
 }
 
 // Actions for CRUD operations on Redirects
@@ -42,6 +36,7 @@ const redirectSchema = z.object({
 
 export async function createRedirect(formData: FormData) {
 	try {
+		await checkRedirectsAdmin();
 		const data = redirectSchema.parse(Object.fromEntries(formData));
 		await prisma.redirects.create({
 			data: {
@@ -49,7 +44,7 @@ export async function createRedirect(formData: FormData) {
 				redirectCode: data.redirectCode,
 			},
 		});
-		revalidatePath("/dashboard");
+		revalidatePath("/redirects");
 		return { success: true, message: "Redirect created successfully." };
 	} catch (error) {
 		return { success: false, message: "Failed to create redirect." };
@@ -58,6 +53,7 @@ export async function createRedirect(formData: FormData) {
 
 export async function updateRedirect(formData: FormData) {
 	try {
+		await checkRedirectsAdmin();
 		const data = redirectSchema.parse(Object.fromEntries(formData));
 		if (!data.id) throw new Error("ID is required for update.");
 
@@ -74,6 +70,7 @@ export async function updateRedirect(formData: FormData) {
 
 export async function deleteRedirect(id: string) {
 	try {
+		await checkRedirectsAdmin();
 		await prisma.redirects.delete({ where: { id } });
 		revalidatePath("/redirects");
 		return { success: true, message: "Redirect deleted successfully." };

@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/main/theme-provider";
-import { Header } from "@/components/main/Header";
-import { Footer } from "@/components/main/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import { LayoutWrapper } from "@/components/layout-wrapper";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -21,8 +20,8 @@ export const metadata: Metadata = {
 	description: "Official website for ARSA dorm system - Your home away from home",
 	keywords: ["dorm", "university", "student housing", "ARSA"],
 	icons: {
-		icon: '/images/favicon.png', // /public path
-	  },
+		icon: "/images/favicon.png", // /public path
+	},
 };
 
 export default function RootLayout({
@@ -39,12 +38,8 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
-					<div className="flex min-h-screen flex-col">
-						<Header />
-						<main className="flex-1">{children}</main>
-						<Toaster position="top-center" />
-						<Footer />
-					</div>
+					<LayoutWrapper>{children}</LayoutWrapper>
+					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>
 		</html>
