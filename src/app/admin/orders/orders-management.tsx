@@ -279,26 +279,40 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 								<p className="text-sm">Email: {selectedOrder.user.email}</p>
 							</div>
 
-							<div>
-								<h3 className="mb-2 font-semibold">Order Items</h3>
-								<div className="space-y-2">
-									{selectedOrder.orderItems.map((item) => (
-										<div
-											key={item.id}
-											className="bg-muted flex justify-between rounded p-2 text-sm"
-										>
-											<span>
-												{item.product.name} × {item.quantity}
-											</span>
-											<span>₱{(item.price * item.quantity).toFixed(2)}</span>
+							<Card>
+								<CardHeader>
+									<CardTitle>Order Items</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<div className="space-y-4">
+										{selectedOrder.orderItems.map((item) => (
+											<div
+												key={item.id}
+												className="flex flex-col gap-2 border-b pb-4 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+											>
+												<div>
+													<p className="font-medium">{item.product.name}</p>
+													<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+														{item.size && (
+															<span className="flex items-center gap-1">
+																Size:{" "}
+																<span className="text-foreground font-medium">{item.size}</span>
+															</span>
+														)}
+														<span>Quantity: {item.quantity}</span>
+													</div>
+												</div>
+												<p className="font-semibold">₱{(item.price * item.quantity).toFixed(2)}</p>
+											</div>
+										))}
+
+										<div className="flex items-center justify-between pt-4 text-lg font-bold">
+											<span>Total</span>
+											<span>₱{selectedOrder.totalAmount.toFixed(2)}</span>
 										</div>
-									))}
-									<div className="flex justify-between border-t pt-2 font-bold">
-										<span>Total</span>
-										<span>₱{selectedOrder.totalAmount.toFixed(2)}</span>
 									</div>
-								</div>
-							</div>
+								</CardContent>
+							</Card>
 
 							{selectedOrder.notes && (
 								<div>
