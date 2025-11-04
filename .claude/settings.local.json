@@ -5,7 +5,9 @@
 			"Bash(npx prisma generate)",
 			"Bash(npm run build:*)",
 			"Bash(docker:*)",
-			"Bash(docker compose:*)"
+			"Bash(docker compose:*)",
+			"Bash(npx prisma db push:*)",
+			"Bash(cat:*)"
 		],
 		"deny": [],
 		"ask": []

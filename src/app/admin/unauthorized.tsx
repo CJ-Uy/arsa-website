@@ -29,8 +29,7 @@ export function Unauthorized({ isLoggedIn }: UnauthorizedProps) {
 					{!isLoggedIn ? (
 						<>
 							<p className="text-muted-foreground text-center text-sm">
-								Sign in with your{" "}
-								<span className="text-foreground font-semibold">@student.ateneo.edu</span> email and
+								Sign in with your <span className="text-foreground font-semibold">email</span> and
 								contact an administrator to request shop admin access.
 							</p>
 							<Button

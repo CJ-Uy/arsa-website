@@ -3,6 +3,7 @@
 ## Quick Setup
 
 ### 1. Environment Variables
+
 In Coolify, add these environment variables to your application:
 
 ```bash
@@ -36,6 +37,7 @@ NEXT_TELEMETRY_DISABLED=1
 **IMPORTANT**: Increase deployment timeout to avoid build timeouts.
 
 In Coolify:
+
 1. Go to your application
 2. Navigate to **Advanced** or **Settings** tab
 3. Find **Build Timeout** or **Deployment Timeout**
@@ -65,6 +67,7 @@ curl https://yourdomain.com/api/health
 ```
 
 Configure in Coolify:
+
 - **Health Check Path**: `/api/health`
 - **Health Check Interval**: 30s
 - **Timeout**: 5s
@@ -114,6 +117,7 @@ You'll see these stages in the build logs:
 **Symptom**: `App\Jobs\ApplicationDeploymentJob has timed out`
 
 **Solution**:
+
 1. Increase Coolify deployment timeout to 90-120 minutes
 2. The optimizations in `next.config.ts` should prevent this going forward
 3. Retry the deployment
@@ -123,6 +127,7 @@ You'll see these stages in the build logs:
 **Symptom**: `JavaScript heap out of memory` or build crashes
 
 **Solution**:
+
 - Already addressed with `NODE_OPTIONS="--max-old-space-size=4096"`
 - If still occurs, increase to 8192: `NODE_OPTIONS="--max-old-space-size=8192"`
 
@@ -131,6 +136,7 @@ You'll see these stages in the build logs:
 **Symptom**: `Error: Prisma Client could not locate the Query Engine`
 
 **Solution**:
+
 - Already addressed with `binaryTargets = ["native", "linux-musl-openssl-3.0.x"]`
 - If still occurs, verify Prisma files are being copied correctly in Dockerfile
 
@@ -139,6 +145,7 @@ You'll see these stages in the build logs:
 **Symptom**: `Can't reach database server` or connection timeout
 
 **Solution**:
+
 1. Verify `DATABASE_URL` is correct in Coolify environment variables
 2. Ensure database is accessible from Coolify network
 3. Check if database requires whitelisting Coolify's IP
@@ -148,6 +155,7 @@ You'll see these stages in the build logs:
 **Symptom**: `Failed to load SWC binary for linux/x64`
 
 **Solution**:
+
 - Already addressed with Alpine-compatible SWC installation
 - Dockerfile installs `@next/swc-linux-x64-musl` in deps stage
 
@@ -156,12 +164,14 @@ You'll see these stages in the build logs:
 ### Build Speed
 
 Current optimizations:
+
 - ✅ Type checking skipped during build
 - ✅ Webpack memory optimizations enabled
 - ✅ Node.js memory increased to 4GB
 - ✅ Docker layer caching (deps, prisma, builder stages)
 
 Potential future optimizations:
+
 - Enable SWC minification instead of Terser
 - Use Turbopack for production builds (experimental)
 - Implement build caching in Coolify
@@ -178,6 +188,7 @@ Potential future optimizations:
 ### Logs
 
 View application logs in Coolify:
+
 ```bash
 # Coolify provides log viewer in UI
 # Or via CLI:
@@ -187,6 +198,7 @@ docker logs <container-name> --tail 100 -f
 ### Resources
 
 Monitor CPU/Memory usage in Coolify dashboard:
+
 - Normal operation: ~512MB RAM, <0.5 CPU
 - Under load: Up to 2GB RAM, 2 CPU (limits)
 
@@ -202,6 +214,7 @@ When deploying schema changes:
 6. **Apply migration**: SSH into container and run `npx prisma migrate deploy`
 
 Or use Coolify's pre-deploy command:
+
 ```bash
 npx prisma migrate deploy
 ```
@@ -227,6 +240,7 @@ If deployment fails:
 ## Support
 
 For issues:
+
 1. Check Coolify build logs first
 2. Verify environment variables are set
 3. Review this troubleshooting guide

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Upload, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createOrder } from "../actions";
@@ -24,6 +26,9 @@ type CartItem = {
 type User = {
 	id: string;
 	name: string | null;
+	firstName: string | null;
+	lastName: string | null;
+	studentId: string | null;
 	email: string;
 };
 
@@ -34,6 +39,9 @@ type CheckoutClientProps = {
 
 export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 	const router = useRouter();
+	const [firstName, setFirstName] = useState(user.firstName || "");
+	const [lastName, setLastName] = useState(user.lastName || "");
+	const [studentId, setStudentId] = useState(user.studentId || "");
 	const [receiptFile, setReceiptFile] = useState<File | null>(null);
 	const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 	const [notes, setNotes] = useState("");
@@ -64,6 +72,17 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
+		if (!firstName.trim() || !lastName.trim()) {
+			toast.error("Please provide your first and last name for delivery");
+			return;
+		}
+
+		// Validate student ID format if provided
+		if (studentId.trim() && !/^2\d{5}$/.test(studentId.trim())) {
+			toast.error("Student ID must be in format 2XXXXX (e.g., 212345)");
+			return;
+		}
+
 		if (!receiptFile || !receiptPreview) {
 			toast.error("Please upload a receipt");
 			return;
@@ -90,8 +109,14 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 
 			const { url: receiptUrl } = await uploadResponse.json();
 
-			// Create order with the MinIO URL
-			const result = await createOrder(receiptUrl, notes || undefined);
+			// Create order with the MinIO URL and user info
+			const result = await createOrder(
+				receiptUrl,
+				notes || undefined,
+				firstName.trim(),
+				lastName.trim(),
+				studentId.trim() || undefined,
+			);
 
 			if (result.success) {
 				toast.success("Order placed successfully!");
@@ -114,11 +139,49 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 					<Card>
 						<CardHeader>
 							<CardTitle>Customer Information</CardTitle>
+							<CardDescription>Please provide your delivery information</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<div>
+									<Label htmlFor="firstName">First Name *</Label>
+									<Input
+										id="firstName"
+										type="text"
+										placeholder="Juan"
+										value={firstName}
+										onChange={(e) => setFirstName(e.target.value)}
+										required
+										className="mt-2"
+									/>
+								</div>
+								<div>
+									<Label htmlFor="lastName">Last Name *</Label>
+									<Input
+										id="lastName"
+										type="text"
+										placeholder="Dela Cruz"
+										value={lastName}
+										onChange={(e) => setLastName(e.target.value)}
+										required
+										className="mt-2"
+									/>
+								</div>
+							</div>
 							<div>
-								<Label>Name</Label>
-								<p className="mt-1 text-sm font-medium">{user.name || "Not provided"}</p>
+								<Label htmlFor="studentId">Student ID (Optional)</Label>
+								<Input
+									id="studentId"
+									type="text"
+									placeholder="212345"
+									value={studentId}
+									onChange={(e) => setStudentId(e.target.value)}
+									maxLength={6}
+									className="mt-2"
+								/>
+								<p className="text-muted-foreground mt-1 text-xs">
+									Format: 2XXXXX (e.g., 212345) - Helps us verify your identity for pickup
+								</p>
 							</div>
 							<div>
 								<Label>Email</Label>
@@ -138,7 +201,8 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 								<AlertDescription>
 									<ol className="mt-2 list-inside list-decimal space-y-2">
 										<li>
-											Send ₱{total.toFixed(2)} via GCash to: <strong>0912-345-6789</strong>
+											Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
+											<strong>0912-345-6789</strong>
 										</li>
 										<li>Take a screenshot of the receipt</li>
 										<li>Upload the screenshot below</li>
@@ -147,6 +211,24 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 									</ol>
 								</AlertDescription>
 							</Alert>
+
+							{/* GCash QR Code */}
+							<div className="flex justify-center">
+								<div className="rounded-lg border bg-white p-4">
+									<div className="relative h-64 w-64">
+										<Image
+											src="/images/gcash_qr.jpg"
+											alt="GCash QR Code"
+											fill
+											className="object-contain"
+											priority
+										/>
+									</div>
+									<p className="text-muted-foreground mt-2 text-center text-sm">
+										Scan with GCash app
+									</p>
+								</div>
+							</div>
 
 							<div>
 								<Label htmlFor="receipt">GCash Receipt Screenshot *</Label>

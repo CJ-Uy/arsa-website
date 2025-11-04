@@ -10,6 +10,8 @@ type Product = {
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;
+	isPreOrder: boolean;
+	availableSizes: string[];
 };
 
 export default async function AdminProductsPage() {

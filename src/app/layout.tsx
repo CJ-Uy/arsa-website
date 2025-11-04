@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "ARSA - Dorm System",
-	description: "Official website for ARSA dorm system - Your home away from home",
+	title: "ARSA Website",
+	description: "Official website for ARSA - It's Good to be Home",
 	keywords: ["dorm", "university", "student housing", "ARSA"],
 	icons: {
 		icon: "/images/favicon.png", // /public path

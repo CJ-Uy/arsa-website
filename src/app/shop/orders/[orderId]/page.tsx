@@ -115,7 +115,14 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								>
 									<div>
 										<p className="font-medium">{item.product.name}</p>
-										<p className="text-muted-foreground text-sm">Quantity: {item.quantity}</p>
+										<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+											{item.size && (
+												<span className="flex items-center gap-1">
+													Size: <span className="text-foreground font-medium">{item.size}</span>
+												</span>
+											)}
+											<span>Quantity: {item.quantity}</span>
+										</div>
 									</div>
 									<p className="font-semibold">₱{(item.price * item.quantity).toFixed(2)}</p>
 								</div>

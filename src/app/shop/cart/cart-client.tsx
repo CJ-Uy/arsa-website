@@ -11,6 +11,7 @@ import Link from "next/link";
 type CartItem = {
 	id: string;
 	quantity: number;
+	size: string | null;
 	product: {
 		id: string;
 		name: string;
@@ -102,6 +103,11 @@ export function CartClient({ initialCart }: CartClientProps) {
 
 								<div className="min-w-0 flex-1">
 									<h3 className="mb-1 text-lg font-semibold">{item.product.name}</h3>
+									{item.size && (
+										<p className="text-muted-foreground mb-1 text-sm">
+											Size: <span className="text-foreground font-medium">{item.size}</span>
+										</p>
+									)}
 									<p className="text-muted-foreground mb-2 line-clamp-2 text-sm">
 										{item.product.description}
 									</p>

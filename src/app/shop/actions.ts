@@ -13,7 +13,7 @@ async function getSession() {
 }
 
 // Cart Actions
-export async function addToCart(productId: string, quantity: number = 1) {
+export async function addToCart(productId: string, quantity: number = 1, size?: string) {
 	try {
 		const session = await getSession();
 		if (!session?.user) {
@@ -28,17 +28,24 @@ export async function addToCart(productId: string, quantity: number = 1) {
 			return { success: false, message: "Product not available" };
 		}
 
-		if (product.stock < quantity) {
+		// Check if size is required but not provided
+		if (product.availableSizes.length > 0 && !size) {
+			return { success: false, message: "Please select a size" };
+		}
+
+		if (!product.isPreOrder && product.stock < quantity) {
 			return { success: false, message: "Insufficient stock" };
 		}
 
-		// Check if item already in cart
-		const existingCartItem = await prisma.cartItem.findUnique({
+		// Normalize size to null if undefined or empty
+		const normalizedSize = size ? size : null;
+
+		// Check if item already in cart (including size)
+		const existingCartItem = await prisma.cartItem.findFirst({
 			where: {
-				userId_productId: {
-					userId: session.user.id,
-					productId,
-				},
+				userId: session.user.id,
+				productId,
+				size: normalizedSize,
 			},
 		});
 
@@ -55,6 +62,7 @@ export async function addToCart(productId: string, quantity: number = 1) {
 					userId: session.user.id,
 					productId,
 					quantity,
+					size: normalizedSize,
 				},
 			});
 		}
@@ -140,11 +148,45 @@ export async function getCart() {
 }
 
 // Order Actions
-export async function createOrder(receiptImageUrl: string, notes?: string) {
+export async function createOrder(
+	receiptImageUrl: string,
+	notes?: string,
+	firstName?: string,
+	lastName?: string,
+	studentId?: string,
+) {
 	try {
 		const session = await getSession();
 		if (!session?.user) {
 			return { success: false, message: "Unauthorized" };
+		}
+
+		// Update user's information if provided
+		const updateData: {
+			firstName?: string;
+			lastName?: string;
+			name?: string;
+			studentId?: string;
+		} = {};
+
+		if (firstName && firstName.trim()) {
+			updateData.firstName = firstName.trim();
+		}
+		if (lastName && lastName.trim()) {
+			updateData.lastName = lastName.trim();
+		}
+		if (firstName && lastName) {
+			updateData.name = `${firstName.trim()} ${lastName.trim()}`;
+		}
+		if (studentId && studentId.trim()) {
+			updateData.studentId = studentId.trim();
+		}
+
+		if (Object.keys(updateData).length > 0) {
+			await prisma.user.update({
+				where: { id: session.user.id },
+				data: updateData,
+			});
 		}
 
 		// Get cart items
@@ -176,6 +218,7 @@ export async function createOrder(receiptImageUrl: string, notes?: string) {
 						productId: item.productId,
 						quantity: item.quantity,
 						price: item.product.price,
+						size: item.size,
 					})),
 				},
 			},

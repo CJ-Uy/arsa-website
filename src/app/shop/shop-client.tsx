@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus } from "lucide-react";
+import Image from "next/image";
+import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -12,7 +13,16 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { addToCart, getCart, updateCartItemQuantity } from "./actions";
 import { toast } from "sonner";
 import { signIn } from "@/lib/auth-client";
@@ -28,12 +38,15 @@ type Product = {
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;
+	isPreOrder: boolean;
+	availableSizes: string[];
 };
 
 type CartItem = {
 	id: string;
 	productId: string;
 	quantity: number;
+	size: string | null;
 };
 
 type ShopClientProps = {
@@ -45,6 +58,10 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 	const [products] = useState<Product[]>(initialProducts);
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
+	const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
+	const [loadingProducts, setLoadingProducts] = useState<Record<string, boolean>>({});
+	const [loadingCartItems, setLoadingCartItems] = useState<Record<string, boolean>>({});
+	const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
 
 	const filteredProducts =
 		selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory);
@@ -73,16 +90,19 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 					id: item.id,
 					productId: item.productId,
 					quantity: item.quantity,
+					size: item.size,
 				})),
 			);
 		}
 	};
 
-	const getCartItem = (productId: string) => {
-		return cartItems.find((item) => item.productId === productId);
+	const getCartItem = (productId: string, size?: string | null) => {
+		return cartItems.find(
+			(item) => item.productId === productId && (size === undefined || item.size === size),
+		);
 	};
 
-	const handleAddToCart = async (productId: string) => {
+	const handleAddToCart = async (productId: string, size?: string) => {
 		if (!session?.user) {
 			toast.error("Please sign in to add items to cart", {
 				action: {
@@ -97,22 +117,33 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 			return;
 		}
 
-		const result = await addToCart(productId, 1);
-		if (result.success) {
-			toast.success(result.message);
-			// Dispatch custom event to update cart counter
-			window.dispatchEvent(new Event("cartUpdated"));
-		} else {
-			toast.error(result.message);
+		setLoadingProducts((prev) => ({ ...prev, [productId]: true }));
+		try {
+			const result = await addToCart(productId, 1, size);
+			if (result.success) {
+				// Immediately update cart items for instant UI feedback
+				await fetchCartItems();
+				toast.success(result.message);
+			} else {
+				toast.error(result.message);
+			}
+		} finally {
+			setLoadingProducts((prev) => ({ ...prev, [productId]: false }));
 		}
 	};
 
 	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
-		const result = await updateCartItemQuantity(cartItemId, newQuantity);
-		if (result.success) {
-			window.dispatchEvent(new Event("cartUpdated"));
-		} else {
-			toast.error(result.message || "Failed to update quantity");
+		setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: true }));
+		try {
+			const result = await updateCartItemQuantity(cartItemId, newQuantity);
+			if (result.success) {
+				// Immediately update cart items for instant UI feedback
+				await fetchCartItems();
+			} else {
+				toast.error(result.message || "Failed to update quantity");
+			}
+		} finally {
+			setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: false }));
 		}
 	};
 
@@ -137,16 +168,18 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 					onValueChange={setSelectedCategory}
 					className="w-full sm:w-auto"
 				>
-					<TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+					<TabsList className="grid w-full grid-cols-4">
 						<TabsTrigger value="all">All</TabsTrigger>
 						<TabsTrigger value="merch">Merch</TabsTrigger>
-						<TabsTrigger value="arsari-sari">Arsari-Sari</TabsTrigger>
+						<TabsTrigger value="arsari-sari" className="text-xs sm:text-sm">
+							Arsari-Sari
+						</TabsTrigger>
 						<TabsTrigger value="other">Other</TabsTrigger>
 					</TabsList>
 				</Tabs>
 
 				{session?.user && (
-					<Link href="/shop/cart" className="w-full sm:w-auto">
+					<Link href="/shop/cart" className="hidden w-full md:block md:w-auto">
 						<Button variant="outline" className="w-full sm:ml-4 sm:w-auto">
 							<ShoppingCart className="mr-2 h-4 w-4" />
 							Cart
@@ -162,9 +195,8 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 							<div>
 								<h3 className="mb-1 font-semibold">Sign in to shop</h3>
 								<p className="text-muted-foreground text-sm">
-									Sign in with your{" "}
-									<span className="text-foreground font-semibold">@student.ateneo.edu</span> email
-									to start shopping
+									Sign in with your <span className="text-foreground font-semibold">email</span> to
+									start shopping
 								</p>
 							</div>
 							<Button
@@ -192,34 +224,87 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 					</div>
 				) : (
 					filteredProducts.map((product) => {
-						const cartItem = getCartItem(product.id);
+						const selectedSize = selectedSizes[product.id];
+						const cartItem = getCartItem(product.id, selectedSize);
+						const isImageLoading = loadingImages[product.id] ?? true;
+						const isProductLoading = loadingProducts[product.id] ?? false;
+						const isCartItemLoading = cartItem ? (loadingCartItems[cartItem.id] ?? false) : false;
+						const requiresSize = product.availableSizes.length > 0;
+
 						return (
 							<Card key={product.id} className="flex flex-col">
 								<CardHeader>
-									<div className="bg-muted mb-4 flex aspect-square items-center justify-center rounded-lg">
+									<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
 										{product.image ? (
-											<img
-												src={product.image}
-												alt={product.name}
-												className="h-full w-full rounded-lg object-cover"
-											/>
+											<>
+												{isImageLoading && (
+													<div className="absolute inset-0 flex items-center justify-center">
+														<Skeleton className="h-full w-full" />
+													</div>
+												)}
+												<Image
+													src={product.image}
+													alt={product.name}
+													fill
+													sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+													className="rounded-lg object-cover transition-opacity duration-300"
+													style={{ opacity: isImageLoading ? 0 : 1 }}
+													loading="lazy"
+													onLoad={() => {
+														setLoadingImages((prev) => ({ ...prev, [product.id]: false }));
+													}}
+												/>
+											</>
 										) : (
 											<Package className="text-muted-foreground h-16 w-16" />
 										)}
 									</div>
 									<div className="flex items-start justify-between">
 										<CardTitle className="text-lg">{product.name}</CardTitle>
-										<Badge variant="secondary" className="ml-2">
-											{getCategoryIcon(product.category)}
-										</Badge>
+										<div className="ml-2 flex gap-1">
+											{product.isPreOrder && (
+												<Badge variant="outline" className="text-xs">
+													Pre-Order
+												</Badge>
+											)}
+											<Badge variant="secondary">{getCategoryIcon(product.category)}</Badge>
+										</div>
 									</div>
 									<CardDescription className="line-clamp-2">{product.description}</CardDescription>
 								</CardHeader>
-								<CardContent className="flex-1">
+								<CardContent className="flex-1 space-y-3">
 									<div className="flex items-center justify-between">
 										<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
-										<span className="text-muted-foreground text-sm">Stock: {product.stock}</span>
+										<span className="text-muted-foreground text-sm">
+											{product.isPreOrder ? `${product.stock} ordered` : `Stock: ${product.stock}`}
+										</span>
 									</div>
+
+									{/* Size Selection */}
+									{requiresSize && (
+										<div>
+											<Label htmlFor={`size-${product.id}`} className="text-xs">
+												Select Size
+											</Label>
+											<Select
+												value={selectedSize}
+												onValueChange={(value) =>
+													setSelectedSizes((prev) => ({ ...prev, [product.id]: value }))
+												}
+											>
+												<SelectTrigger id={`size-${product.id}`} className="mt-1">
+													<SelectValue placeholder="Choose size" />
+												</SelectTrigger>
+												<SelectContent>
+													{product.availableSizes.map((size) => (
+														<SelectItem key={size} value={size}>
+															{size}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									)}
 								</CardContent>
 								<CardFooter>
 									{cartItem ? (
@@ -228,15 +313,23 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 												variant="outline"
 												size="icon"
 												onClick={() => handleUpdateQuantity(cartItem.id, cartItem.quantity - 1)}
+												disabled={isCartItemLoading}
 											>
 												<Minus className="h-4 w-4" />
 											</Button>
-											<span className="text-lg font-semibold">{cartItem.quantity}</span>
+											{isCartItemLoading ? (
+												<Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+											) : (
+												<span className="text-lg font-semibold">{cartItem.quantity}</span>
+											)}
 											<Button
 												variant="outline"
 												size="icon"
 												onClick={() => handleUpdateQuantity(cartItem.id, cartItem.quantity + 1)}
-												disabled={cartItem.quantity >= product.stock}
+												disabled={
+													(!product.isPreOrder && cartItem.quantity >= product.stock) ||
+													isCartItemLoading
+												}
 											>
 												<Plus className="h-4 w-4" />
 											</Button>
@@ -244,11 +337,28 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 									) : (
 										<Button
 											className="w-full"
-											onClick={() => handleAddToCart(product.id)}
-											disabled={product.stock === 0 || !product.isAvailable}
+											onClick={() => handleAddToCart(product.id, selectedSize)}
+											disabled={
+												(!product.isPreOrder && product.stock === 0) ||
+												!product.isAvailable ||
+												isProductLoading ||
+												(requiresSize && !selectedSize)
+											}
 										>
-											<ShoppingCart className="mr-2 h-4 w-4" />
-											{product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+											{isProductLoading ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<ShoppingCart className="mr-2 h-4 w-4" />
+											)}
+											{isProductLoading
+												? "Adding..."
+												: !product.isPreOrder && product.stock === 0
+													? "Out of Stock"
+													: requiresSize && !selectedSize
+														? "Select Size"
+														: product.isPreOrder
+															? "Pre-Order Now"
+															: "Add to Cart"}
 										</Button>
 									)}
 								</CardFooter>

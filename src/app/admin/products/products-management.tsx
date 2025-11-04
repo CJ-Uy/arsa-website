@@ -45,6 +45,8 @@ type Product = {
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;
+	isPreOrder: boolean;
+	availableSizes: string[];
 };
 
 type ProductsManagementProps = {
@@ -59,6 +61,8 @@ type ProductFormData = {
 	image: string;
 	stock: number;
 	isAvailable: boolean;
+	isPreOrder: boolean;
+	availableSizes: string[];
 };
 
 export function ProductsManagement({ initialProducts }: ProductsManagementProps) {
@@ -78,6 +82,8 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 		image: "",
 		stock: 0,
 		isAvailable: true,
+		isPreOrder: false,
+		availableSizes: [],
 	});
 
 	const resetForm = () => {
@@ -89,6 +95,8 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			image: "",
 			stock: 0,
 			isAvailable: true,
+			isPreOrder: false,
+			availableSizes: [],
 		});
 		setEditingProduct(null);
 	};
@@ -104,6 +112,8 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 				image: product.image || "",
 				stock: product.stock,
 				isAvailable: product.isAvailable,
+				isPreOrder: product.isPreOrder,
+				availableSizes: product.availableSizes,
 			});
 		} else {
 			resetForm();
@@ -375,6 +385,57 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 									/>
 								</div>
 							)}
+						</div>
+
+						{/* Size Selection */}
+						<div>
+							<Label>Available Sizes (optional)</Label>
+							<p className="text-muted-foreground mb-2 text-xs">
+								Select sizes if this product requires size selection (e.g., T-shirts)
+							</p>
+							<div className="flex flex-wrap gap-2">
+								{["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+									<div key={size} className="flex items-center space-x-2">
+										<input
+											type="checkbox"
+											id={`size-${size}`}
+											checked={formData.availableSizes.includes(size)}
+											onChange={(e) => {
+												if (e.target.checked) {
+													setFormData({
+														...formData,
+														availableSizes: [...formData.availableSizes, size],
+													});
+												} else {
+													setFormData({
+														...formData,
+														availableSizes: formData.availableSizes.filter((s) => s !== size),
+													});
+												}
+											}}
+											className="h-4 w-4"
+										/>
+										<Label htmlFor={`size-${size}`} className="cursor-pointer">
+											{size}
+										</Label>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Pre-Order Mode */}
+						<div className="flex items-center space-x-2">
+							<Switch
+								id="preOrder"
+								checked={formData.isPreOrder}
+								onCheckedChange={(checked) => setFormData({ ...formData, isPreOrder: checked })}
+							/>
+							<div>
+								<Label htmlFor="preOrder">Pre-Order Mode</Label>
+								<p className="text-muted-foreground text-xs">
+									Stock count will reflect number of orders received
+								</p>
+							</div>
 						</div>
 
 						<div className="flex items-center space-x-2">

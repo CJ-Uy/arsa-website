@@ -35,6 +35,8 @@ const productSchema = z.object({
 	image: z.string().optional(),
 	stock: z.number().int().min(0, "Stock cannot be negative"),
 	isAvailable: z.boolean(),
+	isPreOrder: z.boolean(),
+	availableSizes: z.array(z.string()),
 });
 
 export async function createProduct(data: z.infer<typeof productSchema>) {

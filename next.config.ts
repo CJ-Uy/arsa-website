@@ -15,6 +15,17 @@ const nextConfig: NextConfig = {
 		// Reduce memory usage during build
 		webpackMemoryOptimizations: true,
 	},
+	// Image optimization configuration
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "minio-s3.ateneoarsa.org",
+				pathname: "/**",
+			},
+		],
+		formats: ["image/webp", "image/avif"],
+	},
 };
 
 export default nextConfig;

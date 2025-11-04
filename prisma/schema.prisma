@@ -28,6 +28,9 @@ model User {
   email           String    @unique
   emailVerified   Boolean   @default(false)
   name            String?
+  firstName       String?
+  lastName        String?
+  studentId       String?
   image           String?
   isShopAdmin     Boolean   @default(false)
   isRedirectsAdmin Boolean  @default(false)
@@ -90,19 +93,21 @@ model Verification {
 
 // Shop Models
 model Product {
-  id          String      @id @default(uuid())
-  name        String
-  description String
-  price       Float
-  category    String      // "merch", "arsari-sari", "other"
-  image       String?
-  stock       Int         @default(0)
-  isAvailable Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  name           String
+  description    String
+  price          Float
+  category       String      // "merch", "arsari-sari", "other"
+  image          String?
+  stock          Int         @default(0)
+  isAvailable    Boolean     @default(true)
+  isPreOrder     Boolean     @default(false) // If true, stock shows order count
+  availableSizes String[]    @default([])    // Array of sizes: ["XS", "S", "M", "L", "XL", "XXL"]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
 }
 
 model CartItem {
@@ -110,14 +115,15 @@ model CartItem {
   userId    String
   productId String
   quantity  Int      @default(1)
+  size      String?  // Selected size (if applicable)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, productId])
   @@index([userId])
+  @@index([userId, productId, size])
 }
 
 model Order {
@@ -143,6 +149,7 @@ model OrderItem {
   productId String
   quantity  Int
   price     Float   // Store price at time of order
+  size      String? // Selected size (if applicable)
 
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])

@@ -77,11 +77,17 @@ export default async function OrdersPage() {
 								<div className="space-y-4">
 									<div className="space-y-2">
 										{order.orderItems.map((item) => (
-											<div key={item.id} className="flex justify-between text-sm">
+											<div key={item.id} className="flex justify-between gap-2 text-sm">
 												<span className="text-muted-foreground">
-													{item.product.name} × {item.quantity}
+													{item.product.name}
+													{item.size && (
+														<span className="text-foreground ml-1 font-medium">({item.size})</span>
+													)}{" "}
+													× {item.quantity}
 												</span>
-												<span>₱{(item.price * item.quantity).toFixed(2)}</span>
+												<span className="whitespace-nowrap">
+													₱{(item.price * item.quantity).toFixed(2)}
+												</span>
 											</div>
 										))}
 									</div>

@@ -15,16 +15,6 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: false, // Only allow OAuth login
 	},
-	async onRequest(request: Request) {
-		// Hook to validate email domain during OAuth sign-in
-		const url = new URL(request.url);
-
-		// Check if this is a callback from Google OAuth
-		if (url.pathname.includes("/api/auth/callback/google")) {
-			// The email will be available in the user object during the callback
-			// We'll validate it in the user creation hook instead
-		}
-	},
 	user: {
 		additionalFields: {
 			isShopAdmin: {
@@ -36,10 +26,20 @@ export const auth = betterAuth({
 				defaultValue: false,
 			},
 		},
-		async onCreate(user: { email: string }) {
-			// Validate that the email is from @student.ateneo.edu domain
-			if (!user.email.endsWith("@student.ateneo.edu")) {
-				throw new Error("Only @student.ateneo.edu email addresses are allowed");
+		async onCreate(user: { name?: string; email: string }) {
+			// Auto-populate firstName and lastName from Google name
+			if (user.name) {
+				const nameParts = user.name.trim().split(" ");
+				const firstName = nameParts[0] || "";
+				const lastName = nameParts.slice(1).join(" ") || "";
+
+				await prisma.user.update({
+					where: { email: user.email },
+					data: {
+						firstName,
+						lastName,
+					},
+				});
 			}
 		},
 	},
