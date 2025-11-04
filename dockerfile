@@ -37,6 +37,9 @@ COPY --from=prisma /app/node_modules ./node_modules
 # Copy application source
 COPY . .
 
+# Copy the generated Prisma client from prisma stage
+COPY --from=prisma /app/src/generated ./src/generated
+
 # Set environment to production for optimal build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
