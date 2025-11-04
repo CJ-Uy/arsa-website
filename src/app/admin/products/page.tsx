@@ -6,7 +6,7 @@ type Product = {
 	name: string;
 	description: string;
 	price: number;
-	category: "merch" | "arsari-sari" | "services";
+	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;

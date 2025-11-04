@@ -41,7 +41,7 @@ type Product = {
 	name: string;
 	description: string;
 	price: number;
-	category: "merch" | "arsari-sari" | "services";
+	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;
@@ -55,7 +55,7 @@ type ProductFormData = {
 	name: string;
 	description: string;
 	price: number;
-	category: "merch" | "arsari-sari" | "services";
+	category: "merch" | "arsari-sari" | "other";
 	image: string;
 	stock: number;
 	isAvailable: boolean;
@@ -338,7 +338,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								onValueChange={(value) =>
 									setFormData({
 										...formData,
-										category: value as "merch" | "arsari-sari" | "services",
+										category: value as "merch" | "arsari-sari" | "other",
 									})
 								}
 							>
@@ -348,7 +348,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								<SelectContent>
 									<SelectItem value="merch">Merch</SelectItem>
 									<SelectItem value="arsari-sari">Arsari-Sari</SelectItem>
-									<SelectItem value="services">Services</SelectItem>
+									<SelectItem value="other">Other</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>

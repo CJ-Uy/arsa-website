@@ -94,7 +94,7 @@ model Product {
   name        String
   description String
   price       Float
-  category    String      // "merch", "arsari-sari", "services"
+  category    String      // "merch", "arsari-sari", "other"
   image       String?
   stock       Int         @default(0)
   isAvailable Boolean     @default(true)

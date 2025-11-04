@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { ThemeToggle } from "@/components/main/theme-toggle";
@@ -61,7 +63,15 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 			<header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
 				<div className="container flex h-16 items-center justify-between px-4">
 					<Link href="/shop" className="flex items-center gap-3">
-						<img src="/images/logo.png" alt="ARSA Logo" className="h-10 w-10" />
+						<div className="relative h-12 w-12">
+							<Image
+								src="/images/logo.png"
+								alt="ARSA Logo"
+								fill
+								className="object-contain"
+								priority
+							/>
+						</div>
 						<h1 className="text-xl font-bold">ARSA Shop</h1>
 					</Link>
 

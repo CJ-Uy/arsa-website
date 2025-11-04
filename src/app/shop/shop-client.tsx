@@ -122,7 +122,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 				return <ShoppingBag className="h-4 w-4" />;
 			case "arsari-sari":
 				return <Store className="h-4 w-4" />;
-			case "services":
+			case "other":
 				return <Package className="h-4 w-4" />;
 			default:
 				return <ShoppingCart className="h-4 w-4" />;
@@ -141,7 +141,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 						<TabsTrigger value="all">All</TabsTrigger>
 						<TabsTrigger value="merch">Merch</TabsTrigger>
 						<TabsTrigger value="arsari-sari">Arsari-Sari</TabsTrigger>
-						<TabsTrigger value="services">Services</TabsTrigger>
+						<TabsTrigger value="other">Other</TabsTrigger>
 					</TabsList>
 				</Tabs>
 
