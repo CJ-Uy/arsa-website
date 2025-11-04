@@ -5,51 +5,75 @@ WORKDIR /app
 # Install dependencies in a separate layer to leverage Docker's caching.
 # This layer is only rebuilt when package.json or package-lock.json changes.
 FROM base AS deps
+# Install libc6-compat for compatibility with native modules
+RUN apk add --no-cache libc6-compat
+
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Install ALL dependencies (including devDependencies) needed for build
+# Also install @next/swc-linux-x64-musl specifically for Alpine
+RUN npm ci && \
+    npm cache clean --force
+
+# Install the Alpine-compatible SWC binary
+RUN npm install --no-save @next/swc-linux-x64-musl
+
+
+# ---- Prisma Generator ----
+# Separate stage for Prisma generation to leverage caching
+FROM base AS prisma
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json* ./
+# Only copy Prisma schema for better caching
+COPY prisma ./prisma
+RUN npx prisma generate
 
 
 # ---- Builder ----
-# This stage builds the actual application.
+# Rebuild the source code only when needed
 FROM base AS builder
-# Copy dependencies from the 'deps' stage
-COPY --from=deps /app/node_modules ./node_modules
-# Copy the rest of your application code
+# Copy dependencies (includes Prisma client after generation)
+COPY --from=prisma /app/node_modules ./node_modules
+
+# Copy application source
 COPY . .
 
-# Generate the Prisma client based on your schema
-# This is a critical step!
-RUN npx prisma generate
+# Set environment to production for optimal build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the Next.js application for production
+# Build Next.js
 RUN npm run build
 
 
 # ---- Runner ----
-# This is the final, small production image.
-FROM node:18-alpine AS runner
+# Production image, copy all the files and run next
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 # Set the environment to production
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create a non-root user for security best practices
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create a non-root user for security best practices (combine RUN commands to reduce layers)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 # Copy the standalone output from the builder stage.
-# These are the only files needed to run the app.
+# Note: Next.js standalone mode includes necessary node_modules in the output
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy Prisma client for runtime (generated client is in custom location)
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
+
 # Switch to the non-root user
 USER nextjs
 
-# Expose the port the app will run on. This is read from the ENV variable.
-# The default is 3000, but Coolify will set this from your .env.
+# Expose the port the app will run on
 EXPOSE 3000
 ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # The command to start the production server
 CMD ["node", "server.js"]

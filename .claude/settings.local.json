@@ -1,6 +1,12 @@
 {
 	"permissions": {
-		"allow": ["Bash(nul)", "Bash(npx prisma generate)", "Bash(npm run build:*)"],
+		"allow": [
+			"Bash(nul)",
+			"Bash(npx prisma generate)",
+			"Bash(npm run build:*)",
+			"Bash(docker:*)",
+			"Bash(docker compose:*)"
+		],
 		"deny": [],
 		"ask": []
 	}
