@@ -311,7 +311,7 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 								<div>
 									<h3 className="mb-2 font-semibold">Payment Receipt</h3>
 									<img
-										src={selectedOrder.receiptImageUrl}
+										src={`/api/receipts/${selectedOrder.receiptImageUrl.split("/").pop()}`}
 										alt="Receipt"
 										className="max-w-full rounded-lg border"
 									/>

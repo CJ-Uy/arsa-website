@@ -15,7 +15,7 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: false, // Only allow OAuth login
 	},
-	async onRequest(request) {
+	async onRequest(request: Request) {
 		// Hook to validate email domain during OAuth sign-in
 		const url = new URL(request.url);
 
@@ -36,7 +36,7 @@ export const auth = betterAuth({
 				defaultValue: false,
 			},
 		},
-		async onCreate(user) {
+		async onCreate(user: { email: string }) {
 			// Validate that the email is from @student.ateneo.edu domain
 			if (!user.email.endsWith("@student.ateneo.edu")) {
 				throw new Error("Only @student.ateneo.edu email addresses are allowed");

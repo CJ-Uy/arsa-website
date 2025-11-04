@@ -13,9 +13,13 @@ export function CartCounter() {
 
 	const fetchCartCount = async () => {
 		try {
-			const cart = await getCart();
-			const total = cart.reduce((sum, item) => sum + item.quantity, 0);
-			setItemCount(total);
+			const result = await getCart();
+			if (result.success && result.cart) {
+				const total = result.cart.reduce((sum, item) => sum + item.quantity, 0);
+				setItemCount(total);
+			} else {
+				setItemCount(0);
+			}
 		} catch (error) {
 			console.error("Failed to fetch cart count:", error);
 			setItemCount(0);

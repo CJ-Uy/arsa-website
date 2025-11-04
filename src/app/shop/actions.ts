@@ -87,6 +87,7 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
 		});
 
 		revalidatePath("/shop");
+		revalidatePath("/shop/cart");
 		return { success: true };
 	} catch (error) {
 		console.error("Update cart error:", error);

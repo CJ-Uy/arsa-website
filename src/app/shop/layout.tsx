@@ -60,7 +60,8 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 			{/* Minimal header for shop */}
 			<header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
 				<div className="container flex h-16 items-center justify-between px-4">
-					<Link href="/shop" className="flex items-center">
+					<Link href="/shop" className="flex items-center gap-3">
+						<img src="/images/logo.png" alt="ARSA Logo" className="h-10 w-10" />
 						<h1 className="text-xl font-bold">ARSA Shop</h1>
 					</Link>
 

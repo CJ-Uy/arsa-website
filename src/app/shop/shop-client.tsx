@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ShoppingCart, Package, ShoppingBag, Store } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addToCart } from "./actions";
+import { addToCart, getCart, updateCartItemQuantity } from "./actions";
 import { toast } from "sonner";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
@@ -30,6 +30,12 @@ type Product = {
 	isAvailable: boolean;
 };
 
+type CartItem = {
+	id: string;
+	productId: string;
+	quantity: number;
+};
+
 type ShopClientProps = {
 	initialProducts: Product[];
 	session: Session | null;
@@ -38,9 +44,43 @@ type ShopClientProps = {
 export function ShopClient({ initialProducts, session }: ShopClientProps) {
 	const [products] = useState<Product[]>(initialProducts);
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
+	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
 	const filteredProducts =
 		selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory);
+
+	// Fetch cart items on mount
+	useEffect(() => {
+		if (session?.user) {
+			fetchCartItems();
+		}
+	}, [session]);
+
+	// Listen for cart updates
+	useEffect(() => {
+		const handleCartUpdate = () => {
+			fetchCartItems();
+		};
+		window.addEventListener("cartUpdated", handleCartUpdate);
+		return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+	}, []);
+
+	const fetchCartItems = async () => {
+		const result = await getCart();
+		if (result.success && result.cart) {
+			setCartItems(
+				result.cart.map((item) => ({
+					id: item.id,
+					productId: item.productId,
+					quantity: item.quantity,
+				})),
+			);
+		}
+	};
+
+	const getCartItem = (productId: string) => {
+		return cartItems.find((item) => item.productId === productId);
+	};
 
 	const handleAddToCart = async (productId: string) => {
 		if (!session?.user) {
@@ -64,6 +104,15 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 			window.dispatchEvent(new Event("cartUpdated"));
 		} else {
 			toast.error(result.message);
+		}
+	};
+
+	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
+		const result = await updateCartItemQuantity(cartItemId, newQuantity);
+		if (result.success) {
+			window.dispatchEvent(new Event("cartUpdated"));
+		} else {
+			toast.error(result.message || "Failed to update quantity");
 		}
 	};
 
@@ -142,46 +191,70 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 						<p className="text-muted-foreground">Check back later for new items!</p>
 					</div>
 				) : (
-					filteredProducts.map((product) => (
-						<Card key={product.id} className="flex flex-col">
-							<CardHeader>
-								<div className="bg-muted mb-4 flex aspect-square items-center justify-center rounded-lg">
-									{product.image ? (
-										<img
-											src={product.image}
-											alt={product.name}
-											className="h-full w-full rounded-lg object-cover"
-										/>
+					filteredProducts.map((product) => {
+						const cartItem = getCartItem(product.id);
+						return (
+							<Card key={product.id} className="flex flex-col">
+								<CardHeader>
+									<div className="bg-muted mb-4 flex aspect-square items-center justify-center rounded-lg">
+										{product.image ? (
+											<img
+												src={product.image}
+												alt={product.name}
+												className="h-full w-full rounded-lg object-cover"
+											/>
+										) : (
+											<Package className="text-muted-foreground h-16 w-16" />
+										)}
+									</div>
+									<div className="flex items-start justify-between">
+										<CardTitle className="text-lg">{product.name}</CardTitle>
+										<Badge variant="secondary" className="ml-2">
+											{getCategoryIcon(product.category)}
+										</Badge>
+									</div>
+									<CardDescription className="line-clamp-2">{product.description}</CardDescription>
+								</CardHeader>
+								<CardContent className="flex-1">
+									<div className="flex items-center justify-between">
+										<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
+										<span className="text-muted-foreground text-sm">Stock: {product.stock}</span>
+									</div>
+								</CardContent>
+								<CardFooter>
+									{cartItem ? (
+										<div className="flex w-full items-center justify-between gap-2">
+											<Button
+												variant="outline"
+												size="icon"
+												onClick={() => handleUpdateQuantity(cartItem.id, cartItem.quantity - 1)}
+											>
+												<Minus className="h-4 w-4" />
+											</Button>
+											<span className="text-lg font-semibold">{cartItem.quantity}</span>
+											<Button
+												variant="outline"
+												size="icon"
+												onClick={() => handleUpdateQuantity(cartItem.id, cartItem.quantity + 1)}
+												disabled={cartItem.quantity >= product.stock}
+											>
+												<Plus className="h-4 w-4" />
+											</Button>
+										</div>
 									) : (
-										<Package className="text-muted-foreground h-16 w-16" />
+										<Button
+											className="w-full"
+											onClick={() => handleAddToCart(product.id)}
+											disabled={product.stock === 0 || !product.isAvailable}
+										>
+											<ShoppingCart className="mr-2 h-4 w-4" />
+											{product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+										</Button>
 									)}
-								</div>
-								<div className="flex items-start justify-between">
-									<CardTitle className="text-lg">{product.name}</CardTitle>
-									<Badge variant="secondary" className="ml-2">
-										{getCategoryIcon(product.category)}
-									</Badge>
-								</div>
-								<CardDescription className="line-clamp-2">{product.description}</CardDescription>
-							</CardHeader>
-							<CardContent className="flex-1">
-								<div className="flex items-center justify-between">
-									<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
-									<span className="text-muted-foreground text-sm">Stock: {product.stock}</span>
-								</div>
-							</CardContent>
-							<CardFooter>
-								<Button
-									className="w-full"
-									onClick={() => handleAddToCart(product.id)}
-									disabled={product.stock === 0 || !product.isAvailable}
-								>
-									<ShoppingCart className="mr-2 h-4 w-4" />
-									{product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-								</Button>
-							</CardFooter>
-						</Card>
-					))
+								</CardFooter>
+							</Card>
+						);
+					})
 				)}
 			</div>
 		</div>

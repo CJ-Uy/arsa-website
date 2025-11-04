@@ -136,7 +136,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 						</CardHeader>
 						<CardContent>
 							<img
-								src={order.receiptImageUrl}
+								src={`/api/receipts/${order.receiptImageUrl.split("/").pop()}`}
 								alt="Payment receipt"
 								className="max-w-full rounded-lg border"
 							/>

@@ -41,7 +41,7 @@ type Product = {
 	name: string;
 	description: string;
 	price: number;
-	category: string;
+	category: "merch" | "arsari-sari" | "services";
 	image: string | null;
 	stock: number;
 	isAvailable: boolean;
@@ -55,7 +55,7 @@ type ProductFormData = {
 	name: string;
 	description: string;
 	price: number;
-	category: string;
+	category: "merch" | "arsari-sari" | "services";
 	image: string;
 	stock: number;
 	isAvailable: boolean;
@@ -335,7 +335,12 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 							<Label htmlFor="category">Category *</Label>
 							<Select
 								value={formData.category}
-								onValueChange={(value) => setFormData({ ...formData, category: value })}
+								onValueChange={(value) =>
+									setFormData({
+										...formData,
+										category: value as "merch" | "arsari-sari" | "services",
+									})
+								}
 							>
 								<SelectTrigger>
 									<SelectValue />
