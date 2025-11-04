@@ -41,6 +41,9 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Optimize Node.js memory and build performance
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Build Next.js
 RUN npm run build
 
