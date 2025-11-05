@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
 	experimental: {
 		// Reduce memory usage during build
 		webpackMemoryOptimizations: true,
+		// Ensure standalone works with webpack
+		outputFileTracingRoot: undefined,
 	},
 	// Image optimization configuration
 	images: {

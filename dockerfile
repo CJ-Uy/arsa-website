@@ -49,8 +49,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Build Next.js (without Turbopack for stability)
-# Add verbose logging to debug build issues
-RUN npm run build 2>&1 | tee build.log || (cat build.log && exit 1)
+# Force rebuild 2025-11-05
+RUN npm run build
+
+# Verify the build output exists
+RUN ls -la .next/ && \
+    ls -la .next/standalone/ && \
+    echo "Build verification complete"
 
 
 # ---- Runner ----
