@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateCartItemQuantity, removeFromCart } from "../actions";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type CartItem = {
 	id: string;
@@ -27,8 +28,10 @@ type CartClientProps = {
 };
 
 export function CartClient({ initialCart }: CartClientProps) {
+	const router = useRouter();
 	const [cartItems, setCartItems] = useState<CartItem[]>(initialCart);
 	const [loading, setLoading] = useState<string | null>(null);
+	const [checkoutLoading, setCheckoutLoading] = useState(false);
 
 	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
 		setLoading(cartItemId);
@@ -68,6 +71,11 @@ export function CartClient({ initialCart }: CartClientProps) {
 	};
 
 	const total = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+	const handleCheckout = () => {
+		setCheckoutLoading(true);
+		router.push("/shop/checkout");
+	};
 
 	if (cartItems.length === 0) {
 		return (
@@ -121,7 +129,11 @@ export function CartClient({ initialCart }: CartClientProps) {
 										onClick={() => handleRemove(item.id)}
 										disabled={loading === item.id}
 									>
-										<Trash2 className="h-4 w-4" />
+										{loading === item.id ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<Trash2 className="h-4 w-4" />
+										)}
 									</Button>
 
 									<div className="flex items-center gap-2">
@@ -131,7 +143,11 @@ export function CartClient({ initialCart }: CartClientProps) {
 											onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
 											disabled={loading === item.id || item.quantity <= 1}
 										>
-											<Minus className="h-4 w-4" />
+											{loading === item.id ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												<Minus className="h-4 w-4" />
+											)}
 										</Button>
 										<span className="w-12 text-center font-semibold">{item.quantity}</span>
 										<Button
@@ -140,7 +156,11 @@ export function CartClient({ initialCart }: CartClientProps) {
 											onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
 											disabled={loading === item.id || item.quantity >= item.product.stock}
 										>
-											<Plus className="h-4 w-4" />
+											{loading === item.id ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												<Plus className="h-4 w-4" />
+											)}
 										</Button>
 									</div>
 								</div>
@@ -171,11 +191,21 @@ export function CartClient({ initialCart }: CartClientProps) {
 							</div>
 						</div>
 
-						<Link href="/shop/checkout">
-							<Button className="w-full" size="lg">
-								Proceed to Checkout
-							</Button>
-						</Link>
+						<Button
+							className="w-full"
+							size="lg"
+							onClick={handleCheckout}
+							disabled={checkoutLoading}
+						>
+							{checkoutLoading ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Proceeding to Checkout...
+								</>
+							) : (
+								"Proceed to Checkout"
+							)}
+						</Button>
 
 						<Link href="/shop">
 							<Button variant="outline" className="mt-2 w-full">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Check, AlertCircle } from "lucide-react";
+import { Upload, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -316,7 +316,14 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 							</div>
 
 							<Button type="submit" className="w-full" size="lg" disabled={loading || !receiptFile}>
-								{loading ? "Processing..." : "Place Order"}
+								{loading ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Processing...
+									</>
+								) : (
+									"Place Order"
+								)}
 							</Button>
 
 							<p className="text-muted-foreground text-center text-xs">

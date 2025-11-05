@@ -159,8 +159,8 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								<div>
 									<p className="font-semibold">What happens next?</p>
 									<p className="text-muted-foreground text-sm">
-										Our team will verify your payment and process your order. You'll receive updates
-										via email.
+										Our team will verify your payment and process your order. Be sure to stay
+										updated on the Facebook page for when the merch claiming will begin!
 									</p>
 								</div>
 							</div>
@@ -168,10 +168,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								<Package className="text-primary mt-0.5 h-5 w-5" />
 								<div>
 									<p className="font-semibold">Order Processing</p>
-									<p className="text-muted-foreground text-sm">
-										Orders are typically processed within 1-2 business days. You can pick up your
-										items at the ARSA office.
-									</p>
+									<p className="text-muted-foreground text-sm">You'll receive updates via email in case of any issues with your order.</p>
 								</div>
 							</div>
 						</div>
