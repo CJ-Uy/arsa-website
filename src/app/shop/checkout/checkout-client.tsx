@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Upload, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,13 +214,11 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 							{/* GCash QR Code */}
 							<div className="flex justify-center">
 								<div className="rounded-lg border bg-white p-4">
-									<div className="relative h-64 w-64">
-										<Image
+									<div className="h-64 w-64">
+										<img
 											src="/images/gcash_qr.jpg"
 											alt="GCash QR Code"
-											fill
-											className="object-contain"
-											priority
+											className="h-full w-full object-contain"
 										/>
 									</div>
 									<p className="text-muted-foreground mt-2 text-center text-sm">

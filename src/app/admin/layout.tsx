@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Package, ArrowLeft } from "lucide-react";
 import { Unauthorized } from "./unauthorized";
 
-import Image from "next/image";
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({
 		headers: await headers(),
@@ -36,15 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 						href="/shop"
 						className="flex items-center gap-3 transition-opacity hover:opacity-80"
 					>
-						<div className="relative h-12 w-12">
-							<Image
-								src="/images/logo.png"
-								alt="ARSA Logo"
-								fill
-								className="object-contain"
-								priority
-							/>
-						</div>
+						<img src="/images/logo.png" alt="ARSA Logo" className="h-12 w-12 object-contain" />
 						<h1 className="text-xl font-bold">ARSA Shop</h1>
 					</Link>
 					<Link href="/shop">

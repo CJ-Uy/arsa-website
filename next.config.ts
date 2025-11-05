@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
 	},
 	// Image optimization configuration
 	images: {
+		// Disable Next.js image optimization to reduce server load
+		// Images are pre-optimized at upload time using sharp
+		unoptimized: true,
 		remotePatterns: [
 			{
 				protocol: "https",
@@ -39,7 +42,6 @@ const nextConfig: NextConfig = {
 				pathname: "/**",
 			},
 		],
-		formats: ["image/webp", "image/avif"],
 	},
 };
 

@@ -9,11 +9,14 @@ Official website for the ARSA dorm system featuring a complete e-commerce shop f
 - **Publications** - View ARSA newsletters and resources
 - **Merch Showcase** - Interactive gacha system for viewing merchandise
 - **E-Commerce Shop** - Full shopping experience with:
-  - Google OAuth student email authentication
-  - Product catalog (Merch, Arsari-Sari Store, Services)
-  - Shopping cart
+  - Google OAuth student email authentication (auto-populates name from Google)
+  - Product catalog with categories (Merch, Arsari-Sari Store, Other)
+  - Product size selection (XS, S, M, L, XL, XXL)
+  - Pre-order mode for out-of-stock items
+  - Shopping cart with size-aware items
   - GCash payment with receipt upload
-  - Order tracking
+  - Order tracking with detailed history
+  - Customer information (first name, last name, student ID)
   - Admin dashboard for order & product management
 
 ## 🛠️ Tech Stack
@@ -22,10 +25,12 @@ Official website for the ARSA dorm system featuring a complete e-commerce shop f
 - **Styling**: Tailwind CSS v4
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: Better Auth with Google OAuth
-- **File Storage**: MinIO (S3-compatible)
+- **File Storage**: MinIO (S3-compatible object storage)
+- **Image Optimization**: Sharp (upload-time optimization to WebP)
 - **UI Components**: Radix UI + shadcn/ui
 - **Forms**: react-hook-form with Zod validation
-- **Deployment**: Docker + Docker Compose
+- **Notifications**: Sonner (toast notifications)
+- **Deployment**: Docker + Docker Compose (standalone output mode)
 
 ## 📋 Prerequisites
 
@@ -146,28 +151,72 @@ arsa-website/
 
 ### Customer Features
 
-- Browse products by category
-- Add items to cart
-- Google OAuth login (student email required)
-- Upload GCash payment receipt
-- Track order status
-- View order history
+- **Product Browsing**: Browse products by category (All, Merch, Arsari-Sari, Other)
+- **Size Selection**: Choose sizes (XS-XXL) for applicable products
+- **Pre-Orders**: Order products even when out of stock (if pre-order enabled)
+- **Shopping Cart**: Add items with size-aware cart management
+- **Authentication**: Google OAuth login (student email required) with loading indicators
+- **Checkout**:
+  - Auto-populated name from Google account
+  - Optional first name, last name, and student ID fields
+  - GCash payment with QR code
+  - Receipt upload with preview
+  - Special instructions/notes
+- **Order Tracking**:
+  - View order history with sizes displayed
+  - Track order status (pending → paid → confirmed → completed)
+  - View detailed order information
 
 ### Admin Features
 
-- View all orders with status filtering
-- Update order status (pending → paid → confirmed → completed)
-- View payment receipts
-- Add/edit/delete products
-- Upload product images
-- Manage stock and availability
+- **Order Management**:
+  - View all orders with status filtering
+  - Update order status
+  - View payment receipts
+  - See customer information (name, email, student ID)
+  - View order items with sizes
+- **Product Management**:
+  - Add/edit/delete products
+  - Upload product images (auto-optimized to WebP)
+  - Configure available sizes per product
+  - Set pre-order mode
+  - Manage stock and availability
+  - Organize by categories
 
 ## 🔐 Authentication
 
 - Uses Better Auth with Google OAuth
-- Restricts access to @student.ateneo.edu emails
+- Auto-populates user name from Google account
+- Restricts access to @student.ateneo.edu emails (configurable)
 - Session-based authentication
-- Protected admin routes
+- Protected admin routes (shop admin and redirects admin)
+
+## ⚡ Performance & Optimization
+
+### Image Optimization Strategy
+
+This application is optimized for **weak servers** with minimal CPU/memory resources:
+
+- **Upload-Time Optimization**: Product images are optimized once when uploaded by admins
+  - Automatically resized to max 1200x1200px (maintains aspect ratio)
+  - Converted to WebP format (~70% smaller than JPEG)
+  - Quality set to 85% (excellent quality, smaller file size)
+- **No Runtime Processing**: Images served directly from MinIO storage
+- **Next.js Image Optimization Disabled**: Reduces server load significantly
+- **Browser-Native Lazy Loading**: Uses standard `<img loading="lazy">` tags
+
+### Server Resource Usage
+
+- **Low Memory Footprint**: No image processing during page requests
+- **Low CPU Usage**: Only processes images during admin uploads (infrequent)
+- **Fast Page Loads**: Pre-optimized images load quickly
+- **Bandwidth Efficient**: WebP format reduces bandwidth by ~70%
+
+### SSL/TLS Support
+
+- **CA Certificates**: Bundled in Docker image for secure HTTPS connections
+- **MinIO Integration**: Secure connections to object storage
+- **OAuth Security**: Secure Google authentication flow
 
 ## 📦 Available Scripts
 
@@ -187,13 +236,42 @@ node scripts/setup-buckets.js   # Setup MinIO buckets
 
 ## 🚢 Deployment
 
-The app is configured for Docker deployment with standalone output:
+The app is configured for Docker deployment with standalone output mode for optimal performance:
+
+### Docker Features
+
+- **Multi-stage Build**: Optimized build process with separate stages
+- **Standalone Output**: Minimal production bundle (~150MB vs ~500MB)
+- **Alpine Linux**: Lightweight base image with security updates
+- **CA Certificates**: Bundled for SSL/TLS support
+- **Non-root User**: Runs as `nextjs` user for security
+- **Sharp Integration**: Native image processing with Alpine-compatible binaries
+
+### Quick Start
 
 ```bash
+# Build and start with Docker Compose
 docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-See [dockerfile](dockerfile) and [docker-compose.yaml](docker-compose.yaml) for details.
+### Environment Variables
+
+Ensure your `.env` file includes production values:
+
+```env
+# Production URLs
+BETTER_AUTH_URL="https://yourdomain.com"
+MINIO_ENDPOINT="minio-s3.yourdomain.com"
+MINIO_USE_SSL="true"
+```
+
+See [dockerfile](dockerfile) and [docker-compose.yaml](docker-compose.yaml) for configuration details.
 
 ## 📚 Documentation
 
@@ -236,7 +314,60 @@ See [dockerfile](dockerfile) and [docker-compose.yaml](docker-compose.yaml) for 
 
 ## 🐛 Troubleshooting
 
-See [SHOP_SETUP.md](SHOP_SETUP.md#troubleshooting) for common issues and solutions.
+### Common Issues
+
+**Images not loading in production:**
+
+- Ensure MinIO is accessible from production server
+- Check SSL certificates are properly configured
+- Verify `MINIO_ENDPOINT` and `MINIO_USE_SSL` environment variables
+- Images are served as `<img>` tags (not Next.js Image component) for maximum compatibility
+
+**OAuth not working:**
+
+- Verify `BETTER_AUTH_URL` matches your production domain
+- Check Google OAuth redirect URIs include your production URL
+- Ensure email domain restrictions are properly configured
+
+**Database connection issues:**
+
+- Verify `DATABASE_URL` format and credentials
+- Check PostgreSQL is accessible from Docker container
+- Run `npx prisma db push` after schema changes
+
+**Performance issues:**
+
+- Images are pre-optimized at upload time (WebP, 1200px max)
+- Next.js image optimization is disabled to save server resources
+- Use CDN for static assets if needed
+
+See [SHOP_SETUP.md](SHOP_SETUP.md#troubleshooting) for more detailed solutions.
+
+## 🏗️ Architecture Decisions
+
+### Why Regular `<img>` Tags Instead of Next.js Image?
+
+We use native `<img>` tags throughout the application for several reasons:
+
+1. **Server Resource Efficiency**: Next.js Image component runs an optimization server that processes images on-demand, consuming significant CPU and memory
+2. **Pre-Optimization**: Images are optimized once at upload time using Sharp (resized, converted to WebP)
+3. **Weak Server Friendly**: Perfect for low-resource environments (shared hosting, small VPS)
+4. **SSL Compatibility**: Avoids SSL certificate validation issues in Docker containers
+5. **Simplicity**: Direct serving from MinIO without intermediate processing
+
+### Database Schema Design
+
+- **Custom Prisma Output**: Generated client in `src/generated/prisma/` for better organization
+- **Size-Aware Cart**: Cart items include `size` field for products with size variants
+- **Composite Indexes**: Used instead of unique constraints due to nullable size fields
+- **User Information**: Stores `firstName`, `lastName`, `studentId` for order fulfillment
+- **Pre-Order Support**: `isPreOrder` flag enables selling out-of-stock items
+
+### Middleware Architecture
+
+- **Chainable Middleware**: Request flows through redirect middleware first, then Next.js routing
+- **Database Lookup**: Checks all paths against redirect codes for SEO-friendly URLs
+- **Click Tracking**: Records analytics data for each redirect hit
 
 ## 📄 License
 

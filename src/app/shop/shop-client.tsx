@@ -61,6 +61,13 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 	const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
 	const [signingIn, setSigningIn] = useState(false);
 
+	// Debug: Log session state
+	useEffect(() => {
+		console.log("ShopClient session:", session);
+		console.log("Has user?", !!session?.user);
+		console.log("Should show sign in?", !session?.user);
+	}, [session]);
+
 	const filteredProducts =
 		selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory);
 

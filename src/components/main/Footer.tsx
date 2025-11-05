@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Facebook, Instagram, Mail, Phone } from "lucide-react";
 
 export function Footer() {
@@ -10,9 +9,7 @@ export function Footer() {
 					{/* Brand Section */}
 					<div className="space-y-4">
 						<div className="flex items-center">
-							<div className="relative h-10 w-10">
-								<Image src="/images/logo.png" alt="ARSA Logo" fill className="object-contain" />
-							</div>
+							<img src="/images/logo.png" alt="ARSA Logo" className="h-10 w-10 object-contain" />
 						</div>
 						<p className="text-muted-foreground text-sm">In ARSA, It&apos;s good to be home.</p>
 					</div>

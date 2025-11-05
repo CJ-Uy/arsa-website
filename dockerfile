@@ -56,6 +56,9 @@ RUN npm run build
 FROM node:24-alpine AS runner
 WORKDIR /app
 
+# Install CA certificates for SSL/TLS support
+RUN apk add --no-cache ca-certificates
+
 # Set the environment to production
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
