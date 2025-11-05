@@ -55,8 +55,8 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 				toast.error("Please upload an image file");
 				return;
 			}
-			if (file.size > 5 * 1024 * 1024) {
-				toast.error("File size must be less than 5MB");
+			if (file.size > 10 * 1024 * 1024) {
+				toast.error("File size must be less than 10MB");
 				return;
 			}
 			setReceiptFile(file);
@@ -267,7 +267,7 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 													<Upload className="text-muted-foreground mx-auto h-12 w-12" />
 													<p className="text-sm font-medium">Click to upload receipt</p>
 													<p className="text-muted-foreground text-xs">
-														PNG, JPG or JPEG (max 5MB)
+														PNG, JPG or JPEG (max 10MB)
 													</p>
 												</div>
 											)}

@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
 		}
 
-		// Validate file size (max 5MB)
-		if (file.size > 5 * 1024 * 1024) {
-			return NextResponse.json({ error: "File size must be less than 5MB" }, { status: 400 });
+		// Validate file size (max 10MB)
+		if (file.size > 10 * 1024 * 1024) {
+			return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
 		}
 
 		// Convert file to buffer

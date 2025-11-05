@@ -1,7 +1,15 @@
 import * as Minio from "minio";
+import * as https from "https";
 
 const minioPort = parseInt(process.env.MINIO_PORT || "9000");
 const useSSL = process.env.MINIO_USE_SSL === "true";
+
+// Create a custom HTTPS agent that accepts self-signed certificates
+const httpsAgent = useSSL
+	? new https.Agent({
+			rejectUnauthorized: false, // Accept self-signed certificates
+	  })
+	: undefined;
 
 export const minioClient = new Minio.Client({
 	endPoint: process.env.MINIO_ENDPOINT || "localhost",
@@ -9,8 +17,8 @@ export const minioClient = new Minio.Client({
 	useSSL: useSSL,
 	accessKey: process.env.MINIO_ACCESS_KEY || "",
 	secretKey: process.env.MINIO_SECRET_KEY || "",
-	// Add timeout to fail faster
-	transportAgent: undefined,
+	// Use custom HTTPS agent to handle SSL certificates
+	transportAgent: httpsAgent,
 });
 
 // Bucket names
