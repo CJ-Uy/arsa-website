@@ -45,10 +45,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Optimize Node.js memory and build performance
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Reduced from 4096 to 2048 for weaker servers
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
-# Build Next.js
-RUN npm run build
+# Build Next.js (without Turbopack for stability)
+# Add verbose logging to debug build issues
+RUN npm run build 2>&1 | tee build.log || (cat build.log && exit 1)
 
 
 # ---- Runner ----
