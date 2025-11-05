@@ -45,17 +45,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Optimize Node.js memory and build performance
-# Reduced from 4096 to 2048 for weaker servers
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Build Next.js (without Turbopack for stability)
-# Force rebuild 2025-11-05
+# Build Next.js with Turbopack
 RUN npm run build
-
-# Verify the build output exists
-RUN ls -la .next/ && \
-    ls -la .next/standalone/ && \
-    echo "Build verification complete"
 
 
 # ---- Runner ----
