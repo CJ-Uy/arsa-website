@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Select,
 	SelectContent,
@@ -58,10 +56,10 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 	const [products] = useState<Product[]>(initialProducts);
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
-	const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
 	const [loadingProducts, setLoadingProducts] = useState<Record<string, boolean>>({});
 	const [loadingCartItems, setLoadingCartItems] = useState<Record<string, boolean>>({});
 	const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
+	const [signingIn, setSigningIn] = useState(false);
 
 	const filteredProducts =
 		selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory);
@@ -102,16 +100,24 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		);
 	};
 
+	const handleSignIn = async () => {
+		setSigningIn(true);
+		try {
+			await signIn.social({
+				provider: "google",
+				callbackURL: "/shop",
+			});
+		} catch (error) {
+			setSigningIn(false);
+		}
+	};
+
 	const handleAddToCart = async (productId: string, size?: string) => {
 		if (!session?.user) {
 			toast.error("Please sign in to add items to cart", {
 				action: {
 					label: "Sign In",
-					onClick: () =>
-						signIn.social({
-							provider: "google",
-							callbackURL: "/shop",
-						}),
+					onClick: handleSignIn,
 				},
 			});
 			return;
@@ -199,16 +205,15 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 									start shopping
 								</p>
 							</div>
-							<Button
-								onClick={() =>
-									signIn.social({
-										provider: "google",
-										callbackURL: "/shop",
-									})
-								}
-								className="w-full sm:w-auto"
-							>
-								Sign In with Google
+							<Button onClick={handleSignIn} className="w-full sm:w-auto" disabled={signingIn}>
+								{signingIn ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Signing In...
+									</>
+								) : (
+									"Sign In with Google"
+								)}
 							</Button>
 						</div>
 					</CardContent>
@@ -226,7 +231,6 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 					filteredProducts.map((product) => {
 						const selectedSize = selectedSizes[product.id];
 						const cartItem = getCartItem(product.id, selectedSize);
-						const isImageLoading = loadingImages[product.id] ?? true;
 						const isProductLoading = loadingProducts[product.id] ?? false;
 						const isCartItemLoading = cartItem ? (loadingCartItems[cartItem.id] ?? false) : false;
 						const requiresSize = product.availableSizes.length > 0;
@@ -236,25 +240,12 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 								<CardHeader>
 									<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
 										{product.image ? (
-											<>
-												{isImageLoading && (
-													<div className="absolute inset-0 flex items-center justify-center">
-														<Skeleton className="h-full w-full" />
-													</div>
-												)}
-												<Image
-													src={product.image}
-													alt={product.name}
-													fill
-													sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-													className="rounded-lg object-cover transition-opacity duration-300"
-													style={{ opacity: isImageLoading ? 0 : 1 }}
-													loading="lazy"
-													onLoad={() => {
-														setLoadingImages((prev) => ({ ...prev, [product.id]: false }));
-													}}
-												/>
-											</>
+											<img
+												src={product.image}
+												alt={product.name}
+												className="h-full w-full rounded-lg object-cover"
+												loading="lazy"
+											/>
 										) : (
 											<Package className="text-muted-foreground h-16 w-16" />
 										)}

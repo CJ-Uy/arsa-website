@@ -23,6 +23,21 @@ const nextConfig: NextConfig = {
 				hostname: "minio-s3.ateneoarsa.org",
 				pathname: "/**",
 			},
+			{
+				protocol: "http",
+				hostname: "minio-s3.ateneoarsa.org",
+				pathname: "/**",
+			},
+			{
+				protocol: "http",
+				hostname: "localhost",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "localhost",
+				pathname: "/**",
+			},
 		],
 		formats: ["image/webp", "image/avif"],
 	},

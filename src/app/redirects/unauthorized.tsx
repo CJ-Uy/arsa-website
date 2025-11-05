@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 
@@ -11,6 +12,19 @@ type UnauthorizedProps = {
 };
 
 export function Unauthorized({ isLoggedIn }: UnauthorizedProps) {
+	const [signingIn, setSigningIn] = useState(false);
+
+	const handleSignIn = async () => {
+		setSigningIn(true);
+		try {
+			await signIn.social({
+				provider: "google",
+				callbackURL: "/redirects",
+			});
+		} catch (error) {
+			setSigningIn(false);
+		}
+	};
 	return (
 		<div className="container mx-auto flex min-h-[80vh] items-center justify-center py-10">
 			<Card className="w-full max-w-md">
@@ -32,16 +46,15 @@ export function Unauthorized({ isLoggedIn }: UnauthorizedProps) {
 								Sign in with your <span className="text-foreground font-semibold">email</span> and
 								contact an administrator to request redirects admin access.
 							</p>
-							<Button
-								onClick={() =>
-									signIn.social({
-										provider: "google",
-										callbackURL: "/redirects",
-									})
-								}
-								className="w-full"
-							>
-								Sign In with Google
+							<Button onClick={handleSignIn} className="w-full" disabled={signingIn}>
+								{signingIn ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Signing In...
+									</>
+								) : (
+									"Sign In with Google"
+								)}
 							</Button>
 						</>
 					) : (
