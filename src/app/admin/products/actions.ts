@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { cache } from "@/lib/cache";
 
 async function checkShopAdmin() {
 	const session = await auth.api.getSession({
@@ -49,6 +50,9 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 			data: validated,
 		});
 
+		// Invalidate product cache so changes show immediately
+		cache.deletePattern("products:.*");
+
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
 		return { success: true };
@@ -68,6 +72,9 @@ export async function updateProduct(id: string, data: z.infer<typeof productSche
 			data: validated,
 		});
 
+		// Invalidate product cache so changes show immediately
+		cache.deletePattern("products:.*");
+
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
 		return { success: true };
@@ -83,6 +90,9 @@ export async function deleteProduct(id: string) {
 		await prisma.product.delete({
 			where: { id },
 		});
+
+		// Invalidate product cache so changes show immediately
+		cache.deletePattern("products:.*");
 
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
