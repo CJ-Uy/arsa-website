@@ -109,7 +109,11 @@ class MemoryCache {
 // Singleton instance
 export const cache = new MemoryCache();
 
+// In-flight requests tracker to prevent cache stampede
+const inflightRequests = new Map<string, Promise<any>>();
+
 // Helper function to wrap async functions with caching
+// Implements request deduplication to prevent cache stampede
 export async function withCache<T>(key: string, ttl: number, fn: () => Promise<T>): Promise<T> {
 	// Try to get from cache first
 	const cached = cache.get<T>(key);
@@ -117,10 +121,32 @@ export async function withCache<T>(key: string, ttl: number, fn: () => Promise<T
 		return cached;
 	}
 
-	// Execute function and cache result
-	const result = await fn();
-	cache.set(key, result, ttl);
-	return result;
+	// Check if there's already a request in-flight for this key
+	const existingRequest = inflightRequests.get(key);
+	if (existingRequest) {
+		// Wait for the existing request instead of making a new one
+		return existingRequest as Promise<T>;
+	}
+
+	// Create new request and track it
+	const request = fn()
+		.then((result) => {
+			// Cache the result
+			cache.set(key, result, ttl);
+			// Remove from in-flight tracker
+			inflightRequests.delete(key);
+			return result;
+		})
+		.catch((error) => {
+			// Remove from in-flight tracker on error
+			inflightRequests.delete(key);
+			throw error;
+		});
+
+	// Track this request so other concurrent requests can wait for it
+	inflightRequests.set(key, request);
+
+	return request;
 }
 
 // Cache key generators
