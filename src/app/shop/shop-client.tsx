@@ -78,6 +78,21 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		[selectedCategory, products],
 	);
 
+	// Memoize fetchCartItems to avoid recreating on every render
+	const fetchCartItems = useCallback(async () => {
+		const result = await getCart();
+		if (result.success && result.cart) {
+			setCartItems(
+				result.cart.map((item) => ({
+					id: item.id,
+					productId: item.productId,
+					quantity: item.quantity,
+					size: item.size,
+				})),
+			);
+		}
+	}, []);
+
 	// Fetch cart items on mount
 	useEffect(() => {
 		if (session?.user) {
@@ -93,21 +108,6 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		window.addEventListener("cartUpdated", handleCartUpdate);
 		return () => window.removeEventListener("cartUpdated", handleCartUpdate);
 	}, [fetchCartItems]);
-
-	// Memoize fetchCartItems to avoid recreating on every render
-	const fetchCartItems = useCallback(async () => {
-		const result = await getCart();
-		if (result.success && result.cart) {
-			setCartItems(
-				result.cart.map((item) => ({
-					id: item.id,
-					productId: item.productId,
-					quantity: item.quantity,
-					size: item.size,
-				})),
-			);
-		}
-	}, []);
 
 	// Memoize getCartItem to avoid recreating on every render
 	const getCartItem = useCallback(
