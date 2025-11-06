@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { cache, cacheKeys, withCache } from "@/lib/cache";
 
 // Get current session
 async function getSession() {
@@ -67,6 +68,9 @@ export async function addToCart(productId: string, quantity: number = 1, size?: 
 			});
 		}
 
+		// Invalidate cart cache
+		cache.delete(cacheKeys.cart(session.user.id));
+
 		revalidatePath("/shop");
 		return { success: true, message: "Added to cart" };
 	} catch (error) {
@@ -94,6 +98,9 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
 			data: { quantity },
 		});
 
+		// Invalidate cart cache
+		cache.delete(cacheKeys.cart(session.user.id));
+
 		revalidatePath("/shop");
 		revalidatePath("/shop/cart");
 		return { success: true };
@@ -117,6 +124,9 @@ export async function removeFromCart(cartItemId: string) {
 			},
 		});
 
+		// Invalidate cart cache
+		cache.delete(cacheKeys.cart(session.user.id));
+
 		revalidatePath("/shop");
 		return { success: true };
 	} catch (error) {
@@ -132,13 +142,20 @@ export async function getCart() {
 			return { success: false, cart: [] };
 		}
 
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId: session.user.id },
-			include: {
-				product: true,
+		// Cache cart for 10 seconds - it updates frequently but this still helps
+		const cartItems = await withCache(
+			cacheKeys.cart(session.user.id),
+			10000, // 10 seconds cache
+			async () => {
+				return await prisma.cartItem.findMany({
+					where: { userId: session.user.id },
+					include: {
+						product: true,
+					},
+					orderBy: { createdAt: "desc" },
+				});
 			},
-			orderBy: { createdAt: "desc" },
-		});
+		);
 
 		return { success: true, cart: cartItems };
 	} catch (error) {
@@ -266,13 +283,20 @@ export async function getOrders() {
 // Product Actions
 export async function getProducts(category?: string) {
 	try {
-		const products = await prisma.product.findMany({
-			where: {
-				isAvailable: true,
-				...(category && { category }),
+		// Cache products for 30 seconds to reduce DB load
+		const products = await withCache(
+			cacheKeys.products(category),
+			30000, // 30 seconds cache
+			async () => {
+				return await prisma.product.findMany({
+					where: {
+						isAvailable: true,
+						...(category && { category }),
+					},
+					orderBy: { createdAt: "desc" },
+				});
 			},
-			orderBy: { createdAt: "desc" },
-		});
+		);
 
 		return { success: true, products };
 	} catch (error) {
