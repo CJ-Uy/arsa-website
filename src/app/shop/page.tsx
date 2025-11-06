@@ -3,6 +3,9 @@ import { ShopClient } from "./shop-client";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+// Cache for 60 seconds, revalidate in background
+export const revalidate = 60;
+
 export default async function ARSAShopPage() {
 	const session = await auth.api.getSession({
 		headers: await headers(),

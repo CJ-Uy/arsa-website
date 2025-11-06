@@ -8,7 +8,7 @@ const useSSL = process.env.MINIO_USE_SSL === "true";
 const httpsAgent = useSSL
 	? new https.Agent({
 			rejectUnauthorized: false, // Accept self-signed certificates
-	  })
+		})
 	: undefined;
 
 export const minioClient = new Minio.Client({

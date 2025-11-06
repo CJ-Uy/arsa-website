@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
 
 		// Use original extension for receipts, .webp for products
 		const originalExtension = file.name.split(".").pop() || "jpg";
-		const fileName = type === "product" ? `${randomUUID()}.webp` : `${randomUUID()}.${originalExtension}`;
+		const fileName =
+			type === "product" ? `${randomUUID()}.webp` : `${randomUUID()}.${originalExtension}`;
 
 		// Upload to MinIO with correct content type
 		const contentType = type === "product" ? "image/webp" : file.type;

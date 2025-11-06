@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/main/theme-toggle";
@@ -75,7 +76,14 @@ export function Header() {
 				{/* Logo */}
 				<div className="flex items-center">
 					<Link href="/" className="flex items-center">
-						<img src="/images/logo.png" alt="ARSA Logo" className="h-12 w-12 object-contain" />
+						<Image
+							src="/images/logo.png"
+							alt="ARSA Logo"
+							width={48}
+							height={48}
+							className="h-12 w-12 object-contain"
+							priority
+						/>
 					</Link>
 				</div>
 

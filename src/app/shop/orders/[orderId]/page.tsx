@@ -168,7 +168,9 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								<Package className="text-primary mt-0.5 h-5 w-5" />
 								<div>
 									<p className="font-semibold">Order Processing</p>
-									<p className="text-muted-foreground text-sm">You'll receive updates via email in case of any issues with your order.</p>
+									<p className="text-muted-foreground text-sm">
+										You'll receive updates via email in case of any issues with your order.
+									</p>
 								</div>
 							</div>
 						</div>

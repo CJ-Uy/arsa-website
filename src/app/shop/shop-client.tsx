@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import { addToCart, getCart, updateCartItemQuantity } from "./actions";
 import { toast } from "sonner";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
+import Image from "next/image";
 import type { Session } from "@/lib/auth";
 
 type Product = {
@@ -68,15 +69,21 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		console.log("Should show sign in?", !session?.user);
 	}, [session]);
 
-	const filteredProducts =
-		selectedCategory === "all" ? products : products.filter((p) => p.category === selectedCategory);
+	// Memoize filtered products to avoid recalculating on every render
+	const filteredProducts = useMemo(
+		() =>
+			selectedCategory === "all"
+				? products
+				: products.filter((p) => p.category === selectedCategory),
+		[selectedCategory, products],
+	);
 
 	// Fetch cart items on mount
 	useEffect(() => {
 		if (session?.user) {
 			fetchCartItems();
 		}
-	}, [session]);
+	}, [session, fetchCartItems]);
 
 	// Listen for cart updates
 	useEffect(() => {
@@ -85,9 +92,10 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		};
 		window.addEventListener("cartUpdated", handleCartUpdate);
 		return () => window.removeEventListener("cartUpdated", handleCartUpdate);
-	}, []);
+	}, [fetchCartItems]);
 
-	const fetchCartItems = async () => {
+	// Memoize fetchCartItems to avoid recreating on every render
+	const fetchCartItems = useCallback(async () => {
 		const result = await getCart();
 		if (result.success && result.cart) {
 			setCartItems(
@@ -99,15 +107,20 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 				})),
 			);
 		}
-	};
+	}, []);
 
-	const getCartItem = (productId: string, size?: string | null) => {
-		return cartItems.find(
-			(item) => item.productId === productId && (size === undefined || item.size === size),
-		);
-	};
+	// Memoize getCartItem to avoid recreating on every render
+	const getCartItem = useCallback(
+		(productId: string, size?: string | null) => {
+			return cartItems.find(
+				(item) => item.productId === productId && (size === undefined || item.size === size),
+			);
+		},
+		[cartItems],
+	);
 
-	const handleSignIn = async () => {
+	// Memoize handleSignIn to avoid recreating on every render
+	const handleSignIn = useCallback(async () => {
 		setSigningIn(true);
 		try {
 			await signIn.social({
@@ -117,50 +130,63 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		} catch (error) {
 			setSigningIn(false);
 		}
-	};
+	}, []);
 
-	const handleAddToCart = async (productId: string, size?: string) => {
-		if (!session?.user) {
-			toast.error("Please sign in to add items to cart", {
-				action: {
-					label: "Sign In",
-					onClick: handleSignIn,
-				},
-			});
-			return;
-		}
-
-		setLoadingProducts((prev) => ({ ...prev, [productId]: true }));
-		try {
-			const result = await addToCart(productId, 1, size);
-			if (result.success) {
-				// Immediately update cart items for instant UI feedback
-				await fetchCartItems();
-				toast.success(result.message);
-			} else {
-				toast.error(result.message);
+	// Memoize handleAddToCart to avoid recreating on every render
+	const handleAddToCart = useCallback(
+		async (productId: string, size?: string) => {
+			if (!session?.user) {
+				toast.error("Please sign in to add items to cart", {
+					action: {
+						label: "Sign In",
+						onClick: handleSignIn,
+					},
+				});
+				return;
 			}
-		} finally {
-			setLoadingProducts((prev) => ({ ...prev, [productId]: false }));
-		}
-	};
 
-	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
-		setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: true }));
-		try {
-			const result = await updateCartItemQuantity(cartItemId, newQuantity);
-			if (result.success) {
-				// Immediately update cart items for instant UI feedback
-				await fetchCartItems();
-			} else {
-				toast.error(result.message || "Failed to update quantity");
+			setLoadingProducts((prev) => ({ ...prev, [productId]: true }));
+			try {
+				const result = await addToCart(productId, 1, size);
+				if (result.success) {
+					// Immediately update cart items for instant UI feedback
+					await fetchCartItems();
+					toast.success(result.message);
+					// Dispatch cart updated event for CartCounter
+					window.dispatchEvent(new Event("cartUpdated"));
+				} else {
+					toast.error(result.message);
+				}
+			} finally {
+				setLoadingProducts((prev) => ({ ...prev, [productId]: false }));
 			}
-		} finally {
-			setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: false }));
-		}
-	};
+		},
+		[session?.user, handleSignIn, fetchCartItems],
+	);
 
-	const getCategoryIcon = (category: string) => {
+	// Memoize handleUpdateQuantity to avoid recreating on every render
+	const handleUpdateQuantity = useCallback(
+		async (cartItemId: string, newQuantity: number) => {
+			setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: true }));
+			try {
+				const result = await updateCartItemQuantity(cartItemId, newQuantity);
+				if (result.success) {
+					// Immediately update cart items for instant UI feedback
+					await fetchCartItems();
+					// Dispatch cart updated event for CartCounter
+					window.dispatchEvent(new Event("cartUpdated"));
+				} else {
+					toast.error(result.message || "Failed to update quantity");
+				}
+			} finally {
+				setLoadingCartItems((prev) => ({ ...prev, [cartItemId]: false }));
+			}
+		},
+		[fetchCartItems],
+	);
+
+	// Memoize getCategoryIcon to avoid recreating on every render
+	const getCategoryIcon = useCallback((category: string) => {
 		switch (category) {
 			case "merch":
 				return <ShoppingBag className="h-4 w-4" />;
@@ -171,7 +197,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 			default:
 				return <ShoppingCart className="h-4 w-4" />;
 		}
-	};
+	}, []);
 
 	return (
 		<div>
@@ -247,9 +273,11 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 								<CardHeader>
 									<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
 										{product.image ? (
-											<img
+											<Image
 												src={product.image}
 												alt={product.name}
+												width={400}
+												height={400}
 												className="h-full w-full rounded-lg object-cover"
 												loading="lazy"
 											/>

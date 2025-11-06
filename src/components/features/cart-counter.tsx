@@ -30,11 +30,8 @@ export function CartCounter() {
 
 	useEffect(() => {
 		fetchCartCount();
-
-		// Refresh cart count every 5 seconds to keep it in sync
-		const interval = setInterval(fetchCartCount, 5000);
-
-		return () => clearInterval(interval);
+		// Removed polling interval - rely on cartUpdated events instead
+		// This eliminates 720 unnecessary DB queries per hour per user
 	}, []);
 
 	// Listen for custom cart update events

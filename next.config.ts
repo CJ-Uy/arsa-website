@@ -14,6 +14,18 @@ const nextConfig: NextConfig = {
 	experimental: {
 		// Reduce memory usage during build
 		webpackMemoryOptimizations: true,
+		// Enable optimized package imports for smaller bundles
+		optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
+	},
+	// Compiler optimizations
+	compiler: {
+		// Remove console logs in production for better performance
+		removeConsole:
+			process.env.NODE_ENV === "production"
+				? {
+						exclude: ["error", "warn"],
+					}
+				: false,
 	},
 	// Image optimization configuration
 	images: {
