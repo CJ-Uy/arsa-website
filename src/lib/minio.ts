@@ -27,16 +27,8 @@ export const BUCKETS = {
 	RECEIPTS: "receipts",
 };
 
-// Global flag to track initialization
-const globalForMinio = global as unknown as { minioInitialized: boolean };
-
 // Initialize buckets
 export async function initializeBuckets() {
-	// Prevent multiple initializations in development
-	if (globalForMinio.minioInitialized) {
-		return;
-	}
-
 	try {
 		for (const bucketName of Object.values(BUCKETS)) {
 			const exists = await minioClient.bucketExists(bucketName);
@@ -61,11 +53,6 @@ export async function initializeBuckets() {
 			}
 		}
 		console.log("MinIO buckets initialized");
-
-		// Mark as initialized in development to prevent re-runs on hot reload
-		if (process.env.NODE_ENV !== "production") {
-			globalForMinio.minioInitialized = true;
-		}
 	} catch (error) {
 		console.error("Error initializing MinIO buckets:", error);
 	}
@@ -118,9 +105,6 @@ export async function deleteFile(bucket: string, fileName: string): Promise<void
 		throw new Error("Failed to delete file");
 	}
 }
-
-// Auto-initialize buckets when module is imported
-initializeBuckets()
 
 // Get file URL (for private access with presigned URL)
 export async function getPresignedUrl(
