@@ -283,10 +283,10 @@ export async function getOrders() {
 // Product Actions
 export async function getProducts(category?: string) {
 	try {
-		// Cache products for 30 seconds to reduce DB load
+		// Cache products for 2 minutes to reduce DB load (increased due to VPS latency)
 		const products = await withCache(
 			cacheKeys.products(category),
-			30000, // 30 seconds cache
+			120000, // 2 minutes cache (was 30s)
 			async () => {
 				return await prisma.product.findMany({
 					where: {

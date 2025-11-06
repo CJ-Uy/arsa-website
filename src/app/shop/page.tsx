@@ -6,9 +6,6 @@ import { headers } from "next/headers";
 // Cache for 5 minutes for remote DB - products don't change that often
 export const revalidate = 300; // 5 minutes
 
-// Generate static params at build time (optional)
-export const dynamic = "force-dynamic"; // Ensure fresh session data
-
 export default async function ARSAShopPage() {
 	const session = await auth.api.getSession({
 		headers: await headers(),
