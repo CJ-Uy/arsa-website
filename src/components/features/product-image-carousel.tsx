@@ -64,7 +64,7 @@ export function ProductImageCarousel({
 					fill
 					className={cn(
 						"cursor-pointer transition-all duration-300",
-						isZoomedOut ? "object-contain" : "object-cover"
+						isZoomedOut ? "object-contain" : "object-cover",
 					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					onClick={() => setIsZoomedOut(!isZoomedOut)}
@@ -128,8 +128,8 @@ export function ProductImageCarousel({
 					alt={`${productName} - Image ${currentIndex + 1}`}
 					fill
 					className={cn(
-						"cursor-pointer select-none transition-all duration-300",
-						isZoomedOut ? "object-contain" : "object-cover"
+						"cursor-pointer transition-all duration-300 select-none",
+						isZoomedOut ? "object-contain" : "object-cover",
 					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
