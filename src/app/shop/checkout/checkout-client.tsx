@@ -201,7 +201,7 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 									<ol className="mt-2 list-inside list-decimal space-y-2">
 										<li>
 											Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
-											<strong>0912-345-6789</strong>
+											<strong>0967 027 4670</strong>
 										</li>
 										<li>Take a screenshot of the receipt</li>
 										<li>Upload the screenshot below</li>
