@@ -24,6 +24,7 @@ export function ProductImageCarousel({
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [touchStart, setTouchStart] = useState<number | null>(null);
 	const [touchEnd, setTouchEnd] = useState<number | null>(null);
+	const [isZoomedOut, setIsZoomedOut] = useState(false);
 
 	// Minimum swipe distance (in px) to trigger navigation
 	const minSwipeDistance = 50;
@@ -61,8 +62,12 @@ export function ProductImageCarousel({
 					src={images[0]}
 					alt={productName}
 					fill
-					className="object-contain"
+					className={cn(
+						"cursor-pointer transition-all duration-300",
+						isZoomedOut ? "object-contain" : "object-cover"
+					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+					onClick={() => setIsZoomedOut(!isZoomedOut)}
 				/>
 			</div>
 		);
@@ -122,10 +127,14 @@ export function ProductImageCarousel({
 					src={images[currentIndex]}
 					alt={`${productName} - Image ${currentIndex + 1}`}
 					fill
-					className="object-contain transition-opacity duration-300 select-none"
+					className={cn(
+						"cursor-pointer select-none transition-all duration-300",
+						isZoomedOut ? "object-contain" : "object-cover"
+					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
 					draggable={false}
+					onClick={() => setIsZoomedOut(!isZoomedOut)}
 				/>
 
 				{/* Navigation Buttons - Hidden on mobile, visible on hover on desktop */}
@@ -134,18 +143,24 @@ export function ProductImageCarousel({
 						variant="secondary"
 						size="icon"
 						className="bg-background/95 hover:bg-background border-border/50 h-8 w-8 rounded-full border shadow-lg backdrop-blur-sm sm:h-10 sm:w-10"
-						onClick={goToPrevious}
+						onClick={(e) => {
+							e.stopPropagation();
+							goToPrevious();
+						}}
 					>
-						<ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+						<ChevronLeft className="text-foreground h-4 w-4 sm:h-5 sm:w-5" />
 						<span className="sr-only">Previous image</span>
 					</Button>
 					<Button
 						variant="secondary"
 						size="icon"
 						className="bg-background/95 hover:bg-background border-border/50 h-8 w-8 rounded-full border shadow-lg backdrop-blur-sm sm:h-10 sm:w-10"
-						onClick={goToNext}
+						onClick={(e) => {
+							e.stopPropagation();
+							goToNext();
+						}}
 					>
-						<ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+						<ChevronRight className="text-foreground h-4 w-4 sm:h-5 sm:w-5" />
 						<span className="sr-only">Next image</span>
 					</Button>
 				</div>
