@@ -51,23 +51,24 @@ export function ProductImageCarousel({
 		return (
 			<div
 				className={cn(
-					"bg-muted relative w-full overflow-hidden rounded-lg",
+					"bg-muted relative w-full cursor-pointer overflow-hidden rounded-lg",
 					aspectRatio === "square" && "aspect-square",
 					aspectRatio === "portrait" && "aspect-[3/4]",
 					aspectRatio === "landscape" && "aspect-video",
 					className,
 				)}
+				onClick={() => setIsZoomedOut(!isZoomedOut)}
 			>
 				<Image
 					src={images[0]}
 					alt={productName}
 					fill
 					className={cn(
-						"cursor-pointer transition-all duration-300",
+						"transition-all duration-300 select-none",
 						isZoomedOut ? "object-contain" : "object-cover",
 					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-					onClick={() => setIsZoomedOut(!isZoomedOut)}
+					draggable={false}
 				/>
 			</div>
 		);
@@ -114,7 +115,7 @@ export function ProductImageCarousel({
 			{/* Main Image with Navigation */}
 			<div
 				className={cn(
-					"bg-muted group relative w-full touch-pan-y overflow-hidden rounded-lg",
+					"bg-muted group relative w-full cursor-pointer touch-pan-y overflow-hidden rounded-lg",
 					aspectRatio === "square" && "aspect-square",
 					aspectRatio === "portrait" && "aspect-[3/4]",
 					aspectRatio === "landscape" && "aspect-video",
@@ -122,19 +123,19 @@ export function ProductImageCarousel({
 				onTouchStart={onTouchStart}
 				onTouchMove={onTouchMove}
 				onTouchEnd={onTouchEnd}
+				onClick={() => setIsZoomedOut(!isZoomedOut)}
 			>
 				<Image
 					src={images[currentIndex]}
 					alt={`${productName} - Image ${currentIndex + 1}`}
 					fill
 					className={cn(
-						"cursor-pointer transition-all duration-300 select-none",
+						"transition-all duration-300 select-none",
 						isZoomedOut ? "object-contain" : "object-cover",
 					)}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
 					draggable={false}
-					onClick={() => setIsZoomedOut(!isZoomedOut)}
 				/>
 
 				{/* Navigation Buttons - Hidden on mobile, visible on hover on desktop */}
