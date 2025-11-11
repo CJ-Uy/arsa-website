@@ -341,22 +341,21 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 						const requiresSize = product.availableSizes.length > 0;
 
 						return (
-							<Card key={product.id} className="flex flex-col">
-								<CardHeader>
-									<div className="mb-4">
-										<ProductImageCarousel
-											images={
-												product.imageUrls.length > 0
-													? product.imageUrls
-													: product.image
-														? [product.image]
-														: []
-											}
-											productName={product.name}
-											aspectRatio="square"
-											showThumbnails={true}
-										/>
-									</div>
+							<Card key={product.id} className="flex flex-col overflow-hidden">
+								<CardHeader className="pb-3">
+									<ProductImageCarousel
+										images={
+											product.imageUrls.length > 0
+												? product.imageUrls
+												: product.image
+													? [product.image]
+													: []
+										}
+										productName={product.name}
+										aspectRatio="square"
+										showThumbnails={true}
+										className="mb-4"
+									/>
 									<div className="flex items-start justify-between">
 										<CardTitle className="text-lg">{product.name}</CardTitle>
 										<div className="ml-2 flex gap-1">
