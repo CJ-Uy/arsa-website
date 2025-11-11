@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,11 @@ export function ProductImageCarousel({
 	showThumbnails = true,
 }: ProductImageCarouselProps) {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [touchStart, setTouchStart] = useState<number | null>(null);
+	const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+	// Minimum swipe distance (in px) to trigger navigation
+	const minSwipeDistance = 50;
 
 	// If no images, show placeholder
 	if (!images || images.length === 0) {
@@ -75,24 +80,52 @@ export function ProductImageCarousel({
 		setCurrentIndex(index);
 	};
 
+	// Touch handlers for swipe gestures
+	const onTouchStart = (e: React.TouchEvent) => {
+		setTouchEnd(null);
+		setTouchStart(e.targetTouches[0].clientX);
+	};
+
+	const onTouchMove = (e: React.TouchEvent) => {
+		setTouchEnd(e.targetTouches[0].clientX);
+	};
+
+	const onTouchEnd = () => {
+		if (!touchStart || !touchEnd) return;
+
+		const distance = touchStart - touchEnd;
+		const isLeftSwipe = distance > minSwipeDistance;
+		const isRightSwipe = distance < -minSwipeDistance;
+
+		if (isLeftSwipe) {
+			goToNext();
+		} else if (isRightSwipe) {
+			goToPrevious();
+		}
+	};
+
 	return (
 		<div className={cn("w-full", className)}>
 			{/* Main Image with Navigation */}
 			<div
 				className={cn(
-					"bg-muted group relative w-full overflow-hidden rounded-lg",
+					"bg-muted group relative w-full touch-pan-y overflow-hidden rounded-lg",
 					aspectRatio === "square" && "aspect-square",
 					aspectRatio === "portrait" && "aspect-[3/4]",
 					aspectRatio === "landscape" && "aspect-video",
 				)}
+				onTouchStart={onTouchStart}
+				onTouchMove={onTouchMove}
+				onTouchEnd={onTouchEnd}
 			>
 				<Image
 					src={images[currentIndex]}
 					alt={`${productName} - Image ${currentIndex + 1}`}
 					fill
-					className="object-contain transition-opacity duration-300"
+					className="object-contain transition-opacity duration-300 select-none"
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
+					draggable={false}
 				/>
 
 				{/* Navigation Buttons - Hidden on mobile, visible on hover on desktop */}
@@ -100,7 +133,7 @@ export function ProductImageCarousel({
 					<Button
 						variant="secondary"
 						size="icon"
-						className="bg-background/80 hover:bg-background/90 h-8 w-8 rounded-full backdrop-blur-sm sm:h-10 sm:w-10"
+						className="bg-background/95 hover:bg-background border-border/50 h-8 w-8 rounded-full border shadow-lg backdrop-blur-sm sm:h-10 sm:w-10"
 						onClick={goToPrevious}
 					>
 						<ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -109,7 +142,7 @@ export function ProductImageCarousel({
 					<Button
 						variant="secondary"
 						size="icon"
-						className="bg-background/80 hover:bg-background/90 h-8 w-8 rounded-full backdrop-blur-sm sm:h-10 sm:w-10"
+						className="bg-background/95 hover:bg-background border-border/50 h-8 w-8 rounded-full border shadow-lg backdrop-blur-sm sm:h-10 sm:w-10"
 						onClick={goToNext}
 					>
 						<ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
