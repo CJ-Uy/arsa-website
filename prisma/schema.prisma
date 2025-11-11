@@ -98,8 +98,9 @@ model Product {
   description    String
   price          Float
   category       String      // "merch", "arsari-sari", "other"
-  image          String?
-  stock          Int         @default(0)
+  image          String?     // Kept for backward compatibility
+  imageUrls      String[]    @default([]) // Array of image URLs for carousel
+  stock          Int?        // Optional stock tracking
   isAvailable    Boolean     @default(true)
   isPreOrder     Boolean     @default(false) // If true, stock shows order count
   availableSizes String[]    @default([])    // Array of sizes: ["XS", "S", "M", "L", "XL", "XXL"]

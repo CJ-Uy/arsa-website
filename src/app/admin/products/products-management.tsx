@@ -24,7 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 import { toast } from "sonner";
-import { Package, Plus, Edit2, Trash2, Upload } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Upload, X } from "lucide-react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -43,7 +43,8 @@ type Product = {
 	price: number;
 	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
-	stock: number;
+	imageUrls: string[];
+	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
 	availableSizes: string[];
@@ -59,7 +60,8 @@ type ProductFormData = {
 	price: number;
 	category: "merch" | "arsari-sari" | "other";
 	image: string;
-	stock: number;
+	imageUrls: string[];
+	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
 	availableSizes: string[];
@@ -80,7 +82,8 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 		price: 0,
 		category: "merch",
 		image: "",
-		stock: 0,
+		imageUrls: [],
+		stock: null,
 		isAvailable: true,
 		isPreOrder: false,
 		availableSizes: [],
@@ -93,7 +96,8 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			price: 0,
 			category: "merch",
 			image: "",
-			stock: 0,
+			imageUrls: [],
+			stock: null,
 			isAvailable: true,
 			isPreOrder: false,
 			availableSizes: [],
@@ -110,6 +114,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 				price: product.price,
 				category: product.category,
 				image: product.image || "",
+				imageUrls: product.imageUrls || [],
 				stock: product.stock,
 				isAvailable: product.isAvailable,
 				isPreOrder: product.isPreOrder,
@@ -127,37 +132,65 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 	};
 
 	const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
+		const files = e.target.files;
+		if (!files || files.length === 0) return;
 
-		if (!file.type.startsWith("image/")) {
-			toast.error("Please upload an image file");
+		// Validate all files are images
+		const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+		if (validFiles.length === 0) {
+			toast.error("Please upload image files only");
 			return;
+		}
+
+		if (validFiles.length !== files.length) {
+			toast.error("Some files were skipped (not images)");
 		}
 
 		setUploading(true);
 		try {
-			const formData = new FormData();
-			formData.append("file", file);
-			formData.append("type", "product");
+			const uploadPromises = validFiles.map(async (file) => {
+				const formData = new FormData();
+				formData.append("file", file);
+				formData.append("type", "product");
 
-			const response = await fetch("/api/upload", {
-				method: "POST",
-				body: formData,
+				const response = await fetch("/api/upload", {
+					method: "POST",
+					body: formData,
+				});
+
+				if (!response.ok) {
+					throw new Error(`Upload failed for ${file.name}`);
+				}
+
+				const { url } = await response.json();
+				return url;
 			});
 
-			if (!response.ok) {
-				throw new Error("Upload failed");
-			}
+			const urls = await Promise.all(uploadPromises);
 
-			const { url } = await response.json();
-			setFormData((prev) => ({ ...prev, image: url }));
-			toast.success("Image uploaded");
+			setFormData((prev) => ({
+				...prev,
+				imageUrls: [...prev.imageUrls, ...urls],
+				// Set first image as main image if not set
+				image: prev.image || urls[0],
+			}));
+
+			toast.success(`${urls.length} image${urls.length > 1 ? "s" : ""} uploaded`);
 		} catch (error) {
-			toast.error("Failed to upload image");
+			toast.error("Failed to upload images");
 		} finally {
 			setUploading(false);
+			// Reset the file input
+			e.target.value = "";
 		}
+	};
+
+	const handleRemoveImage = (index: number) => {
+		setFormData((prev) => ({
+			...prev,
+			imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+		}));
+		toast.success("Image removed");
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -223,8 +256,21 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 					products.map((product) => (
 						<Card key={product.id}>
 							<CardHeader>
-								<div className="bg-muted mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-									{product.image ? (
+								<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
+									{product.imageUrls && product.imageUrls.length > 0 ? (
+										<>
+											<img
+												src={product.imageUrls[0]}
+												alt={product.name}
+												className="h-full w-full object-cover"
+											/>
+											{product.imageUrls.length > 1 && (
+												<div className="bg-background/80 absolute right-2 bottom-2 rounded-full px-2 py-1 text-xs backdrop-blur-sm">
+													+{product.imageUrls.length - 1}
+												</div>
+											)}
+										</>
+									) : product.image ? (
 										<img
 											src={product.image}
 											alt={product.name}
@@ -245,7 +291,9 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								<p className="text-muted-foreground line-clamp-2 text-sm">{product.description}</p>
 								<div className="flex items-center justify-between text-sm">
 									<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
-									<span>Stock: {product.stock}</span>
+									{product.stock !== null && (
+										<span className="text-muted-foreground text-sm">Stock: {product.stock}</span>
+									)}
 								</div>
 								<Badge variant="outline">{product.category}</Badge>
 								<div className="flex gap-2 pt-2">
@@ -324,20 +372,23 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 							</div>
 
 							<div>
-								<Label htmlFor="stock">Stock *</Label>
+								<Label htmlFor="stock">Stock (optional)</Label>
 								<Input
 									id="stock"
 									type="number"
 									min="0"
-									value={formData.stock}
+									value={formData.stock ?? ""}
 									onChange={(e) =>
 										setFormData({
 											...formData,
-											stock: parseInt(e.target.value),
+											stock: e.target.value ? parseInt(e.target.value) : null,
 										})
 									}
-									required
+									placeholder="Leave empty to hide stock"
 								/>
+								<p className="text-muted-foreground mt-1 text-xs">
+									Leave empty if you don't want to track stock
+								</p>
 							</div>
 						</div>
 
@@ -364,25 +415,48 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 						</div>
 
 						<div>
-							<Label htmlFor="image">Product Image</Label>
-							<div className="mt-2 flex gap-2">
+							<Label htmlFor="image">Product Images</Label>
+							<p className="text-muted-foreground mb-2 text-xs">
+								Upload multiple images for a carousel. First image will be the main display.
+							</p>
+							<div className="mt-2 flex items-center gap-2">
 								<Input
 									id="image-file"
 									type="file"
 									accept="image/*"
+									multiple
 									onChange={handleImageUpload}
 									disabled={uploading}
 									className="flex-1"
 								/>
 								{uploading && <p className="text-muted-foreground text-sm">Uploading...</p>}
 							</div>
-							{formData.image && (
-								<div className="mt-2">
-									<img
-										src={formData.image}
-										alt="Preview"
-										className="h-32 w-32 rounded object-cover"
-									/>
+							{formData.imageUrls && formData.imageUrls.length > 0 && (
+								<div className="mt-3">
+									<p className="mb-2 text-sm font-medium">Uploaded Images:</p>
+									<div className="flex flex-wrap gap-2">
+										{formData.imageUrls.map((url, index) => (
+											<div key={index} className="group relative">
+												<img
+													src={url}
+													alt={`Product ${index + 1}`}
+													className="border-border h-24 w-24 rounded border-2 object-cover"
+												/>
+												<button
+													type="button"
+													onClick={() => handleRemoveImage(index)}
+													className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+												>
+													<X className="h-3 w-3" />
+												</button>
+												{index === 0 && (
+													<div className="bg-primary/90 text-primary-foreground absolute right-0 bottom-0 left-0 py-0.5 text-center text-xs">
+														Main
+													</div>
+												)}
+											</div>
+										))}
+									</div>
 								</div>
 							)}
 						</div>

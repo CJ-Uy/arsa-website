@@ -8,6 +8,7 @@ import { updateCartItemQuantity, removeFromCart } from "../actions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 
 type CartItem = {
 	id: string;
@@ -19,7 +20,8 @@ type CartItem = {
 		description: string;
 		price: number;
 		image: string | null;
-		stock: number;
+		imageUrls: string[];
+		stock: number | null;
 	};
 };
 
@@ -97,16 +99,19 @@ export function CartClient({ initialCart }: CartClientProps) {
 					<Card key={item.id}>
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex flex-col gap-4 sm:flex-row">
-								<div className="bg-muted flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg">
-									{item.product.image ? (
-										<img
-											src={item.product.image}
-											alt={item.product.name}
-											className="h-full w-full rounded-lg object-cover"
-										/>
-									) : (
-										<ShoppingBag className="text-muted-foreground h-8 w-8" />
-									)}
+								<div className="w-32 flex-shrink-0 sm:w-40">
+									<ProductImageCarousel
+										images={
+											item.product.imageUrls.length > 0
+												? item.product.imageUrls
+												: item.product.image
+													? [item.product.image]
+													: []
+										}
+										productName={item.product.name}
+										aspectRatio="square"
+										showThumbnails={false}
+									/>
 								</div>
 
 								<div className="min-w-0 flex-1">
@@ -154,7 +159,10 @@ export function CartClient({ initialCart }: CartClientProps) {
 											variant="outline"
 											size="icon"
 											onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-											disabled={loading === item.id || item.quantity >= item.product.stock}
+											disabled={
+												loading === item.id ||
+												(item.product.stock !== null && item.quantity >= item.product.stock)
+											}
 										>
 											{loading === item.id ? (
 												<Loader2 className="h-4 w-4 animate-spin" />

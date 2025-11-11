@@ -27,6 +27,7 @@ import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
 import type { Session } from "@/lib/auth";
+import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 
 type Product = {
 	id: string;
@@ -35,7 +36,8 @@ type Product = {
 	price: number;
 	category: string;
 	image: string | null;
-	stock: number;
+	imageUrls: string[];
+	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
 	availableSizes: string[];
@@ -271,19 +273,19 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 						return (
 							<Card key={product.id} className="flex flex-col">
 								<CardHeader>
-									<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-										{product.image ? (
-											<Image
-												src={product.image}
-												alt={product.name}
-												width={400}
-												height={400}
-												className="h-full w-full rounded-lg object-cover"
-												loading="lazy"
-											/>
-										) : (
-											<Package className="text-muted-foreground h-16 w-16" />
-										)}
+									<div className="mb-4">
+										<ProductImageCarousel
+											images={
+												product.imageUrls.length > 0
+													? product.imageUrls
+													: product.image
+														? [product.image]
+														: []
+											}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={true}
+										/>
 									</div>
 									<div className="flex items-start justify-between">
 										<CardTitle className="text-lg">{product.name}</CardTitle>
@@ -301,9 +303,6 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 								<CardContent className="flex-1 space-y-3">
 									<div className="flex items-center justify-between">
 										<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
-										<span className="text-muted-foreground text-sm">
-											{product.isPreOrder ? `${product.stock} ordered` : `Stock: ${product.stock}`}
-										</span>
 									</div>
 
 									{/* Size Selection */}
@@ -353,7 +352,9 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 												size="icon"
 												onClick={() => handleUpdateQuantity(cartItem.id, cartItem.quantity + 1)}
 												disabled={
-													(!product.isPreOrder && cartItem.quantity >= product.stock) ||
+													(!product.isPreOrder &&
+														product.stock !== null &&
+														cartItem.quantity >= product.stock) ||
 													isCartItemLoading
 												}
 											>
@@ -365,7 +366,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 											className="w-full"
 											onClick={() => handleAddToCart(product.id, selectedSize)}
 											disabled={
-												(!product.isPreOrder && product.stock === 0) ||
+												(!product.isPreOrder && product.stock !== null && product.stock === 0) ||
 												!product.isAvailable ||
 												isProductLoading ||
 												(requiresSize && !selectedSize)
@@ -378,7 +379,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 											)}
 											{isProductLoading
 												? "Adding..."
-												: !product.isPreOrder && product.stock === 0
+												: !product.isPreOrder && product.stock !== null && product.stock === 0
 													? "Out of Stock"
 													: requiresSize && !selectedSize
 														? "Select Size"

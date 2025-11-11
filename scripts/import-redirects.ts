@@ -9,7 +9,9 @@ async function importRedirects() {
 
 		if (!jsonFilePath) {
 			console.error("Usage: npx tsx scripts/import-redirects.ts <path-to-json-file>");
-			console.error("Example: npx tsx scripts/import-redirects.ts exports/redirects-2024-01-01.json");
+			console.error(
+				"Example: npx tsx scripts/import-redirects.ts exports/redirects-2024-01-01.json",
+			);
 			process.exit(1);
 		}
 
@@ -37,7 +39,9 @@ async function importRedirects() {
 
 		// Check for conflicts
 		const existingCodes = new Set(
-			(await prisma.redirects.findMany({ select: { redirectCode: true } })).map((r) => r.redirectCode),
+			(await prisma.redirects.findMany({ select: { redirectCode: true } })).map(
+				(r) => r.redirectCode,
+			),
 		);
 
 		const conflicts = redirects.filter((r) => existingCodes.has(r.redirectCode));
