@@ -40,6 +40,64 @@ import Image from "next/image";
 import type { Session } from "@/lib/auth";
 import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 
+// Helper component to format product descriptions with lists
+function ProductDescription({ description }: { description: string }) {
+	// Split by newlines and identify list items (lines starting with - or •)
+	const lines = description.split("\n");
+	const elements: React.ReactNode[] = [];
+	let currentText: string[] = [];
+	let currentList: string[] = [];
+
+	const flushText = () => {
+		if (currentText.length > 0) {
+			elements.push(
+				<p key={`text-${elements.length}`} className="text-muted-foreground text-sm">
+					{currentText.join("\n")}
+				</p>,
+			);
+			currentText = [];
+		}
+	};
+
+	const flushList = () => {
+		if (currentList.length > 0) {
+			elements.push(
+				<ul
+					key={`list-${elements.length}`}
+					className="text-muted-foreground mt-2 space-y-1 text-sm"
+				>
+					{currentList.map((item, idx) => (
+						<li key={idx} className="flex items-start gap-2">
+							<span className="text-primary mt-0.5 text-xs">•</span>
+							<span>{item}</span>
+						</li>
+					))}
+				</ul>,
+			);
+			currentList = [];
+		}
+	};
+
+	lines.forEach((line) => {
+		const trimmedLine = line.trim();
+		// Check if line is a list item (starts with -, •, or *)
+		if (trimmedLine.match(/^[-•*]\s+/)) {
+			flushText();
+			// Remove the bullet point and add to list
+			currentList.push(trimmedLine.replace(/^[-•*]\s+/, ""));
+		} else if (trimmedLine) {
+			flushList();
+			currentText.push(trimmedLine);
+		}
+	});
+
+	// Flush any remaining content
+	flushText();
+	flushList();
+
+	return <div className="space-y-1">{elements}</div>;
+}
+
 type Product = {
 	id: string;
 	name: string;
@@ -367,7 +425,7 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 											<Badge variant="secondary">{getCategoryIcon(product.category)}</Badge>
 										</div>
 									</div>
-									<CardDescription className="line-clamp-2">{product.description}</CardDescription>
+									<ProductDescription description={product.description} />
 								</CardHeader>
 								<CardContent className="flex-1 space-y-3">
 									<div className="flex items-center justify-between">

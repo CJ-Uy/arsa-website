@@ -10,6 +10,73 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 
+// Helper component to format product descriptions with lists
+function ProductDescription({
+	description,
+	compact = false,
+}: {
+	description: string;
+	compact?: boolean;
+}) {
+	// Split by newlines and identify list items (lines starting with - or •)
+	const lines = description.split("\n");
+	const elements: React.ReactNode[] = [];
+	let currentText: string[] = [];
+	let currentList: string[] = [];
+
+	const flushText = () => {
+		if (currentText.length > 0) {
+			elements.push(
+				<p
+					key={`text-${elements.length}`}
+					className={`text-muted-foreground text-sm ${compact ? "line-clamp-1" : ""}`}
+				>
+					{currentText.join(" ")}
+				</p>,
+			);
+			currentText = [];
+		}
+	};
+
+	const flushList = () => {
+		if (currentList.length > 0) {
+			elements.push(
+				<ul
+					key={`list-${elements.length}`}
+					className={`text-muted-foreground space-y-0.5 text-xs ${compact ? "line-clamp-2" : "mt-1"}`}
+				>
+					{currentList.map((item, idx) => (
+						<li key={idx} className="flex items-start gap-1.5">
+							<span className="text-primary mt-0.5 text-xs">•</span>
+							<span className="leading-tight">{item}</span>
+						</li>
+					))}
+				</ul>,
+			);
+			currentList = [];
+		}
+	};
+
+	lines.forEach((line) => {
+		const trimmedLine = line.trim();
+		// Check if line is a list item (starts with -, •, or *)
+		if (trimmedLine.match(/^[-•*]\s+/)) {
+			flushText();
+			// Remove the bullet point and add to list
+			currentList.push(trimmedLine.replace(/^[-•*]\s+/, ""));
+		} else if (trimmedLine) {
+			flushList();
+			currentText.push(trimmedLine);
+		}
+	});
+
+	// Flush any remaining content
+	flushText();
+	flushList();
+
+	return <div className={compact ? "space-y-0.5" : "space-y-1"}>{elements}</div>;
+}
+
 type CartItem = {
 	id: string;
 	quantity: number;
@@ -121,9 +188,9 @@ export function CartClient({ initialCart }: CartClientProps) {
 											Size: <span className="text-foreground font-medium">{item.size}</span>
 										</p>
 									)}
-									<p className="text-muted-foreground mb-2 line-clamp-2 text-sm">
-										{item.product.description}
-									</p>
+									<div className="mb-2">
+										<ProductDescription description={item.product.description} compact={true} />
+									</div>
 									<p className="text-lg font-bold">₱{item.product.price.toFixed(2)}</p>
 								</div>
 
