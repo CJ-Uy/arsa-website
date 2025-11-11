@@ -588,7 +588,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								Select sizes if this product requires size selection (e.g., T-shirts)
 							</p>
 							<div className="flex flex-wrap gap-2">
-								{["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+								{["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"].map((size) => (
 									<div key={size} className="flex items-center space-x-2">
 										<input
 											type="checkbox"

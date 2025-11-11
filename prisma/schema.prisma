@@ -103,7 +103,7 @@ model Product {
   stock          Int?        // Optional stock tracking
   isAvailable    Boolean     @default(true)
   isPreOrder     Boolean     @default(false) // If true, stock shows order count
-  availableSizes String[]    @default([])    // Array of sizes: ["XS", "S", "M", "L", "XL", "XXL"]
+  availableSizes String[]    @default([])    // Array of sizes: ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
