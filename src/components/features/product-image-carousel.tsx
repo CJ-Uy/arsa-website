@@ -45,7 +45,7 @@ export function ProductImageCarousel({
 		return (
 			<div
 				className={cn(
-					"relative w-full overflow-hidden rounded-lg",
+					"bg-muted relative w-full overflow-hidden rounded-lg",
 					aspectRatio === "square" && "aspect-square",
 					aspectRatio === "portrait" && "aspect-[3/4]",
 					aspectRatio === "landscape" && "aspect-video",
@@ -56,7 +56,7 @@ export function ProductImageCarousel({
 					src={images[0]}
 					alt={productName}
 					fill
-					className="object-cover"
+					className="object-contain"
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 				/>
 			</div>
@@ -76,11 +76,11 @@ export function ProductImageCarousel({
 	};
 
 	return (
-		<div className={cn("space-y-2", className)}>
+		<div className={cn("w-full", className)}>
 			{/* Main Image with Navigation */}
 			<div
 				className={cn(
-					"group relative w-full overflow-hidden rounded-lg",
+					"bg-muted group relative w-full overflow-hidden rounded-lg",
 					aspectRatio === "square" && "aspect-square",
 					aspectRatio === "portrait" && "aspect-[3/4]",
 					aspectRatio === "landscape" && "aspect-video",
@@ -90,7 +90,7 @@ export function ProductImageCarousel({
 					src={images[currentIndex]}
 					alt={`${productName} - Image ${currentIndex + 1}`}
 					fill
-					className="object-cover transition-opacity duration-300"
+					className="object-contain transition-opacity duration-300"
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
 				/>
@@ -123,35 +123,37 @@ export function ProductImageCarousel({
 				</div>
 			</div>
 
-			{/* Thumbnail Navigation */}
+			{/* Thumbnail Navigation - Desktop */}
 			{showThumbnails && images.length > 1 && (
-				<div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent flex gap-2 overflow-x-auto pb-2">
-					{images.map((image, index) => (
-						<button
-							key={index}
-							onClick={() => goToIndex(index)}
-							className={cn(
-								"relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border-2 transition-all duration-200 sm:h-20 sm:w-20",
-								currentIndex === index
-									? "border-primary ring-primary ring-offset-background ring-2 ring-offset-2"
-									: "hover:border-muted-foreground/50 border-transparent",
-							)}
-						>
-							<Image
-								src={image}
-								alt={`${productName} thumbnail ${index + 1}`}
-								fill
-								className="object-cover"
-								sizes="80px"
-							/>
-						</button>
-					))}
+				<div className="relative mt-3 hidden sm:block">
+					<div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40 flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-2">
+						{images.map((image, index) => (
+							<button
+								key={index}
+								onClick={() => goToIndex(index)}
+								className={cn(
+									"relative h-16 w-16 flex-shrink-0 snap-start overflow-hidden rounded-md border-2 transition-all duration-200",
+									currentIndex === index
+										? "border-primary ring-primary ring-offset-background scale-105 ring-2 ring-offset-2"
+										: "border-border hover:border-muted-foreground/50 hover:scale-105",
+								)}
+							>
+								<Image
+									src={image}
+									alt={`${productName} thumbnail ${index + 1}`}
+									fill
+									className="object-cover"
+									sizes="64px"
+								/>
+							</button>
+						))}
+					</div>
 				</div>
 			)}
 
 			{/* Touch Indicator for Mobile */}
 			{images.length > 1 && (
-				<div className="flex justify-center gap-1.5 sm:hidden">
+				<div className="mt-3 flex justify-center gap-1.5 sm:hidden">
 					{images.map((_, index) => (
 						<button
 							key={index}
