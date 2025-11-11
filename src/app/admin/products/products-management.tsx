@@ -24,7 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 import { toast } from "sonner";
-import { Package, Plus, Edit2, Trash2, Upload, X } from "lucide-react";
+import { Package, Plus, Edit2, Trash2, Upload, X, RotateCw, GripVertical } from "lucide-react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -191,6 +191,99 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			imageUrls: prev.imageUrls.filter((_, i) => i !== index),
 		}));
 		toast.success("Image removed");
+	};
+
+	const handleRotateImage = async (index: number) => {
+		const imageUrl = formData.imageUrls[index];
+		setUploading(true);
+		try {
+			// Fetch the image
+			const response = await fetch(imageUrl);
+			const blob = await response.blob();
+
+			// Create a canvas to rotate the image
+			const img = new Image();
+			img.crossOrigin = "anonymous";
+
+			await new Promise((resolve, reject) => {
+				img.onload = resolve;
+				img.onerror = reject;
+				img.src = URL.createObjectURL(blob);
+			});
+
+			const canvas = document.createElement("canvas");
+			canvas.width = img.height;
+			canvas.height = img.width;
+			const ctx = canvas.getContext("2d");
+
+			if (ctx) {
+				ctx.translate(canvas.width / 2, canvas.height / 2);
+				ctx.rotate((90 * Math.PI) / 180);
+				ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+				// Convert canvas to blob and upload
+				canvas.toBlob(
+					async (rotatedBlob) => {
+						if (rotatedBlob) {
+							const formDataUpload = new FormData();
+							formDataUpload.append("file", rotatedBlob, "rotated.jpg");
+							formDataUpload.append("type", "product");
+
+							const uploadResponse = await fetch("/api/upload", {
+								method: "POST",
+								body: formDataUpload,
+							});
+
+							if (uploadResponse.ok) {
+								const { url } = await uploadResponse.json();
+								setFormData((prev) => ({
+									...prev,
+									imageUrls: prev.imageUrls.map((u, i) => (i === index ? url : u)),
+								}));
+								toast.success("Image rotated");
+							}
+						}
+						setUploading(false);
+					},
+					"image/jpeg",
+					0.9,
+				);
+			}
+		} catch (error) {
+			toast.error("Failed to rotate image");
+			setUploading(false);
+		}
+	};
+
+	const handleReorderImages = (fromIndex: number, toIndex: number) => {
+		setFormData((prev) => {
+			const newUrls = [...prev.imageUrls];
+			const [movedItem] = newUrls.splice(fromIndex, 1);
+			newUrls.splice(toIndex, 0, movedItem);
+			return {
+				...prev,
+				imageUrls: newUrls,
+				image: newUrls[0] || prev.image,
+			};
+		});
+	};
+
+	const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+		e.dataTransfer.effectAllowed = "move";
+		e.dataTransfer.setData("text/html", index.toString());
+	};
+
+	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+	};
+
+	const handleDrop = (e: React.DragEvent<HTMLDivElement>, toIndex: number) => {
+		e.preventDefault();
+		const fromIndex = parseInt(e.dataTransfer.getData("text/html"));
+		if (fromIndex !== toIndex) {
+			handleReorderImages(fromIndex, toIndex);
+		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -434,23 +527,50 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 							{formData.imageUrls && formData.imageUrls.length > 0 && (
 								<div className="mt-3">
 									<p className="mb-2 text-sm font-medium">Uploaded Images:</p>
+									<p className="text-muted-foreground mb-3 text-xs">
+										Drag images to reorder. First image is the main display image.
+									</p>
 									<div className="flex flex-wrap gap-2">
 										{formData.imageUrls.map((url, index) => (
-											<div key={index} className="group relative">
+											<div
+												key={index}
+												draggable
+												onDragStart={(e) => handleDragStart(e, index)}
+												onDragOver={handleDragOver}
+												onDrop={(e) => handleDrop(e, index)}
+												className="group relative cursor-move"
+											>
 												<img
 													src={url}
 													alt={`Product ${index + 1}`}
 													className="border-border h-24 w-24 rounded border-2 object-cover"
 												/>
+												{/* Drag handle indicator */}
+												<div className="bg-background/80 absolute top-1 left-1 rounded p-0.5 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+													<GripVertical className="h-3 w-3" />
+												</div>
+												{/* Rotate button */}
+												<button
+													type="button"
+													onClick={() => handleRotateImage(index)}
+													disabled={uploading}
+													className="bg-background/80 hover:bg-background absolute top-1 right-1 rounded p-1 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+													title="Rotate 90° clockwise"
+												>
+													<RotateCw className="h-3 w-3" />
+												</button>
+												{/* Remove button */}
 												<button
 													type="button"
 													onClick={() => handleRemoveImage(index)}
 													className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
+													title="Remove image"
 												>
 													<X className="h-3 w-3" />
 												</button>
+												{/* Main image badge */}
 												{index === 0 && (
-													<div className="bg-primary/90 text-primary-foreground absolute right-0 bottom-0 left-0 py-0.5 text-center text-xs">
+													<div className="bg-primary/90 text-primary-foreground absolute right-0 bottom-0 left-0 py-0.5 text-center text-xs font-medium">
 														Main
 													</div>
 												)}

@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ShoppingCart, Package, ShoppingBag, Store, Plus, Minus, Loader2 } from "lucide-react";
+import {
+	ShoppingCart,
+	Package,
+	ShoppingBag,
+	Store,
+	Plus,
+	Minus,
+	Loader2,
+	Search,
+	ArrowUpDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Card,
 	CardContent,
@@ -58,6 +69,10 @@ type ShopClientProps = {
 export function ShopClient({ initialProducts, session }: ShopClientProps) {
 	const [products] = useState<Product[]>(initialProducts);
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
+	const [searchQuery, setSearchQuery] = useState<string>("");
+	const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "price-asc" | "price-desc">(
+		"name-asc",
+	);
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [loadingProducts, setLoadingProducts] = useState<Record<string, boolean>>({});
 	const [loadingCartItems, setLoadingCartItems] = useState<Record<string, boolean>>({});
@@ -71,14 +86,39 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 		console.log("Should show sign in?", !session?.user);
 	}, [session]);
 
-	// Memoize filtered products to avoid recalculating on every render
-	const filteredProducts = useMemo(
-		() =>
+	// Memoize filtered, searched, and sorted products
+	const filteredProducts = useMemo(() => {
+		let filtered =
 			selectedCategory === "all"
 				? products
-				: products.filter((p) => p.category === selectedCategory),
-		[selectedCategory, products],
-	);
+				: products.filter((p) => p.category === selectedCategory);
+
+		// Apply search filter
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			filtered = filtered.filter(
+				(p) => p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query),
+			);
+		}
+
+		// Apply sorting
+		filtered = [...filtered].sort((a, b) => {
+			switch (sortBy) {
+				case "name-asc":
+					return a.name.localeCompare(b.name);
+				case "name-desc":
+					return b.name.localeCompare(a.name);
+				case "price-asc":
+					return a.price - b.price;
+				case "price-desc":
+					return b.price - a.price;
+				default:
+					return 0;
+			}
+		});
+
+		return filtered;
+	}, [selectedCategory, products, searchQuery, sortBy]);
 
 	// Memoize fetchCartItems to avoid recreating on every render
 	const fetchCartItems = useCallback(async () => {
@@ -203,7 +243,8 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 
 	return (
 		<div>
-			<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			{/* Category Tabs and Cart Button */}
+			<div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<Tabs
 					value={selectedCategory}
 					onValueChange={setSelectedCategory}
@@ -227,6 +268,35 @@ export function ShopClient({ initialProducts, session }: ShopClientProps) {
 						</Button>
 					</Link>
 				)}
+			</div>
+
+			{/* Search and Sort Controls */}
+			<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+				{/* Search Bar */}
+				<div className="relative flex-1">
+					<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+					<Input
+						type="search"
+						placeholder="Search products..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="pl-9"
+					/>
+				</div>
+
+				{/* Sort Dropdown */}
+				<Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+					<SelectTrigger className="w-full sm:w-[200px]">
+						<ArrowUpDown className="mr-2 h-4 w-4" />
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="name-asc">Name (A-Z)</SelectItem>
+						<SelectItem value="name-desc">Name (Z-A)</SelectItem>
+						<SelectItem value="price-asc">Price (Low-High)</SelectItem>
+						<SelectItem value="price-desc">Price (High-Low)</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
 
 			{!session?.user && (
