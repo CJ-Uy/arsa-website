@@ -39,6 +39,7 @@ const productSchema = z.object({
 	isAvailable: z.boolean(),
 	isPreOrder: z.boolean(),
 	availableSizes: z.array(z.string()),
+	specialNote: z.string().optional(),
 });
 
 export async function createProduct(data: z.infer<typeof productSchema>) {

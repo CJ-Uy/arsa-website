@@ -48,6 +48,7 @@ type Product = {
 	isAvailable: boolean;
 	isPreOrder: boolean;
 	availableSizes: string[];
+	specialNote: string | null;
 };
 
 type ProductsManagementProps = {
@@ -65,6 +66,7 @@ type ProductFormData = {
 	isAvailable: boolean;
 	isPreOrder: boolean;
 	availableSizes: string[];
+	specialNote: string;
 };
 
 export function ProductsManagement({ initialProducts }: ProductsManagementProps) {
@@ -87,6 +89,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 		isAvailable: true,
 		isPreOrder: false,
 		availableSizes: [],
+		specialNote: "",
 	});
 
 	const resetForm = () => {
@@ -101,6 +104,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			isAvailable: true,
 			isPreOrder: false,
 			availableSizes: [],
+			specialNote: "",
 		});
 		setEditingProduct(null);
 	};
@@ -119,6 +123,7 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 				isAvailable: product.isAvailable,
 				isPreOrder: product.isPreOrder,
 				availableSizes: product.availableSizes,
+				specialNote: product.specialNote || "",
 			});
 		} else {
 			resetForm();
@@ -443,6 +448,20 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								rows={3}
 								required
 							/>
+						</div>
+
+						<div>
+							<Label htmlFor="specialNote">Checkout Warning (Optional)</Label>
+							<Textarea
+								id="specialNote"
+								value={formData.specialNote}
+								onChange={(e) => setFormData({ ...formData, specialNote: e.target.value })}
+								rows={2}
+								placeholder="e.g., This bundle includes multiple sizes. Please specify your size preferences in the special instructions."
+							/>
+							<p className="text-muted-foreground mt-1 text-xs">
+								If set, this warning appears above the Special Instructions field during checkout
+							</p>
 						</div>
 
 						<div className="grid grid-cols-2 gap-4">

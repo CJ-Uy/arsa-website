@@ -104,6 +104,7 @@ model Product {
   isAvailable    Boolean     @default(true)
   isPreOrder     Boolean     @default(false) // If true, stock shows order count
   availableSizes String[]    @default([])    // Array of sizes: ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+  specialNote    String?     // Optional special note/warning shown during checkout
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 

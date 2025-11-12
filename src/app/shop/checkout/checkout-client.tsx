@@ -19,6 +19,7 @@ type CartItem = {
 		id: string;
 		name: string;
 		price: number;
+		specialNote: string | null;
 	};
 };
 
@@ -47,6 +48,11 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 	const [loading, setLoading] = useState(false);
 
 	const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+	// Collect all unique special notes from cart items
+	const specialNotes = Array.from(
+		new Set(cart.map((item) => item.product.specialNote).filter((note): note is string => !!note)),
+	);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -278,6 +284,21 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 
 							<div>
 								<Label htmlFor="notes">Special Instructions (Optional)</Label>
+								{specialNotes.length > 0 && (
+									<div className="mt-2 space-y-2">
+										{specialNotes.map((note, index) => (
+											<Alert
+												key={index}
+												className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/50"
+											>
+												<AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+												<AlertDescription className="text-sm font-medium text-red-800 dark:text-red-200">
+													{note}
+												</AlertDescription>
+											</Alert>
+										))}
+									</div>
+								)}
 								<Textarea
 									id="notes"
 									placeholder="Add any special instructions or notes for your order..."
