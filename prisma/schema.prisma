@@ -158,3 +158,13 @@ model OrderItem {
 
   @@index([orderId])
 }
+
+// Banner Configuration
+model Banner {
+  id        String   @id @default(uuid())
+  isActive  Boolean  @default(true)
+  message   String   // Banner message with optional countdown
+  deadline  DateTime? // Optional deadline for countdown
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

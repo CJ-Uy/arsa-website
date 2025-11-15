@@ -19,9 +19,10 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateOrderStatus, deleteOrder } from "./actions";
+import { updateOrderStatus, deleteOrder, exportOrdersData } from "./actions";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Package, Eye, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, Package, Eye, Trash2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -99,6 +100,60 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 		}
 	};
 
+	const handleExportToExcel = async () => {
+		try {
+			toast.loading("Preparing export...");
+
+			const result = await exportOrdersData();
+
+			if (!result.success || !result.data) {
+				toast.error(result.message || "Failed to export data");
+				return;
+			}
+
+			// Create worksheet from data
+			const ws = XLSX.utils.json_to_sheet(result.data);
+
+			// Set column widths for better readability
+			const colWidths = [
+				{ wch: 10 }, // Order ID
+				{ wch: 20 }, // Order Date
+				{ wch: 20 }, // Customer Name
+				{ wch: 25 }, // Customer Email
+				{ wch: 15 }, // Student ID
+				{ wch: 30 }, // Product Name
+				{ wch: 40 }, // Product Description
+				{ wch: 10 }, // Size
+				{ wch: 10 }, // Quantity
+				{ wch: 12 }, // Unit Price
+				{ wch: 12 }, // Item Total
+				{ wch: 12 }, // Order Total
+				{ wch: 12 }, // Order Status
+				{ wch: 30 }, // Notes
+				{ wch: 30 }, // Receipt URL
+			];
+			ws["!cols"] = colWidths;
+
+			// Create workbook
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Orders");
+
+			// Generate filename with current date
+			const date = new Date().toISOString().split("T")[0];
+			const filename = `ARSA_Orders_${date}.xlsx`;
+
+			// Download file
+			XLSX.writeFile(wb, filename);
+
+			toast.dismiss();
+			toast.success(`Exported ${result.data.length} order items to ${filename}`);
+		} catch (error) {
+			console.error("Export error:", error);
+			toast.dismiss();
+			toast.error("Failed to export data");
+		}
+	};
+
 	const getStatusBadge = (status: string) => {
 		const variants: Record<
 			string,
@@ -134,6 +189,14 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 
 	return (
 		<div>
+			{/* Export Button */}
+			<div className="mb-6 flex justify-end">
+				<Button onClick={handleExportToExcel} variant="outline">
+					<Download className="mr-2 h-4 w-4" />
+					Export to Excel
+				</Button>
+			</div>
+
 			{/* Stats Cards */}
 			<div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
 				<Card>

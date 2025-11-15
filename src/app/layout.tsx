@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/main/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LayoutWrapper } from "@/components/layout-wrapper";
+import { prisma } from "@/lib/prisma";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -24,11 +25,17 @@ export const metadata: Metadata = {
 	},
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	// Fetch active banner
+	const banner = await prisma.banner.findFirst({
+		where: { isActive: true },
+		orderBy: { updatedAt: "desc" },
+	});
+
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
@@ -38,7 +45,7 @@ export default function RootLayout({
 					enableSystem
 					disableTransitionOnChange
 				>
-					<LayoutWrapper>{children}</LayoutWrapper>
+					<LayoutWrapper banner={banner}>{children}</LayoutWrapper>
 					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>

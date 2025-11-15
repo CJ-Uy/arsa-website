@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, ArrowLeft } from "lucide-react";
+import { ShoppingCart, Package, ArrowLeft, Megaphone } from "lucide-react";
 import { Unauthorized } from "./unauthorized";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -64,6 +64,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 						<Button variant="outline">
 							<Package className="mr-2 h-4 w-4" />
 							Products
+						</Button>
+					</Link>
+					<Link href="/admin/banner">
+						<Button variant="outline">
+							<Megaphone className="mr-2 h-4 w-4" />
+							Banner
 						</Button>
 					</Link>
 				</div>

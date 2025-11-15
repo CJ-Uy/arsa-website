@@ -56,3 +56,59 @@ export async function deleteOrder(orderId: string) {
 		return { success: false, message: error.message || "Failed to delete order" };
 	}
 }
+
+export async function exportOrdersData() {
+	try {
+		await checkShopAdmin();
+
+		const orders = await prisma.order.findMany({
+			include: {
+				user: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						studentId: true,
+					},
+				},
+				orderItems: {
+					include: {
+						product: {
+							select: {
+								name: true,
+								description: true,
+							},
+						},
+					},
+				},
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+		// Transform data for export
+		const exportData = orders.flatMap((order) =>
+			order.orderItems.map((item) => ({
+				"Order ID": order.id,
+				"Order Date": new Date(order.createdAt).toLocaleString(),
+				"Customer Name": order.user.name || "N/A",
+				"Customer Email": order.user.email,
+				"Student ID": order.user.studentId || "N/A",
+				"Product Name": item.product.name,
+				"Product Description": item.product.description,
+				Size: item.size || "N/A",
+				Quantity: item.quantity,
+				"Unit Price": item.price,
+				"Item Total": item.price * item.quantity,
+				"Order Total": order.totalAmount,
+				"Order Status": order.status,
+				Notes: order.notes || "",
+				"Receipt URL": order.receiptImageUrl || "",
+			})),
+		);
+
+		return { success: true, data: exportData };
+	} catch (error: any) {
+		console.error("Error exporting orders:", error);
+		return { success: false, message: error.message || "Failed to export orders" };
+	}
+}
