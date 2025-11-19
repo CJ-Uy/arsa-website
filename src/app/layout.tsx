@@ -30,11 +30,17 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	// Fetch active banner
-	const banner = await prisma.banner.findFirst({
-		where: { isActive: true },
-		orderBy: { updatedAt: "desc" },
-	});
+	// Fetch active banner (gracefully handle DB unavailability during build)
+	let banner = null;
+	try {
+		banner = await prisma.banner.findFirst({
+			where: { isActive: true },
+			orderBy: { updatedAt: "desc" },
+		});
+	} catch (error) {
+		// Database not available during build or no banner exists
+		console.log("Banner fetch skipped:", error instanceof Error ? error.message : "Unknown error");
+	}
 
 	return (
 		<html lang="en" suppressHydrationWarning>
