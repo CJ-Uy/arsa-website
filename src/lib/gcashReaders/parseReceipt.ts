@@ -29,8 +29,8 @@ export function parseOcrText(rawText: string): GcashReceiptData {
 
 	// Matches "Ref No." followed by the number (with possible spaces) and then captures the date.
 	// Reference numbers can have spaces (e.g., "1234 567 8901")
-	// There's usually a big space gap before the date
-	const refAndDateRegex = /Ref No\.\s*([\d\s]+?)\s{2,}(.+)/;
+	// Capture only digits and spaces, stop at first non-digit/non-space character
+	const refAndDateRegex = /Ref No\.\s*([\d\s]+?)\s+([A-Za-z].+)/;
 
 	// Makes the currency symbol optional and non-capturing, looking for any characters
 	// between "Total Amount Sent" and the number pattern. This handles '₱', '£', '$', or OCR errors.
