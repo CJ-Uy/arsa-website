@@ -1,6 +1,7 @@
 # GCash Reference Number Extractor - Complete Documentation
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Features](#features)
 3. [System Architecture](#system-architecture)
@@ -28,6 +29,7 @@ Both systems are designed to work in Node.js server environments (Next.js server
 ## Features
 
 ### Receipt Image Extraction
+
 - Extracts recipient name and phone number
 - Extracts transaction amount
 - **Extracts reference number**
@@ -36,6 +38,7 @@ Both systems are designed to work in Node.js server environments (Next.js server
 - Client-side or server-side processing
 
 ### PDF Invoice Extraction
+
 - Extracts multiple transactions from GCash PDF statements
 - **Extracts reference numbers for each transaction**
 - Extracts date, description, debit, credit, and balance
@@ -85,22 +88,25 @@ Both systems are designed to work in Node.js server environments (Next.js server
 ## Dependencies
 
 ### Core Dependencies
+
 ```json
 {
-  "tesseract.js": "^6.0.1",
-  "pdfreader": "^3.0.7"
+	"tesseract.js": "^6.0.1",
+	"pdfreader": "^3.0.7"
 }
 ```
 
 ### Optional Dependencies (for storage examples)
+
 ```json
 {
-  "@supabase/supabase-js": "^2.50.2",
-  "@supabase/ssr": "^0.6.1"
+	"@supabase/supabase-js": "^2.50.2",
+	"@supabase/ssr": "^0.6.1"
 }
 ```
 
 ### Node.js Version
+
 - Node.js 18+ recommended
 - Works in Next.js 15+ server environments
 
@@ -145,6 +151,7 @@ SUPABASE_ANON_KEY=your-supabase-anon-key
 The image extraction uses **Tesseract.js** for OCR (Optical Character Recognition) and regex patterns to extract structured data.
 
 ### File Structure
+
 ```
 src/lib/gcashReaders/
 ├── readReceipt.ts      # Server-side OCR processing
@@ -290,7 +297,7 @@ export async function parseGcashReceipt(imageBuffer: Buffer): Promise<GcashRecei
 		// Cache the language data in the specified directory.
 		cachePath: path.join(process.cwd(), "lang-data"),
 		// Optional logger
-		logger: m => console.log(m),
+		logger: (m) => console.log(m),
 	});
 
 	try {
@@ -351,10 +358,12 @@ async function processReceiptClientSide(imageFile: File): Promise<GcashReceiptDa
 ### Architecture
 
 The PDF extraction uses **pdfreader** library with a coordinate-based parsing system. It works in two phases:
+
 1. **Low-level extraction**: Extract all text with X/Y coordinates
 2. **High-level processing**: Map coordinates to table columns
 
 ### File Structure
+
 ```
 src/lib/gcashReaders/
 ├── readInvoice.ts     # PDF parsing logic
@@ -1023,6 +1032,7 @@ export async function storeInvoice(pdfFile: File, invoiceData: GcashInvoiceExtra
 **Error**: `Error: Language data not found`
 
 **Solution**:
+
 - For server-side: Ensure `lang-data/eng.traineddata` exists in project root
 - For client-side: Check network connectivity (auto-downloads)
 
@@ -1037,6 +1047,7 @@ curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata -o la
 **Problem**: Reference number not extracted
 
 **Solutions**:
+
 - Ensure image is clear and high resolution
 - Make sure text is not rotated
 - Adjust regex patterns in `parseOcrText()` if GCash UI changed
@@ -1047,6 +1058,7 @@ curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata -o la
 **Error**: `Invalid password provided for the PDF`
 
 **Solution**:
+
 - Verify password is correct
 - GCash PDFs typically use last 4 digits of mobile number as password
 - Ensure password is passed as string, not number
@@ -1056,13 +1068,17 @@ curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata -o la
 **Problem**: PDF extraction missing columns or merging incorrectly
 
 **Solution**:
+
 - Adjust `columnBoundaries` in `processExtractedData()`
 - GCash may update PDF layout - check actual X coordinates by logging
 - Adjust `ROW_TOLERANCE` if rows are splitting incorrectly
 
 ```typescript
 // Debug coordinates
-console.log("Character positions:", page.content.map(c => ({ x: c.x, y: c.y, text: c.text })));
+console.log(
+	"Character positions:",
+	page.content.map((c) => ({ x: c.x, y: c.y, text: c.text })),
+);
 ```
 
 #### 5. Multi-line Descriptions Not Merging
@@ -1070,6 +1086,7 @@ console.log("Character positions:", page.content.map(c => ({ x: c.x, y: c.y, tex
 **Problem**: Transaction descriptions split across rows
 
 **Solution**:
+
 - Check the `isFragment` logic in Pass 3
 - Adjust the `startX` threshold for fragment detection
 - Ensure rows are sorted by Y coordinate first
@@ -1081,11 +1098,11 @@ console.log("Character positions:", page.content.map(c => ({ x: c.x, y: c.y, tex
 ### Unit Tests
 
 ```typescript
-import { parseOcrText } from './parseReceipt';
+import { parseOcrText } from "./parseReceipt";
 
-describe('parseOcrText', () => {
-  it('should extract reference number', () => {
-    const mockText = `
+describe("parseOcrText", () => {
+	it("should extract reference number", () => {
+		const mockText = `
       Sent via GCash
       John Doe
       +63 912 345 6789
@@ -1093,31 +1110,31 @@ describe('parseOcrText', () => {
       Ref No. 1234567890 Dec 14, 2024 10:30 AM
     `;
 
-    const result = parseOcrText(mockText);
+		const result = parseOcrText(mockText);
 
-    expect(result.referenceNumber).toBe('1234567890');
-    expect(result.amount).toBe(500.00);
-    expect(result.recipientName).toBe('John Doe');
-  });
+		expect(result.referenceNumber).toBe("1234567890");
+		expect(result.amount).toBe(500.0);
+		expect(result.recipientName).toBe("John Doe");
+	});
 });
 ```
 
 ### Integration Tests
 
 ```typescript
-import { parseGcashPdf } from './readInvoice';
-import fs from 'fs';
+import { parseGcashPdf } from "./readInvoice";
+import fs from "fs";
 
-describe('parseGcashPdf', () => {
-  it('should extract transactions from PDF', async () => {
-    const pdfBuffer = fs.readFileSync('./test-data/sample.pdf');
-    const password = '1234';
+describe("parseGcashPdf", () => {
+	it("should extract transactions from PDF", async () => {
+		const pdfBuffer = fs.readFileSync("./test-data/sample.pdf");
+		const password = "1234";
 
-    const result = await parseGcashPdf(pdfBuffer, password);
+		const result = await parseGcashPdf(pdfBuffer, password);
 
-    expect(result.transactions.length).toBeGreaterThan(0);
-    expect(result.transactions[0].reference).toBeDefined();
-  });
+		expect(result.transactions.length).toBeGreaterThan(0);
+		expect(result.transactions[0].reference).toBeDefined();
+	});
 });
 ```
 
@@ -1126,16 +1143,19 @@ describe('parseGcashPdf', () => {
 ## Performance Considerations
 
 ### Image OCR
+
 - **Client-side**: ~5-15 seconds per image (depends on device)
 - **Server-side**: ~3-8 seconds per image
 - **Recommendation**: Use client-side for single receipts, server-side for batch processing
 
 ### PDF Parsing
+
 - **Processing time**: ~1-3 seconds per page
 - **Multi-page**: Linear scaling (10 pages = ~10-30 seconds)
 - **Memory**: ~50-100MB per PDF being processed
 
 ### Optimization Tips
+
 1. Use client-side OCR when possible to reduce server load
 2. Implement progress callbacks for better UX
 3. Consider queuing system for batch processing
@@ -1172,17 +1192,21 @@ describe('parseGcashPdf', () => {
 ### Receipt Patterns
 
 1. **Reference Number with Date**
+
    ```regex
    /Ref No\.\s*(\d+)\s+(.+)/
    ```
+
    - Matches "Ref No." followed by digits
    - Captures reference number and timestamp
    - Example: "Ref No. 1234567890 Dec 14, 2024 10:30 AM"
 
 2. **Amount Pattern**
+
    ```regex
    /Total Amount Sent.*?([\d,]+\.\d{2})/
    ```
+
    - Flexible currency symbol handling
    - Captures numeric amount with decimals
    - Example: "Total Amount Sent ₱1,234.56"
@@ -1191,6 +1215,7 @@ describe('parseGcashPdf', () => {
    ```regex
    /([A-Za-z\s,.-]+)\s*\+63\s*([\d\s]+)/
    ```
+
    - Captures recipient name before phone number
    - Philippines format (+63)
    - Example: "John Doe +63 912 345 6789"
@@ -1201,6 +1226,7 @@ describe('parseGcashPdf', () => {
    ```regex
    /\d{4}-\d{2}-\d{2}TO\d{4}-\d{2}-\d{2}/
    ```
+
    - Matches date range in GCash PDFs
    - Example: "2024-01-01TO2024-01-31"
 
@@ -1224,6 +1250,7 @@ This documentation is provided as-is for implementation in your projects.
 ## Support
 
 For issues with:
+
 - **Tesseract.js**: https://github.com/naptha/tesseract.js
 - **pdfreader**: https://github.com/adrienjoly/npm-pdfreader
 - **Supabase**: https://supabase.com/docs

@@ -4,8 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import https from "https";
 import { parseGcashReceiptFromUrl } from "@/lib/gcashReaders/readReceipt.server";
 import { parseGcashPdf } from "@/lib/gcashReaders/readInvoice";
+
+// HTTPS agent for self-signed certificates
+const httpsAgent = new https.Agent({
+	rejectUnauthorized: false,
+});
 
 async function checkShopAdmin() {
 	const session = await auth.api.getSession({
@@ -67,14 +73,27 @@ export async function processOrderReceipt(orderId: string) {
 		let referenceNumber: string | null = null;
 
 		if (isPDF) {
-			// Fetch and process PDF
-			const response = await fetch(order.receiptImageUrl);
+			// Fetch and process PDF with SSL handling
+			const fetchOptions: RequestInit = {
+				signal: AbortSignal.timeout(30000), // 30 second timeout
+			};
+
+			if (order.receiptImageUrl.startsWith("https://")) {
+				// @ts-ignore - Node.js fetch supports agent option
+				fetchOptions.agent = httpsAgent;
+			}
+
+			const response = await fetch(order.receiptImageUrl, fetchOptions);
 			if (!response.ok) {
-				throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+				throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
 			}
 
 			const arrayBuffer = await response.arrayBuffer();
 			const pdfBuffer = Buffer.from(arrayBuffer);
+
+			if (pdfBuffer.length === 0) {
+				throw new Error("Downloaded PDF is empty");
+			}
 
 			const extractedData = await parseGcashPdf(pdfBuffer, "");
 			referenceNumber = extractedData.transactions[0]?.reference || null;

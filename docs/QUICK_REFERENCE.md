@@ -10,6 +10,7 @@
 ## Key Files
 
 ### New Files Created
+
 - `src/lib/gcashReaders/parseReceipt.ts` - OCR text parsing logic
 - `src/lib/gcashReaders/readReceipt.client.ts` - Client-side OCR wrapper
 - `IMPLEMENTATION_SUMMARY.md` - Complete technical documentation
@@ -17,6 +18,7 @@
 - `QUICK_REFERENCE.md` - This file
 
 ### Modified Files
+
 - `prisma/schema.prisma` - Added `gcashReferenceNumber` field to Order model
 - `src/app/shop/checkout/checkout-client.tsx` - Auto-extraction on upload
 - `src/app/shop/actions.ts` - Duplicate detection in createOrder()
@@ -111,6 +113,7 @@ createOrder(
 ```
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -141,6 +144,7 @@ const data = await parseGcashReceiptClient(imageFile);
 
 **Problem:** Reference number not extracted
 **Solution:**
+
 1. Check browser console for errors
 2. Verify image is clear and well-lit
 3. Try with a different receipt
@@ -150,6 +154,7 @@ const data = await parseGcashReceiptClient(imageFile);
 
 **Problem:** Legitimate orders marked as duplicate
 **Solution:**
+
 1. Check if customer accidentally submitted twice
 2. Verify receipt images match
 3. Contact customer for clarification
@@ -159,6 +164,7 @@ const data = await parseGcashReceiptClient(imageFile);
 
 **Problem:** TypeScript errors about gcashReferenceNumber
 **Solution:**
+
 ```bash
 npx prisma generate
 # Restart dev server
@@ -168,6 +174,7 @@ npx prisma generate
 
 **Problem:** "Drift detected" when running prisma migrate
 **Solution:**
+
 ```bash
 # Use db push instead (safer for production)
 npx prisma db push
@@ -176,6 +183,7 @@ npx prisma db push
 ## Feature Flags / Configuration
 
 No configuration needed! Features work out-of-the-box:
+
 - ✅ Client-side OCR (no server setup)
 - ✅ Automatic language data download
 - ✅ Works with existing MinIO storage
@@ -199,6 +207,7 @@ No configuration needed! Features work out-of-the-box:
 ## Next Steps / Future Enhancements
 
 Potential improvements documented in IMPLEMENTATION_SUMMARY.md:
+
 - [ ] PDF invoice support (using pdfreader)
 - [ ] Manual ref number editing for admins
 - [ ] Batch receipt processing
@@ -224,6 +233,7 @@ Potential improvements documented in IMPLEMENTATION_SUMMARY.md:
 This feature adds automatic GCash reference number extraction and duplicate detection to prevent payment fraud. It's production-ready, non-breaking (supports legacy orders), and requires zero server-side configuration.
 
 **Key Benefits:**
+
 - 🚀 Faster order processing (auto-extraction)
 - 🛡️ Fraud prevention (duplicate detection)
 - 📊 Better analytics (ref numbers in exports)
@@ -231,6 +241,7 @@ This feature adds automatic GCash reference number extraction and duplicate dete
 - ✅ Zero downtime (backward compatible)
 
 **Zero Breaking Changes:**
+
 - Existing orders unaffected (NULL ref numbers)
 - Feature is optional (OCR can fail gracefully)
 - Manual verification still possible

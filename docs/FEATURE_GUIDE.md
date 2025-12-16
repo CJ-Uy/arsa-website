@@ -5,6 +5,7 @@
 ### Checkout Process
 
 #### 1. Upload Your GCash Receipt
+
 After uploading your GCash payment screenshot, the system will automatically:
 
 ```
@@ -16,6 +17,7 @@ After uploading your GCash payment screenshot, the system will automatically:
 ```
 
 #### 2. Reference Number Extracted
+
 Once extracted, you'll see your reference number:
 
 ```
@@ -29,6 +31,7 @@ Once extracted, you'll see your reference number:
 ```
 
 #### 3. Duplicate Detection
+
 If you try to use the same receipt for another order:
 
 ```
@@ -42,6 +45,7 @@ Please contact support if you believe this is an error.
 ### What to Do If OCR Fails
 
 If the system can't read your reference number:
+
 - ⚠️ You'll see a warning, but can still place your order
 - The admin will verify your receipt manually
 - Make sure your screenshot is clear and well-lit
@@ -49,11 +53,13 @@ If the system can't read your reference number:
 ### Tips for Best Results
 
 ✅ **DO:**
+
 - Take a clear, well-lit screenshot
 - Include the entire receipt in the image
 - Use the original GCash screenshot
 
 ❌ **DON'T:**
+
 - Crop important parts of the receipt
 - Use blurry or dark images
 - Edit the screenshot before uploading
@@ -124,9 +130,9 @@ View full reference number and duplicate warnings:
 
 The exported Excel file now includes a "GCash Ref No" column:
 
-| Order ID | Date | Customer | Email | ... | GCash Ref No | Notes | Receipt URL |
-|----------|------|----------|-------|-----|--------------|-------|-------------|
-| a1b2c3d4 | ... | Juan     | ...   | ... | 1234567890123 | ...   | ...         |
+| Order ID | Date | Customer | Email | ... | GCash Ref No  | Notes | Receipt URL |
+| -------- | ---- | -------- | ----- | --- | ------------- | ----- | ----------- |
+| a1b2c3d4 | ...  | Juan     | ...   | ... | 1234567890123 | ...   | ...         |
 
 ### How to Handle Duplicates
 
@@ -150,16 +156,19 @@ When you see duplicate payment warnings:
 ### Admin Best Practices
 
 ✅ **Regular Checks**
+
 - Review orders with duplicate ref numbers daily
 - Cross-reference receipt images
 - Verify payment amounts match order totals
 
 ✅ **Customer Communication**
+
 - Explain one payment = one order policy
 - Request new payment for legitimate additional orders
 - Be understanding of genuine mistakes
 
 ❌ **Don't Automatically**
+
 - Cancel without investigation
 - Approve both orders without verification
 - Ignore duplicate warnings
@@ -171,6 +180,7 @@ When you see duplicate payment warnings:
 ### What is a GCash Reference Number?
 
 The reference number is a unique identifier (usually 13 digits) that GCash assigns to each transaction. Example:
+
 ```
 Ref No. 1234567890123 Dec 17, 2024 10:30 AM
          └── This part ──┘
@@ -243,6 +253,7 @@ A: ~90-95% accuracy with clear screenshots. Always verify against the receipt im
 ## Support
 
 If you encounter issues:
+
 1. Check that the receipt screenshot is clear
 2. Verify internet connection (OCR downloads language data)
 3. Try a different browser (Chrome/Edge recommended)
@@ -251,6 +262,7 @@ If you encounter issues:
 ## Changelog
 
 ### Version 1.0 (Initial Implementation)
+
 - ✅ Automatic reference number extraction
 - ✅ Duplicate order detection
 - ✅ Admin dashboard warnings
@@ -258,6 +270,7 @@ If you encounter issues:
 - ✅ Client-side OCR processing
 
 ### Future Enhancements
+
 - 🔄 Manual reference number editing
 - 🔄 PDF invoice support
 - 🔄 Batch receipt processing

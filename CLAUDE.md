@@ -135,6 +135,7 @@ The checkout system includes automatic GCash reference number extraction:
 - **Excel Export**: Includes "GCash Ref No" column in order exports
 
 **Documentation**: See [docs/](docs/) folder for complete documentation:
+
 - [docs/README.md](docs/README.md) - Documentation index and navigation
 - [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick reference for developers
 - [docs/GCASH.md](docs/GCASH.md) - Complete OCR implementation reference

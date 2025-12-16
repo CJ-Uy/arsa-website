@@ -7,6 +7,7 @@ This implementation adds automatic GCash reference number extraction from paymen
 ## Features Implemented
 
 ### 1. **Automatic Reference Number Extraction**
+
 - **Image Receipts**: Client-side OCR processing using Tesseract.js
 - **PDF Invoices**: Server-side parsing using pdfreader
 - Extracts GCash reference numbers from receipt screenshots and PDF transaction history
@@ -15,12 +16,14 @@ This implementation adds automatic GCash reference number extraction from paymen
 - Supports both single receipt images and multi-transaction PDF exports
 
 ### 2. **Duplicate Order Detection**
+
 - Server-side validation checks for duplicate GCash reference numbers
 - Prevents order creation if reference number already exists
 - Clear error messages to users when duplicates are detected
 - Index on `gcashReferenceNumber` for fast lookups
 
 ### 3. **Admin Dashboard Enhancements**
+
 - Display GCash reference numbers in order list
 - Visual warnings for duplicate reference numbers
 - Red "Duplicate Payment" badge on affected orders
@@ -28,6 +31,7 @@ This implementation adds automatic GCash reference number extraction from paymen
 - Reference numbers included in Excel exports
 
 ### 4. **Database Schema Updates**
+
 - Added `gcashReferenceNumber` field to Order model
 - Indexed for performance and duplicate detection
 - Nullable to support existing orders without ref numbers
@@ -35,6 +39,7 @@ This implementation adds automatic GCash reference number extraction from paymen
 ## Files Created/Modified
 
 ### New Files
+
 1. **[src/lib/gcashReaders/parseReceipt.ts](src/lib/gcashReaders/parseReceipt.ts)**
    - Core OCR text parsing logic
    - Regex patterns for extracting reference numbers
@@ -59,6 +64,7 @@ This implementation adds automatic GCash reference number extraction from paymen
 ### Modified Files
 
 1. **[prisma/schema.prisma](prisma/schema.prisma)**
+
    ```prisma
    model Order {
      // ... existing fields
@@ -96,17 +102,20 @@ This implementation adds automatic GCash reference number extraction from paymen
 ### User Checkout Flow
 
 1. **User uploads GCash receipt screenshot**
+
    ```
    User selects receipt → File upload triggers OCR
    ```
 
 2. **Automatic OCR Processing**
+
    ```
    Tesseract.js processes image → Extracts text
    → Parses text using regex patterns → Finds reference number
    ```
 
 3. **Visual Feedback**
+
    ```
    Loading indicator → Success/Warning toast
    → Reference number displayed in badge
@@ -123,18 +132,18 @@ This implementation adds automatic GCash reference number extraction from paymen
 ```typescript
 // Map to count reference number occurrences
 const refNumberCounts = new Map<string, number>();
-orders.forEach(order => {
-  if (order.gcashReferenceNumber) {
-    const count = refNumberCounts.get(order.gcashReferenceNumber) || 0;
-    refNumberCounts.set(order.gcashReferenceNumber, count + 1);
-  }
+orders.forEach((order) => {
+	if (order.gcashReferenceNumber) {
+		const count = refNumberCounts.get(order.gcashReferenceNumber) || 0;
+		refNumberCounts.set(order.gcashReferenceNumber, count + 1);
+	}
 });
 
 // Set of duplicate reference numbers (count > 1)
 const duplicates = new Set(
-  Array.from(refNumberCounts.entries())
-    .filter(([_, count]) => count > 1)
-    .map(([refNum, _]) => refNum)
+	Array.from(refNumberCounts.entries())
+		.filter(([_, count]) => count > 1)
+		.map(([refNum, _]) => refNum),
 );
 ```
 
@@ -142,17 +151,17 @@ const duplicates = new Set(
 
 ```typescript
 if (gcashReferenceNumber) {
-  const existingOrder = await prisma.order.findFirst({
-    where: { gcashReferenceNumber }
-  });
+	const existingOrder = await prisma.order.findFirst({
+		where: { gcashReferenceNumber },
+	});
 
-  if (existingOrder) {
-    return {
-      success: false,
-      message: "This GCash reference number has already been used...",
-      isDuplicate: true
-    };
-  }
+	if (existingOrder) {
+		return {
+			success: false,
+			message: "This GCash reference number has already been used...",
+			isDuplicate: true,
+		};
+	}
 }
 ```
 
@@ -161,32 +170,40 @@ if (gcashReferenceNumber) {
 The system uses regex patterns to extract data from GCash receipts:
 
 ### Reference Number Pattern
+
 ```regex
 /Ref No\.\s*(\d+)\s+(.+)/
 ```
+
 Matches: `Ref No. 1234567890 Dec 17, 2024 10:30 AM`
 
 ### Amount Pattern
+
 ```regex
 /Total Amount Sent.*?([\d,]+\.\d{2})/
 ```
+
 Matches: `Total Amount Sent ₱500.00`
 
 ### Recipient Pattern
+
 ```regex
 /([A-Za-z\s,.-]+)\s*\+63\s*([\d\s]+)/
 ```
+
 Matches: `Juan Dela Cruz +63 916 361 1002`
 
 ## User Experience
 
 ### Checkout Page
+
 1. User uploads receipt → Auto-extracts ref number
 2. Shows loading indicator: "Extracting GCash reference number..."
 3. On success: Green toast + displays ref number in badge
 4. On failure: Warning toast (order can still proceed)
 
 ### Admin Dashboard
+
 - **Order List View**: Shows GCash ref number for each order
 - **Duplicate Warning Badge**: Red badge with ⚠️ icon
 - **Order Details Modal**: Full ref number display + duplicate alert
@@ -195,16 +212,19 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 ## Error Handling
 
 ### OCR Failures
+
 - Non-blocking: Users can still submit orders
 - Warning toast: "Could not extract reference number"
 - Manual verification by admin if needed
 
 ### Duplicate Orders
+
 - Blocking: Prevents order creation
 - Clear error message with existing order ID
 - Suggests contacting support
 
 ### Invalid Receipts
+
 - File type validation (images only)
 - Size limit (10MB)
 - Clear error messages
@@ -212,11 +232,13 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 ## Performance Considerations
 
 ### Client-Side OCR
+
 - Processing time: ~5-15 seconds (device-dependent)
 - No server load for OCR processing
 - Language data auto-downloaded by browser
 
 ### Database Queries
+
 - Indexed `gcashReferenceNumber` for fast lookups
 - Single query for duplicate detection
 - Efficient counting algorithm in admin dashboard
@@ -231,6 +253,7 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 ## Testing Recommendations
 
 ### Manual Testing
+
 1. Upload a clear GCash receipt → Verify ref number extraction
 2. Try using same receipt twice → Verify duplicate detection
 3. Upload blurry receipt → Verify graceful failure
@@ -238,6 +261,7 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 5. Export to Excel → Verify ref number column
 
 ### Test Scenarios
+
 - ✅ Valid GCash receipt with clear text
 - ✅ Blurry or low-quality receipt
 - ✅ Non-GCash receipt (should fail gracefully)
@@ -247,6 +271,7 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 ## Future Enhancements
 
 ### Potential Improvements
+
 1. **PDF Invoice Support**: Add pdfreader for GCash PDF statements (already documented in GCASH.md)
 2. **Manual Override**: Allow admins to manually edit ref numbers
 3. **Batch Processing**: Process multiple receipts for admin uploads
@@ -254,6 +279,7 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 5. **Server-Side OCR**: Option for server processing (requires Tesseract installation)
 
 ### Additional Validations
+
 - Verify amount matches order total
 - Check recipient phone number matches configured GCash
 - Timestamp validation (payment within reasonable timeframe)
@@ -262,7 +288,7 @@ Matches: `Juan Dela Cruz +63 916 361 1002`
 
 ```json
 {
-  "tesseract.js": "^6.0.1"
+	"tesseract.js": "^6.0.1"
 }
 ```
 
@@ -271,6 +297,7 @@ Note: `pdfreader` dependency not installed (for future PDF support)
 ## Database Migration
 
 Migration applied using `npx prisma db push`:
+
 - Added `gcashReferenceNumber` column (nullable String)
 - Added index on `gcashReferenceNumber`
 - Existing orders unaffected (NULL values)
@@ -278,6 +305,7 @@ Migration applied using `npx prisma db push`:
 ## Configuration
 
 No environment variables needed. System works out-of-the-box with:
+
 - Existing MinIO setup for receipt storage
 - Existing PostgreSQL database
 - Browser-based OCR (no server-side setup required)
@@ -287,16 +315,19 @@ No environment variables needed. System works out-of-the-box with:
 ### Common Issues
 
 **OCR not working?**
+
 - Check browser console for errors
 - Ensure receipt is clear and well-lit
 - Verify file size < 10MB
 
 **Duplicate detection false positives?**
+
 - Check admin dashboard for actual duplicates
 - Reference numbers should be unique per payment
 - Contact support if payment verification needed
 
 **Reference number not in export?**
+
 - Re-export after database update
 - Old orders may not have ref numbers (NULL)
 

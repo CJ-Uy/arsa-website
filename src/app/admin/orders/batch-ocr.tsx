@@ -15,11 +15,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Scan, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
-import {
-	getOrdersNeedingOcr,
-	processOrderReceipt,
-	batchProcessOrders,
-} from "./batchOcrActions";
+import { getOrdersNeedingOcr, processOrderReceipt, batchProcessOrders } from "./batchOcrActions";
 
 type OrderNeedingOcr = {
 	id: string;
@@ -155,7 +151,7 @@ export function BatchOcrProcessor() {
 					<div className="space-y-6">
 						{/* Selection Controls */}
 						<div className="flex items-center justify-between">
-							<div className="text-sm text-muted-foreground">
+							<div className="text-muted-foreground text-sm">
 								{selectedOrders.size} of {orders.length} orders selected
 							</div>
 							<div className="flex gap-2">
@@ -195,7 +191,7 @@ export function BatchOcrProcessor() {
 														<Badge variant="outline">PDF</Badge>
 													)}
 												</div>
-												<div className="mt-1 text-sm text-muted-foreground">
+												<div className="text-muted-foreground mt-1 text-sm">
 													<p>Customer: {order.user.name || order.user.email}</p>
 													<p>Amount: ₱{order.totalAmount.toFixed(2)}</p>
 													<p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
@@ -218,9 +214,7 @@ export function BatchOcrProcessor() {
 								</CardHeader>
 								<CardContent>
 									<Progress value={progress} className="mb-2" />
-									<p className="text-sm text-muted-foreground">
-										{Math.round(progress)}% complete
-									</p>
+									<p className="text-muted-foreground text-sm">{Math.round(progress)}% complete</p>
 								</CardContent>
 							</Card>
 						)}
@@ -236,17 +230,17 @@ export function BatchOcrProcessor() {
 										<div className="text-center">
 											<CheckCircle className="mx-auto mb-2 h-8 w-8 text-green-600" />
 											<div className="text-2xl font-bold">{results.processed}</div>
-											<div className="text-sm text-muted-foreground">Processed</div>
+											<div className="text-muted-foreground text-sm">Processed</div>
 										</div>
 										<div className="text-center">
 											<XCircle className="mx-auto mb-2 h-8 w-8 text-red-600" />
 											<div className="text-2xl font-bold">{results.failed}</div>
-											<div className="text-sm text-muted-foreground">Failed</div>
+											<div className="text-muted-foreground text-sm">Failed</div>
 										</div>
 										<div className="text-center">
 											<AlertCircle className="mx-auto mb-2 h-8 w-8 text-yellow-600" />
 											<div className="text-2xl font-bold">{results.skipped}</div>
-											<div className="text-sm text-muted-foreground">Skipped</div>
+											<div className="text-muted-foreground text-sm">Skipped</div>
 										</div>
 									</div>
 
@@ -299,10 +293,7 @@ export function BatchOcrProcessor() {
 								Close
 							</Button>
 							{orders.length > 0 && (
-								<Button
-									onClick={processBatch}
-									disabled={processing || selectedOrders.size === 0}
-								>
+								<Button onClick={processBatch} disabled={processing || selectedOrders.size === 0}>
 									{processing ? (
 										<>
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />

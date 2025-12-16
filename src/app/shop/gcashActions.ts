@@ -42,7 +42,8 @@ export async function extractRefNumberFromPdf(formData: FormData) {
 		if (error?.message?.includes("password")) {
 			return {
 				success: false,
-				message: "Invalid PDF password. GCash PDFs usually use the last 4 digits of your mobile number.",
+				message:
+					"Invalid PDF password. GCash PDFs usually use the last 4 digits of your mobile number.",
 			};
 		}
 		return {

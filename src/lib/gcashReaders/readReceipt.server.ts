@@ -1,6 +1,13 @@
 import { createWorker } from "tesseract.js";
 import path from "path";
+import https from "https";
 import { parseOcrText, GcashReceiptData } from "./parseReceipt";
+
+// Create an HTTPS agent that ignores SSL certificate errors
+// This is needed for self-signed certificates in production (MinIO, etc.)
+const httpsAgent = new https.Agent({
+	rejectUnauthorized: false, // Allow self-signed certificates
+});
 
 /**
  * Server-side OCR processing for GCash receipts.
@@ -57,18 +64,53 @@ export async function parseGcashReceiptServer(imageBuffer: Buffer): Promise<Gcas
 export async function parseGcashReceiptFromUrl(imageUrl: string): Promise<GcashReceiptData> {
 	try {
 		console.log(`Fetching image from URL: ${imageUrl}`);
-		const response = await fetch(imageUrl);
+
+		// Configure fetch with custom agent for HTTPS and increased timeout
+		const fetchOptions: RequestInit = {
+			signal: AbortSignal.timeout(30000), // 30 second timeout
+		};
+
+		// Add HTTPS agent if URL is HTTPS
+		if (imageUrl.startsWith("https://")) {
+			// @ts-ignore - Node.js fetch supports agent option
+			fetchOptions.agent = httpsAgent;
+		}
+
+		const response = await fetch(imageUrl, fetchOptions);
 
 		if (!response.ok) {
-			throw new Error(`Failed to fetch image: ${response.statusText}`);
+			throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
 		}
 
 		const arrayBuffer = await response.arrayBuffer();
 		const imageBuffer = Buffer.from(arrayBuffer);
 
+		if (imageBuffer.length === 0) {
+			throw new Error("Downloaded image is empty");
+		}
+
+		console.log(`Successfully fetched image (${imageBuffer.length} bytes)`);
 		return await parseGcashReceiptServer(imageBuffer);
 	} catch (error) {
 		console.error("Error fetching or processing image from URL:", error);
-		throw new Error(`Failed to process receipt from URL: ${error instanceof Error ? error.message : "Unknown error"}`);
+
+		// Provide more specific error messages
+		if (error instanceof Error) {
+			if (error.name === "AbortError" || error.message.includes("ETIMEDOUT")) {
+				throw new Error(
+					"Timeout fetching receipt image. The storage server may be slow or unreachable.",
+				);
+			} else if (error.message.includes("UNABLE_TO_GET_ISSUER_CERT")) {
+				throw new Error(
+					"SSL certificate error. The receipt image is stored on a server with an invalid certificate.",
+				);
+			} else if (error.message.includes("ENOTFOUND") || error.message.includes("ECONNREFUSED")) {
+				throw new Error("Could not connect to storage server. Check if MinIO is accessible.");
+			}
+		}
+
+		throw new Error(
+			`Failed to process receipt from URL: ${error instanceof Error ? error.message : "Unknown error"}`,
+		);
 	}
 }

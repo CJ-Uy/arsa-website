@@ -385,8 +385,8 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 											<Alert variant="destructive" className="mt-2">
 												<AlertTriangle className="h-4 w-4" />
 												<AlertDescription>
-													This GCash reference number is used in multiple orders. Please verify
-													the payment.
+													This GCash reference number is used in multiple orders. Please verify the
+													payment.
 												</AlertDescription>
 											</Alert>
 										)}

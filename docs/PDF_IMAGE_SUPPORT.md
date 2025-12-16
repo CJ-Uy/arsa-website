@@ -17,12 +17,14 @@ The system now supports **both image receipts and PDF invoices** for GCash refer
 **Best For:** Single payment screenshots
 
 **What Gets Extracted:**
+
 - Reference Number
 - Amount
 - Recipient Name/Number
 - Timestamp
 
 **Example Use Case:**
+
 ```
 User sends ₱500 via GCash
 → Takes screenshot of receipt
@@ -38,12 +40,14 @@ User sends ₱500 via GCash
 **Best For:** GCash PDF statement exports with multiple transactions
 
 **What Gets Extracted:**
+
 - Most recent transaction's reference number
 - Transaction count
 - Date range
 - All transaction details (not currently displayed to user)
 
 **Example Use Case:**
+
 ```
 User exports GCash transaction history as PDF
 → Uploads PDF at checkout
@@ -185,21 +189,23 @@ const receiptData = await parseGcashReceiptClient(imageFile);
 
 // Returns:
 {
-  recipientName: string | null;
-  recipientNumber: string | null;
-  amount: number | null;
-  referenceNumber: string | null;  // ← We use this
-  timestamp: Date | null;
+	recipientName: string | null;
+	recipientNumber: string | null;
+	amount: number | null;
+	referenceNumber: string | null; // ← We use this
+	timestamp: Date | null;
 }
 ```
 
 **Advantages:**
+
 - ✅ No server load
 - ✅ Fast processing (runs in parallel)
 - ✅ Works offline after language data downloaded
 - ✅ Privacy (image never sent to server)
 
 **Disadvantages:**
+
 - ❌ Depends on client device performance
 - ❌ 5-15 second processing time
 - ❌ Accuracy varies with image quality
@@ -223,12 +229,14 @@ const result = await extractRefNumberFromPdf(formData);
 ```
 
 **Advantages:**
+
 - ✅ Accurate (coordinate-based parsing)
 - ✅ Handles multi-page PDFs
 - ✅ Extracts multiple transactions
 - ✅ Password-protected PDF support
 
 **Disadvantages:**
+
 - ❌ Requires server processing
 - ❌ PDF must match GCash format exactly
 - ❌ Column boundaries hardcoded (may break if format changes)
@@ -250,12 +258,12 @@ These boundaries are defined in `src/lib/gcashReaders/readInvoice.ts`:
 
 ```typescript
 const columnBoundaries = {
-  date: { start: 2, end: 7 },
-  description: { start: 7, end: 20 },
-  reference: { start: 20, end: 25 },
-  debit: { start: 26, end: 28 },
-  credit: { start: 29, end: 31 },
-  balance: { start: 32, end: 35 },
+	date: { start: 2, end: 7 },
+	description: { start: 7, end: 20 },
+	reference: { start: 20, end: 25 },
+	debit: { start: 26, end: 28 },
+	credit: { start: 29, end: 31 },
+	balance: { start: 32, end: 35 },
 };
 ```
 
@@ -264,6 +272,7 @@ const columnBoundaries = {
 GCash transaction history PDFs are typically password-protected with the **last 4 digits of your mobile number**.
 
 **Current Behavior:**
+
 - System tries without password first
 - If password-protected → Shows error message
 - User must use image receipt instead (for now)
@@ -275,43 +284,45 @@ Add a password input field in the UI to support password-protected PDFs.
 
 ### Image Processing Errors
 
-| Error | Cause | User Message | Can Proceed? |
-|-------|-------|--------------|--------------|
-| OCR Failed | Poor image quality | "Could not extract reference number" | ✅ Yes (manual verification) |
-| No Ref Number | Wrong receipt type | "Could not extract reference number" | ✅ Yes |
-| Invalid File Type | Not an image | "Please upload an image or PDF file" | ❌ No |
-| File Too Large | > 20MB | "File size must be less than 20MB" | ❌ No |
+| Error             | Cause              | User Message                         | Can Proceed?                 |
+| ----------------- | ------------------ | ------------------------------------ | ---------------------------- |
+| OCR Failed        | Poor image quality | "Could not extract reference number" | ✅ Yes (manual verification) |
+| No Ref Number     | Wrong receipt type | "Could not extract reference number" | ✅ Yes                       |
+| Invalid File Type | Not an image       | "Please upload an image or PDF file" | ❌ No                        |
+| File Too Large    | > 20MB             | "File size must be less than 20MB"   | ❌ No                        |
 
 ### PDF Processing Errors
 
-| Error | Cause | User Message | Can Proceed? |
-|-------|-------|--------------|--------------|
-| Password Required | Protected PDF | "PDF is password protected..." | ✅ Yes (use image) |
-| Wrong Format | Not GCash PDF | "Could not extract reference number from PDF" | ✅ Yes |
-| Corrupted PDF | File damaged | "Failed to process PDF" | ❌ No |
-| File Too Large | > 20MB | "File size must be less than 20MB" | ❌ No |
+| Error             | Cause         | User Message                                  | Can Proceed?       |
+| ----------------- | ------------- | --------------------------------------------- | ------------------ |
+| Password Required | Protected PDF | "PDF is password protected..."                | ✅ Yes (use image) |
+| Wrong Format      | Not GCash PDF | "Could not extract reference number from PDF" | ✅ Yes             |
+| Corrupted PDF     | File damaged  | "Failed to process PDF"                       | ❌ No              |
+| File Too Large    | > 20MB        | "File size must be less than 20MB"            | ❌ No              |
 
 ## Performance Comparison
 
-| Aspect | Image (Client-Side) | PDF (Server-Side) |
-|--------|---------------------|-------------------|
-| Processing Time | 5-15 seconds | 1-3 seconds |
-| Server Load | None | Minimal |
-| Accuracy | 85-95% | 99% |
-| Multi-Transaction | No | Yes |
-| Offline Support | Yes (after initial load) | No |
-| Privacy | High (stays in browser) | Medium (sent to server) |
+| Aspect            | Image (Client-Side)      | PDF (Server-Side)       |
+| ----------------- | ------------------------ | ----------------------- |
+| Processing Time   | 5-15 seconds             | 1-3 seconds             |
+| Server Load       | None                     | Minimal                 |
+| Accuracy          | 85-95%                   | 99%                     |
+| Multi-Transaction | No                       | Yes                     |
+| Offline Support   | Yes (after initial load) | No                      |
+| Privacy           | High (stays in browser)  | Medium (sent to server) |
 
 ## Best Practices
 
 ### For Users
 
 **Use Images When:**
+
 - ✅ Single recent payment
 - ✅ Clear, high-quality screenshot
 - ✅ Want faster upload (no server round-trip)
 
 **Use PDFs When:**
+
 - ✅ Multiple transactions to choose from
 - ✅ Already have GCash PDF export
 - ✅ Receipt screenshot is unclear/unavailable
@@ -319,11 +330,13 @@ Add a password input field in the UI to support password-protected PDFs.
 ### For Admins
 
 **Image Receipts:**
+
 - Always verify image matches ref number
 - Check timestamp is recent
 - Verify amount matches order total
 
 **PDF Invoices:**
+
 - Check transaction count makes sense
 - Verify date range is recent
 - May contain multiple transactions (only most recent used)
@@ -359,6 +372,7 @@ Add a password input field in the UI to support password-protected PDFs.
 **Problem:** "Could not extract reference number"
 
 **Solutions:**
+
 1. Ensure screenshot is clear and well-lit
 2. Make sure full receipt is visible
 3. Try taking a new screenshot
@@ -371,6 +385,7 @@ Add a password input field in the UI to support password-protected PDFs.
 **Problem:** "PDF is password protected"
 
 **Solutions:**
+
 1. Use image receipt instead (recommended)
 2. Check if PDF is actually from GCash
 3. Contact support for password help
@@ -378,6 +393,7 @@ Add a password input field in the UI to support password-protected PDFs.
 **Problem:** "Could not extract reference number from PDF"
 
 **Solutions:**
+
 1. Verify PDF is GCash transaction history (not a screenshot)
 2. Try using most recent PDF export
 3. Use image receipt instead

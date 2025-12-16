@@ -13,6 +13,7 @@ The Batch OCR Processing feature allows admins to automatically extract GCash re
 **Location:** Admin Dashboard → Orders → "Batch OCR Processing" button
 
 **Requirements:**
+
 - Must be logged in as Shop Admin (`isShopAdmin: true`)
 - Orders must have `receiptImageUrl` but `gcashReferenceNumber` is `null`
 
@@ -30,6 +31,7 @@ Admin Dashboard → Orders
 ### 2. Review Orders List
 
 Each order shows:
+
 - Order ID (first 8 characters)
 - Status badge
 - PDF badge (if receipt is PDF format)
@@ -41,6 +43,7 @@ Each order shows:
 ### 3. Select Orders
 
 **Options:**
+
 - **Individual Selection**: Click checkbox next to each order
 - **Select All**: Click "Select All" button
 - **Deselect All**: Click "Deselect All" button
@@ -52,6 +55,7 @@ Each order shows:
 Click "Process X Orders" button to start batch processing.
 
 **Processing Flow:**
+
 ```
 For each selected order:
   1. Fetch receipt image/PDF from storage (MinIO)
@@ -65,6 +69,7 @@ For each selected order:
 ```
 
 **Progress Tracking:**
+
 - Real-time progress bar
 - Percentage complete
 - Processing indicator
@@ -74,15 +79,18 @@ For each selected order:
 After processing completes, see detailed summary:
 
 **Statistics:**
+
 - ✅ **Processed**: Successfully extracted reference numbers
 - ❌ **Failed**: Could not extract (poor image quality, wrong format, etc.)
 - ⚠️ **Skipped**: Already has ref number or no receipt image
 
 **Successfully Extracted:**
+
 - Shows Order ID → Reference Number mapping
 - Green badges with extracted numbers
 
 **Errors:**
+
 - Lists failed orders with error messages
 - Red alert boxes with details
 
@@ -184,6 +192,7 @@ After processing completes, see detailed summary:
 ```
 
 **Advantages over Client-Side:**
+
 - ✅ Consistent processing environment
 - ✅ Can process images without user interaction
 - ✅ No browser performance dependency
@@ -207,17 +216,18 @@ After processing completes, see detailed summary:
 
 ### Common Errors and Solutions
 
-| Error Message | Cause | Solution |
-|--------------|-------|----------|
-| "Could not extract reference number" | Poor image quality, wrong format | Re-upload with clearer image |
-| "Failed to fetch image" | Image URL invalid or inaccessible | Check MinIO storage |
-| "Order already has a reference number" | Duplicate processing attempt | Skipped (no action needed) |
-| "Order has no receipt image" | No receipt uploaded | Skipped (no action needed) |
-| "Invalid password provided for PDF" | Password-protected PDF | Use image receipt instead |
+| Error Message                          | Cause                             | Solution                     |
+| -------------------------------------- | --------------------------------- | ---------------------------- |
+| "Could not extract reference number"   | Poor image quality, wrong format  | Re-upload with clearer image |
+| "Failed to fetch image"                | Image URL invalid or inaccessible | Check MinIO storage          |
+| "Order already has a reference number" | Duplicate processing attempt      | Skipped (no action needed)   |
+| "Order has no receipt image"           | No receipt uploaded               | Skipped (no action needed)   |
+| "Invalid password provided for PDF"    | Password-protected PDF            | Use image receipt instead    |
 
 ### Skipped Orders
 
 Orders are automatically skipped if:
+
 - `gcashReferenceNumber` already exists (not `null`)
 - `receiptImageUrl` is `null` (no receipt uploaded)
 
@@ -293,6 +303,7 @@ These don't count as failures - they're legitimate skips.
 **Problem:** "Batch OCR Processing" button not visible
 
 **Solutions:**
+
 1. Verify you're logged in as Shop Admin
 2. Check `isShopAdmin: true` in database
 3. Refresh the page
@@ -302,11 +313,13 @@ These don't count as failures - they're legitimate skips.
 **Problem:** "No orders need OCR processing" message
 
 **Possible Reasons:**
+
 1. ✅ All orders already have reference numbers (good!)
 2. No orders have receipt images
 3. Database query issue
 
 **Verification:**
+
 ```sql
 SELECT COUNT(*) FROM "Order"
 WHERE "receiptImageUrl" IS NOT NULL
@@ -318,6 +331,7 @@ AND "gcashReferenceNumber" IS NULL;
 **Problem:** Progress bar not moving
 
 **Solutions:**
+
 1. Wait 30 seconds (OCR can be slow)
 2. Check browser console for errors
 3. Check server logs
@@ -328,11 +342,13 @@ AND "gcashReferenceNumber" IS NULL;
 **Problem:** Every order shows error
 
 **Possible Causes:**
+
 1. MinIO storage connection issue
 2. Tesseract.js not installed properly
 3. Language data not downloaded
 
 **Check:**
+
 ```bash
 # Verify Tesseract.js is installed
 npm list tesseract.js
@@ -349,24 +365,24 @@ Orders needing OCR are fetched with:
 
 ```typescript
 await prisma.order.findMany({
-  where: {
-    receiptImageUrl: { not: null },
-    gcashReferenceNumber: null,
-  },
-  select: {
-    id: true,
-    receiptImageUrl: true,
-    totalAmount: true,
-    status: true,
-    createdAt: true,
-    user: {
-      select: {
-        name: true,
-        email: true,
-      },
-    },
-  },
-  orderBy: { createdAt: 'desc' },
+	where: {
+		receiptImageUrl: { not: null },
+		gcashReferenceNumber: null,
+	},
+	select: {
+		id: true,
+		receiptImageUrl: true,
+		totalAmount: true,
+		status: true,
+		createdAt: true,
+		user: {
+			select: {
+				name: true,
+				email: true,
+			},
+		},
+	},
+	orderBy: { createdAt: "desc" },
 });
 ```
 
@@ -415,6 +431,7 @@ setProgress((completed / total) * 100);
 Fetches all orders with receipts but no reference numbers.
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -428,6 +445,7 @@ Fetches all orders with receipts but no reference numbers.
 Processes a single order's receipt.
 
 **Returns:**
+
 ```typescript
 {
   success: boolean;
@@ -442,17 +460,18 @@ Processes a single order's receipt.
 Processes multiple orders (currently unused, processes one-by-one instead).
 
 **Returns:**
+
 ```typescript
 {
-  success: boolean;
-  results: {
-    processed: number;
-    failed: number;
-    skipped: number;
-    extracted: Array<{ orderId: string; refNumber: string }>;
-    errors: Array<{ orderId: string; error: string }>;
-  };
-  message: string;
+	success: boolean;
+	results: {
+		processed: number;
+		failed: number;
+		skipped: number;
+		extracted: Array<{ orderId: string; refNumber: string }>;
+		errors: Array<{ orderId: string; error: string }>;
+	}
+	message: string;
 }
 ```
 

@@ -5,6 +5,7 @@ This directory contains comprehensive documentation for the GCash reference numb
 ## Quick Start
 
 **New to the system?** Start here:
+
 1. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick reference guide
 2. [FEATURE_GUIDE.md](FEATURE_GUIDE.md) - User and admin guide with examples
 
@@ -32,6 +33,12 @@ This directory contains comprehensive documentation for the GCash reference numb
   - Step-by-step walkthrough
   - Processing logic
   - Troubleshooting guide
+
+- **[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md)** - Production deployment notes
+  - SSL certificate handling
+  - Network configuration for Docker
+  - Timeout settings
+  - Troubleshooting production issues
 
 ### Technical Documentation
 
@@ -93,43 +100,50 @@ docs/
 ## Choose Your Path
 
 ### I'm a Customer
+
 👉 [FEATURE_GUIDE.md](FEATURE_GUIDE.md#for-customers) - Learn how to upload receipts
 
 ### I'm an Admin
+
 👉 [FEATURE_GUIDE.md](FEATURE_GUIDE.md#for-admins) - Learn the admin dashboard
 👉 [BATCH_OCR_GUIDE.md](BATCH_OCR_GUIDE.md) - Process existing orders
 
 ### I'm a Developer
+
 👉 [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick overview
 👉 [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Technical details
 👉 [GCASH.md](GCASH.md) - Deep dive into OCR implementation
 
 ### I Need Specific Info
 
-| Question | Document |
-|----------|----------|
-| How do I test the system? | [QUICK_REFERENCE.md#how-to-test](QUICK_REFERENCE.md#how-to-test) |
-| What's the difference between image and PDF? | [PDF_IMAGE_SUPPORT.md#performance-comparison](PDF_IMAGE_SUPPORT.md#performance-comparison) |
-| How do I process old orders? | [BATCH_OCR_GUIDE.md](BATCH_OCR_GUIDE.md) |
-| What files were changed? | [IMPLEMENTATION_SUMMARY.md#files-createdmodified](IMPLEMENTATION_SUMMARY.md#files-createdmodified) |
-| How does OCR work? | [GCASH.md#image-based-receipt-extraction-ocr](GCASH.md#image-based-receipt-extraction-ocr) |
-| How do I handle errors? | [FEATURE_GUIDE.md#troubleshooting](FEATURE_GUIDE.md#troubleshooting) |
-| What are the regex patterns? | [GCASH.md#regex-pattern-explanations](GCASH.md#regex-pattern-explanations) |
-| How do I batch process? | [BATCH_OCR_GUIDE.md#how-it-works](BATCH_OCR_GUIDE.md#how-it-works) |
+| Question                                     | Document                                                                                           |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| How do I test the system?                    | [QUICK_REFERENCE.md#how-to-test](QUICK_REFERENCE.md#how-to-test)                                   |
+| What's the difference between image and PDF? | [PDF_IMAGE_SUPPORT.md#performance-comparison](PDF_IMAGE_SUPPORT.md#performance-comparison)         |
+| How do I process old orders?                 | [BATCH_OCR_GUIDE.md](BATCH_OCR_GUIDE.md)                                                           |
+| What files were changed?                     | [IMPLEMENTATION_SUMMARY.md#files-createdmodified](IMPLEMENTATION_SUMMARY.md#files-createdmodified) |
+| How does OCR work?                           | [GCASH.md#image-based-receipt-extraction-ocr](GCASH.md#image-based-receipt-extraction-ocr)         |
+| How do I handle errors?                      | [FEATURE_GUIDE.md#troubleshooting](FEATURE_GUIDE.md#troubleshooting)                               |
+| What are the regex patterns?                 | [GCASH.md#regex-pattern-explanations](GCASH.md#regex-pattern-explanations)                         |
+| How do I batch process?                      | [BATCH_OCR_GUIDE.md#how-it-works](BATCH_OCR_GUIDE.md#how-it-works)                                 |
 
 ## Key Concepts
 
 ### Reference Number
+
 A unique identifier (typically 13 digits) that GCash assigns to each transaction.
 Example: `1234567890123`
 
 ### OCR (Optical Character Recognition)
+
 Technology that reads text from images. We use Tesseract.js for this.
 
 ### Duplicate Detection
+
 Prevents the same GCash payment from being used for multiple orders.
 
 ### Batch Processing
+
 Retroactively extract reference numbers from existing orders' receipts.
 
 ## Quick Links
@@ -143,6 +157,7 @@ Retroactively extract reference numbers from existing orders' receipts.
 ## Support
 
 For questions or issues:
+
 1. Check the relevant documentation file
 2. Review the [Troubleshooting](#troubleshooting-index) section
 3. Check the FAQ in [FEATURE_GUIDE.md](FEATURE_GUIDE.md#faq)
@@ -152,13 +167,13 @@ For questions or issues:
 
 Quick links to common issues:
 
-| Issue | Solution |
-|-------|----------|
-| OCR not extracting | [FEATURE_GUIDE.md - What to Do If OCR Fails](FEATURE_GUIDE.md#what-to-do-if-ocr-fails) |
+| Issue                   | Solution                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| OCR not extracting      | [FEATURE_GUIDE.md - What to Do If OCR Fails](FEATURE_GUIDE.md#what-to-do-if-ocr-fails)            |
 | Duplicate payment error | [FEATURE_GUIDE.md - FAQ](FEATURE_GUIDE.md#q-can-i-use-the-same-gcash-payment-for-multiple-orders) |
-| Batch processing stuck | [BATCH_OCR_GUIDE.md - Processing Stuck](BATCH_OCR_GUIDE.md#processing-stuck) |
-| PDF won't process | [PDF_IMAGE_SUPPORT.md - PDF Won't Process](PDF_IMAGE_SUPPORT.md#pdf-wont-process) |
-| Image won't process | [PDF_IMAGE_SUPPORT.md - Image Won't Process](PDF_IMAGE_SUPPORT.md#image-wont-process) |
+| Batch processing stuck  | [BATCH_OCR_GUIDE.md - Processing Stuck](BATCH_OCR_GUIDE.md#processing-stuck)                      |
+| PDF won't process       | [PDF_IMAGE_SUPPORT.md - PDF Won't Process](PDF_IMAGE_SUPPORT.md#pdf-wont-process)                 |
+| Image won't process     | [PDF_IMAGE_SUPPORT.md - Image Won't Process](PDF_IMAGE_SUPPORT.md#image-wont-process)             |
 
 ## Version History
 
