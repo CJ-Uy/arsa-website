@@ -44,6 +44,10 @@ COPY --from=prisma /app/src/generated ./src/generated
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Provide a dummy DATABASE_URL for build time (won't actually connect to DB during build)
+# This is needed because Prisma client requires DATABASE_URL to be set
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+
 # Optimize Node.js memory and build performance
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
