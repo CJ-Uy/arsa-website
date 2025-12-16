@@ -40,8 +40,8 @@ COPY . .
 # Copy the generated Prisma client from prisma stage
 COPY --from=prisma /app/src/generated ./src/generated
 
-# Set environment to production for optimal build
-ENV NODE_ENV=production
+# Don't set NODE_ENV=production here because we need devDependencies for the build
+# Next.js will use production mode automatically during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Provide a dummy DATABASE_URL for build time (won't actually connect to DB during build)
@@ -51,7 +51,7 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 # Optimize Node.js memory and build performance
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Build Next.js with Turbopack
+# Build Next.js (using webpack for production stability)
 RUN npm run build
 
 
