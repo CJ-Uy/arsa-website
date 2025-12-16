@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateOrderStatus, deleteOrder, exportOrdersData } from "./actions";
-import { BatchOcrProcessor } from "./batch-ocr";
+import { ClientBatchOcr } from "./ClientBatchOcr";
 import { toast } from "sonner";
 import { CheckCircle, Clock, Package, Eye, Trash2, Download, AlertTriangle } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -206,9 +206,13 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 
 	return (
 		<div>
+			{/* Batch OCR Section */}
+			<div className="mb-6">
+				<ClientBatchOcr />
+			</div>
+
 			{/* Action Buttons */}
 			<div className="mb-6 flex justify-end gap-2">
-				<BatchOcrProcessor />
 				<Button onClick={handleExportToExcel} variant="outline">
 					<Download className="mr-2 h-4 w-4" />
 					Export to Excel
