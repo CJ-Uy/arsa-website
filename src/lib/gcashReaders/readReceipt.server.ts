@@ -2,13 +2,6 @@ import { createWorker } from "tesseract.js";
 import path from "path";
 import { parseOcrText, GcashReceiptData } from "./parseReceipt";
 
-// Disable SSL certificate validation for production with self-signed certificates
-// This is safe for server-side code as it only affects this Node.js process
-// Note: This is set at module load time, before any fetch calls are made
-if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
-	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-}
-
 /**
  * Server-side OCR processing for GCash receipts.
  * This runs on the Node.js server and can process images from URLs or buffers.

@@ -63,6 +63,10 @@ RUN apk add --no-cache ca-certificates
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Disable SSL certificate verification for self-signed certificates
+# This is needed for MinIO/S3 storage with self-signed SSL certs
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+
 # Create a non-root user for security best practices (combine RUN commands to reduce layers)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
