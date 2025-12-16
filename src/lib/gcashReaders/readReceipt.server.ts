@@ -2,11 +2,10 @@ import { createWorker } from "tesseract.js";
 import path from "path";
 import { parseOcrText, GcashReceiptData } from "./parseReceipt";
 
-// Node.js fetch doesn't support rejectUnauthorized directly
-// We need to set it globally for the process
+// Disable SSL certificate validation for production with self-signed certificates
 // This is safe for server-side code as it only affects this Node.js process
-if (process.env.NODE_ENV === "production") {
-	// @ts-ignore - Node.js specific environment variable
+// Note: This is set at module load time, before any fetch calls are made
+if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
