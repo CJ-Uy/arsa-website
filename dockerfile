@@ -84,6 +84,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy Prisma client for runtime (generated client is in custom location)
 COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
 
+# Copy Tesseract.js worker files for OCR functionality
+# These are needed at runtime for batch OCR processing
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tesseract.js ./node_modules/tesseract.js
+
 # Switch to the non-root user
 USER nextjs
 

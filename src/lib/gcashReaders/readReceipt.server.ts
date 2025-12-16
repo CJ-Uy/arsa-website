@@ -56,7 +56,7 @@ export async function parseGcashReceiptServer(imageBuffer: Buffer): Promise<Gcas
  */
 export async function parseGcashReceiptFromUrl(imageUrl: string): Promise<GcashReceiptData> {
 	try {
-		console.log(`Fetching image from URL: ${imageUrl}`);
+		console.log(`[OCR] Fetching image from URL: ${imageUrl}`);
 
 		// Configure fetch with increased timeout
 		// SSL certificate validation is disabled globally for production
@@ -64,7 +64,9 @@ export async function parseGcashReceiptFromUrl(imageUrl: string): Promise<GcashR
 			signal: AbortSignal.timeout(30000), // 30 second timeout
 		};
 
+		console.log(`[OCR] Initiating fetch request...`);
 		const response = await fetch(imageUrl, fetchOptions);
+		console.log(`[OCR] Fetch response status: ${response.status} ${response.statusText}`);
 
 		if (!response.ok) {
 			throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);

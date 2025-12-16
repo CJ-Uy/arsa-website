@@ -35,8 +35,9 @@ export async function initializeBuckets() {
 			if (!exists) {
 				await minioClient.makeBucket(bucketName, "us-east-1");
 
-				// Set bucket policy to allow read access for product images
-				if (bucketName === BUCKETS.PRODUCTS) {
+				// Set bucket policy to allow read access for product images and receipts
+				// Both need to be publicly readable for OCR processing
+				if (bucketName === BUCKETS.PRODUCTS || bucketName === BUCKETS.RECEIPTS) {
 					const policy = {
 						Version: "2012-10-17",
 						Statement: [

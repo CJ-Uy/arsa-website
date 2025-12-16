@@ -16,6 +16,19 @@ const nextConfig: NextConfig = {
 		webpackMemoryOptimizations: true,
 		// Enable optimized package imports for smaller bundles
 		optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
+		// Ensure serverComponentsExternalPackages includes tesseract.js
+		serverComponentsExternalPackages: ["tesseract.js"],
+	},
+	// Configure webpack for Tesseract.js worker files
+	webpack: (config, { isServer }) => {
+		if (isServer) {
+			// Ensure Tesseract.js worker files are available
+			config.resolve.alias = {
+				...config.resolve.alias,
+				canvas: false,
+			};
+		}
+		return config;
 	},
 	// Compiler optimizations
 	compiler: {
