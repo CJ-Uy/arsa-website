@@ -46,6 +46,9 @@ npx prisma studio        # Open Prisma Studio for database management
 - Database models:
   - `Credentials`: Authentication for the redirect dashboard
   - `Redirects`: URL shortener system tracking redirects, clicks, and codes
+  - `User`, `Session`, `Account`: Better Auth authentication models
+  - `Product`, `CartItem`, `Order`, `OrderItem`: E-commerce/shop system
+  - `Banner`: Homepage banner configuration with countdown support
 
 ### Middleware Architecture
 
@@ -95,6 +98,8 @@ All pages use the App Router structure in [src/app/](src/app/):
 - `/merch` - Merchandise showcase with gacha system
 - `/resources` - Resource links
 - `/contact` - Contact information
+- `/shop` - Shop system with cart and checkout
+- `/admin` - Admin dashboard (protected, requires isShopAdmin)
 - `/redirects` - URL redirect management dashboard (protected)
 
 ### Styling
@@ -117,15 +122,45 @@ The application is containerized for production:
 - **Environment**: Reads `DATABASE_URL` and other env vars from `.env`
 - **Security**: Runs as non-root user (nextjs:nodejs)
 
+## Shop System & GCash Integration
+
+### GCash Reference Number Auto-Extraction
+
+The checkout system includes automatic GCash reference number extraction:
+
+- **OCR Processing**: Uses Tesseract.js for client-side OCR ([src/lib/gcashReaders/](src/lib/gcashReaders/))
+- **Automatic Extraction**: Reference numbers extracted from receipt screenshots during checkout
+- **Duplicate Detection**: Server-side validation prevents using same payment for multiple orders
+- **Admin Visibility**: Reference numbers displayed in admin dashboard with duplicate warnings
+- **Excel Export**: Includes "GCash Ref No" column in order exports
+
+**Documentation**: See [docs/](docs/) folder for complete documentation:
+- [docs/README.md](docs/README.md) - Documentation index and navigation
+- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick reference for developers
+- [docs/GCASH.md](docs/GCASH.md) - Complete OCR implementation reference
+- [docs/IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md) - Technical implementation details
+- [docs/FEATURE_GUIDE.md](docs/FEATURE_GUIDE.md) - User and admin guides
+- [docs/PDF_IMAGE_SUPPORT.md](docs/PDF_IMAGE_SUPPORT.md) - Image vs PDF detailed guide
+- [docs/BATCH_OCR_GUIDE.md](docs/BATCH_OCR_GUIDE.md) - Batch processing for existing orders
+
+### Order Management
+
+- **Customer Flow**: Cart → Checkout → GCash Payment → Receipt Upload → Auto-extraction → Order Creation
+- **Admin Dashboard**: [src/app/admin/orders/](src/app/admin/orders/) - View orders, update status, detect duplicates
+- **Duplicate Detection**: Visual badges and warnings for orders sharing the same GCash reference number
+- **Excel Export**: Full order data with reference numbers for external processing
+
 ## Important Notes
 
 ### Database Workflow
 
 Always run `npx prisma generate` after modifying [prisma/schema.prisma](prisma/schema.prisma) to regenerate the client in `src/generated/prisma/`.
 
+Use `npx prisma db push` to apply schema changes to the database (safer than migrate for existing data).
+
 ### Authentication
 
-The redirect dashboard uses basic authentication with plain text passwords stored in the `Credentials` table. This is not production-ready security.
+The system uses Better Auth for user authentication with session management. Admin access controlled via `isShopAdmin` flag on User model.
 
 ### Build Configuration
 

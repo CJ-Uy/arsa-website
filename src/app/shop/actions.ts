@@ -171,11 +171,37 @@ export async function createOrder(
 	firstName?: string,
 	lastName?: string,
 	studentId?: string,
+	gcashReferenceNumber?: string,
 ) {
 	try {
 		const session = await getSession();
 		if (!session?.user) {
 			return { success: false, message: "Unauthorized" };
+		}
+
+		// Check for duplicate orders using the same GCash reference number
+		if (gcashReferenceNumber) {
+			const existingOrder = await prisma.order.findFirst({
+				where: {
+					gcashReferenceNumber,
+				},
+				include: {
+					user: {
+						select: {
+							name: true,
+							email: true,
+						},
+					},
+				},
+			});
+
+			if (existingOrder) {
+				return {
+					success: false,
+					message: `This GCash reference number has already been used for another order (Order ID: ${existingOrder.id.slice(0, 8)}). Each payment can only be used for one order. Please contact support if you believe this is an error.`,
+					isDuplicate: true,
+				};
+			}
 		}
 
 		// Update user's information if provided
@@ -228,6 +254,7 @@ export async function createOrder(
 				userId: session.user.id,
 				totalAmount,
 				receiptImageUrl,
+				gcashReferenceNumber,
 				notes,
 				status: "pending",
 				orderItems: {

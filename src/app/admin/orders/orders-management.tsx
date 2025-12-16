@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateOrderStatus, deleteOrder, exportOrdersData } from "./actions";
+import { BatchOcrProcessor } from "./batch-ocr";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Package, Eye, Trash2, Download } from "lucide-react";
+import { CheckCircle, Clock, Package, Eye, Trash2, Download, AlertTriangle } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
 	AlertDialog,
@@ -40,6 +41,7 @@ type Order = {
 	totalAmount: number;
 	status: string;
 	receiptImageUrl: string | null;
+	gcashReferenceNumber: string | null;
 	notes: string | null;
 	createdAt: Date;
 	user: {
@@ -51,6 +53,7 @@ type Order = {
 		id: string;
 		quantity: number;
 		price: number;
+		size: string | null;
 		product: {
 			id: string;
 			name: string;
@@ -70,6 +73,19 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
 	const [statusFilter, setStatusFilter] = useState<string>("all");
+
+	// Detect duplicate GCash reference numbers
+	const duplicateRefNumbers = new Set<string>();
+	const refNumberCounts = new Map<string, number>();
+	orders.forEach((order) => {
+		if (order.gcashReferenceNumber) {
+			const count = refNumberCounts.get(order.gcashReferenceNumber) || 0;
+			refNumberCounts.set(order.gcashReferenceNumber, count + 1);
+			if (count > 0) {
+				duplicateRefNumbers.add(order.gcashReferenceNumber);
+			}
+		}
+	});
 
 	const filteredOrders =
 		statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
@@ -129,6 +145,7 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 				{ wch: 12 }, // Item Total
 				{ wch: 12 }, // Order Total
 				{ wch: 12 }, // Order Status
+				{ wch: 15 }, // GCash Ref No
 				{ wch: 30 }, // Notes
 				{ wch: 30 }, // Receipt URL
 			];
@@ -189,8 +206,9 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 
 	return (
 		<div>
-			{/* Export Button */}
-			<div className="mb-6 flex justify-end">
+			{/* Action Buttons */}
+			<div className="mb-6 flex justify-end gap-2">
+				<BatchOcrProcessor />
 				<Button onClick={handleExportToExcel} variant="outline">
 					<Download className="mr-2 h-4 w-4" />
 					Export to Excel
@@ -273,10 +291,25 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 										<div className="flex items-center gap-3">
 											<span className="font-mono text-sm">#{order.id.slice(0, 8)}</span>
 											{getStatusBadge(order.status)}
+											{order.gcashReferenceNumber &&
+												duplicateRefNumbers.has(order.gcashReferenceNumber) && (
+													<Badge variant="destructive" className="flex items-center gap-1">
+														<AlertTriangle className="h-3 w-3" />
+														Duplicate Payment
+													</Badge>
+												)}
 										</div>
 										<div className="text-muted-foreground text-sm">
 											<p>Customer: {order.user.name || order.user.email}</p>
 											<p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+											{order.gcashReferenceNumber && (
+												<p className="flex items-center gap-2">
+													<span>GCash Ref:</span>
+													<span className="text-foreground font-mono font-semibold">
+														{order.gcashReferenceNumber}
+													</span>
+												</p>
+											)}
 											<p className="text-foreground font-semibold">
 												Total: ₱{order.totalAmount.toFixed(2)}
 											</p>
@@ -340,6 +373,25 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 								<h3 className="mb-2 font-semibold">Customer Information</h3>
 								<p className="text-sm">Name: {selectedOrder.user.name || "N/A"}</p>
 								<p className="text-sm">Email: {selectedOrder.user.email}</p>
+								{selectedOrder.gcashReferenceNumber && (
+									<div className="mt-2">
+										<p className="text-sm">
+											GCash Reference Number:{" "}
+											<span className="font-mono font-semibold">
+												{selectedOrder.gcashReferenceNumber}
+											</span>
+										</p>
+										{duplicateRefNumbers.has(selectedOrder.gcashReferenceNumber) && (
+											<Alert variant="destructive" className="mt-2">
+												<AlertTriangle className="h-4 w-4" />
+												<AlertDescription>
+													This GCash reference number is used in multiple orders. Please verify
+													the payment.
+												</AlertDescription>
+											</Alert>
+										)}
+									</div>
+								)}
 							</div>
 
 							<Card>

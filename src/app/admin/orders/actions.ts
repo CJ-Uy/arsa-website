@@ -101,6 +101,7 @@ export async function exportOrdersData() {
 				"Item Total": item.price * item.quantity,
 				"Order Total": order.totalAmount,
 				"Order Status": order.status,
+				"GCash Ref No": order.gcashReferenceNumber || "N/A",
 				Notes: order.notes || "",
 				"Receipt URL": order.receiptImageUrl || "",
 			})),

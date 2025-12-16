@@ -1,17 +1,18 @@
 {
-	"permissions": {
-		"allow": [
-			"Bash(nul)",
-			"Bash(npx prisma generate)",
-			"Bash(npm run build:*)",
-			"Bash(docker:*)",
-			"Bash(docker compose:*)",
-			"Bash(npx prisma db push:*)",
-			"Bash(cat:*)",
-			"Bash(npx prisma migrate dev:*)",
-			"Bash(npx tsc:*)"
-		],
-		"deny": [],
-		"ask": []
-	}
+  "permissions": {
+    "allow": [
+      "Bash(nul)",
+      "Bash(npx prisma generate)",
+      "Bash(npm run build:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(cat:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
 }

@@ -4,13 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createOrder } from "../actions";
+import { extractRefNumberFromPdf } from "../gcashActions";
 import { toast } from "sonner";
+import { parseGcashReceiptClient } from "@/lib/gcashReaders/readReceipt.client";
 
 type CartItem = {
 	id: string;
@@ -46,6 +49,8 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 	const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 	const [notes, setNotes] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
+	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
 
 	const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
@@ -54,23 +59,81 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 		new Set(cart.map((item) => item.product.specialNote).filter((note): note is string => !!note)),
 	);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (file) {
-			if (!file.type.startsWith("image/")) {
-				toast.error("Please upload an image file");
+			// Accept both images and PDFs
+			const isPDF = file.type === "application/pdf";
+			const isImage = file.type.startsWith("image/");
+
+			if (!isImage && !isPDF) {
+				toast.error("Please upload an image or PDF file");
 				return;
 			}
-			if (file.size > 10 * 1024 * 1024) {
-				toast.error("File size must be less than 10MB");
+			if (file.size > 20 * 1024 * 1024) {
+				toast.error("File size must be less than 20MB");
 				return;
 			}
+
 			setReceiptFile(file);
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				setReceiptPreview(reader.result as string);
-			};
-			reader.readAsDataURL(file);
+
+			// Only show preview for images
+			if (isImage) {
+				const reader = new FileReader();
+				reader.onloadend = () => {
+					setReceiptPreview(reader.result as string);
+				};
+				reader.readAsDataURL(file);
+			} else {
+				setReceiptPreview(null); // No preview for PDFs
+			}
+
+			// Auto-extract GCash reference number
+			setExtractingRefNumber(true);
+			toast.loading("Extracting GCash reference number...");
+			try {
+				if (isImage) {
+					// OCR for images
+					const receiptData = await parseGcashReceiptClient(file);
+					if (receiptData.referenceNumber) {
+						setGcashRefNumber(receiptData.referenceNumber);
+						toast.dismiss();
+						toast.success(`Reference number extracted: ${receiptData.referenceNumber}`);
+					} else {
+						toast.dismiss();
+						toast.warning("Could not extract reference number. Please ensure receipt is clear.");
+					}
+				} else if (isPDF) {
+					// For PDFs, extract server-side
+					const pdfFormData = new FormData();
+					pdfFormData.append("pdfFile", file);
+					pdfFormData.append("password", "");
+
+					const result = await extractRefNumberFromPdf(pdfFormData);
+					if (result.success && result.referenceNumber) {
+						setGcashRefNumber(result.referenceNumber);
+						toast.dismiss();
+						toast.success(
+							`Reference number extracted from PDF: ${result.referenceNumber} (${result.transactionCount} transactions found)`,
+						);
+					} else {
+						toast.dismiss();
+						if (result.message?.includes("password")) {
+							toast.error(
+								"PDF is password protected. Please use an image receipt or contact support.",
+							);
+						} else {
+							toast.warning(result.message || "Could not extract reference number from PDF.");
+						}
+					}
+				}
+			} catch (error) {
+				console.error("OCR error:", error);
+				toast.dismiss();
+				toast.warning("Could not extract reference number automatically.");
+			} finally {
+				setExtractingRefNumber(false);
+			}
 		}
 	};
 
@@ -114,13 +177,14 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 
 			const { url: receiptUrl } = await uploadResponse.json();
 
-			// Create order with the MinIO URL and user info
+			// Create order with the MinIO URL, user info, and GCash reference number
 			const result = await createOrder(
 				receiptUrl,
 				notes || undefined,
 				firstName.trim(),
 				lastName.trim(),
 				studentId.trim() || undefined,
+				gcashRefNumber || undefined,
 			);
 
 			if (result.success) {
@@ -239,7 +303,7 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 									<input
 										type="file"
 										id="receipt"
-										accept="image/*"
+										accept="image/*,application/pdf"
 										onChange={handleFileChange}
 										className="hidden"
 									/>
@@ -252,9 +316,23 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 														alt="Receipt preview"
 														className="mx-auto max-h-64 rounded-lg"
 													/>
-													<div className="flex items-center justify-center text-green-600">
-														<Check className="mr-2 h-5 w-5" />
-														<span className="font-medium">Receipt uploaded</span>
+													<div className="space-y-2">
+														<div className="flex items-center justify-center text-green-600">
+															<Check className="mr-2 h-5 w-5" />
+															<span className="font-medium">Receipt uploaded</span>
+														</div>
+														{extractingRefNumber && (
+															<div className="flex items-center justify-center text-blue-600">
+																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+																<span className="text-sm">Extracting reference number...</span>
+															</div>
+														)}
+														{gcashRefNumber && (
+															<Badge variant="outline" className="flex items-center gap-2">
+																<span className="text-xs">Ref No:</span>
+																<span className="font-mono font-semibold">{gcashRefNumber}</span>
+															</Badge>
+														)}
 													</div>
 													<Button
 														type="button"
@@ -268,12 +346,45 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 														Change Receipt
 													</Button>
 												</div>
+											) : receiptFile && receiptFile.type === "application/pdf" ? (
+												<div className="space-y-4">
+													<div className="text-muted-foreground flex items-center justify-center">
+														<Package className="mr-2 h-12 w-12" />
+													</div>
+													<div className="space-y-2">
+														<div className="flex items-center justify-center text-green-600">
+															<Check className="mr-2 h-5 w-5" />
+															<span className="font-medium">PDF uploaded: {receiptFile.name}</span>
+														</div>
+														{gcashRefNumber && (
+															<Badge variant="outline" className="flex items-center gap-2">
+																<span className="text-xs">Ref No:</span>
+																<span className="font-mono font-semibold">{gcashRefNumber}</span>
+															</Badge>
+														)}
+													</div>
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															setReceiptFile(null);
+															setReceiptPreview(null);
+															setGcashRefNumber(null);
+														}}
+													>
+														Change Receipt
+													</Button>
+												</div>
 											) : (
 												<div className="space-y-2">
 													<Upload className="text-muted-foreground mx-auto h-12 w-12" />
 													<p className="text-sm font-medium">Click to upload receipt</p>
 													<p className="text-muted-foreground text-xs">
-														PNG, JPG or JPEG (max 10MB)
+														Image (PNG, JPG) or PDF (max 20MB)
+													</p>
+													<p className="text-muted-foreground text-xs">
+														PDF support: GCash transaction history exports
 													</p>
 												</div>
 											)}
