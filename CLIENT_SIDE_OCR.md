@@ -38,17 +38,28 @@ Instead of processing OCR on the server, we moved it entirely to the client (bro
 ⚠️ **Processes one at a time** (but shows progress)
 ⚠️ **Only works with images** - PDFs still need server-side processing
 
-## Files Created
+## Files Created/Modified
 
 1. **[ClientBatchOcr.tsx](src/app/admin/orders/ClientBatchOcr.tsx)** - Main UI component
-   - Shows "Load Orders" and "Process All" buttons
+   - **Collapsible card** - Click header to expand/collapse
+   - **Four buttons**:
+     - Load New Orders (only unprocessed)
+     - Load All Orders (including processed)
+     - Process New (skip already processed)
+     - Reprocess All (overwrite everything)
    - Displays progress bar and real-time stats
-   - Handles downloading images and running OCR
+   - Tracks: Processed, Failed, Skipped, Updated counts
 
 2. **[clientBatchOcrActions.ts](src/app/admin/orders/clientBatchOcrActions.ts)** - Server actions
-   - `getOrdersForClientOcr()` - Fetch orders needing OCR
-   - `saveExtractedReferenceNumber()` - Save OCR result
+   - `getOrdersForClientOcr()` - Fetch orders needing OCR (no ref number)
+   - `getAllOrdersWithReceipts()` - Fetch ALL orders with receipts
+   - `saveExtractedReferenceNumber()` - Save OCR result (with optional overwrite)
    - `markOrderOcrFailed()` - Log failures
+
+3. **[parseReceipt.ts](src/lib/gcashReaders/parseReceipt.ts)** - OCR parsing logic
+   - **Updated regex** to handle reference numbers with spaces
+   - Example: "Ref No. 1234 567 890 Dec 08, 2025"
+   - Now extracts "1234567890" correctly (spaces removed)
 
 ## Files Modified
 
@@ -62,11 +73,19 @@ Instead of processing OCR on the server, we moved it entirely to the client (bro
 ## Usage
 
 1. Go to Admin → Orders
-2. See the "Client-Side Batch OCR Processing" card at the top
-3. Click "Load Orders Needing OCR"
-4. Click "Process All (X)" to start processing
+2. Click on the "Client-Side Batch OCR Processing" card to expand it
+3. Choose one of the loading options:
+   - **Load New Orders**: Only orders without reference numbers
+   - **Load All Orders**: All orders (for reprocessing false positives)
+4. Choose a processing option:
+   - **Process New**: Process only orders without ref numbers
+   - **Reprocess All**: Overwrite ALL reference numbers (use to fix false positives)
 5. Watch the progress bar - processing happens in your browser
-6. Results show: Processed count, Failed count, Success rate
+6. Results show: Processed, Failed, Skipped, Updated counts
+
+### Collapsible Panel
+
+The OCR panel is now collapsible to save screen space. Click the header to expand/collapse.
 
 ## Performance
 

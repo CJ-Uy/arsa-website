@@ -27,8 +27,10 @@ export function parseOcrText(rawText: string): GcashReceiptData {
 
 	// --- Regex patterns fine-tuned for OCR inaccuracies ---
 
-	// Matches "Ref No." followed by the number and then captures the rest of the line as the date.
-	const refAndDateRegex = /Ref No\.\s*(\d+)\s+(.+)/;
+	// Matches "Ref No." followed by the number (with possible spaces) and then captures the date.
+	// Reference numbers can have spaces (e.g., "1234 567 8901")
+	// There's usually a big space gap before the date
+	const refAndDateRegex = /Ref No\.\s*([\d\s]+?)\s{2,}(.+)/;
 
 	// Makes the currency symbol optional and non-capturing, looking for any characters
 	// between "Total Amount Sent" and the number pattern. This handles '₱', '£', '$', or OCR errors.
@@ -44,7 +46,8 @@ export function parseOcrText(rawText: string): GcashReceiptData {
 		// Find Reference Number and Timestamp
 		const refMatch = line.match(refAndDateRegex);
 		if (refMatch) {
-			data.referenceNumber = refMatch[1].trim();
+			// Remove all spaces from the reference number
+			data.referenceNumber = refMatch[1].replace(/\s/g, "").trim();
 			const dateString = refMatch[2].trim();
 			// Attempt to parse the date, removing any extra text OCR might have added
 			const cleanDateString = dateString.replace(/PM/i, " PM").replace(/AM/i, " AM");

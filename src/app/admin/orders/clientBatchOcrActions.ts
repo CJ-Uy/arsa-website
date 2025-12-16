@@ -73,10 +73,60 @@ export async function getOrdersForClientOcr() {
 }
 
 /**
+ * Get ALL orders with receipt images (including ones already processed)
+ * Used for reprocessing to fix false positives
+ */
+export async function getAllOrdersWithReceipts() {
+	try {
+		await checkShopAdmin();
+
+		const orders = await prisma.order.findMany({
+			where: {
+				receiptImageUrl: { not: null },
+			},
+			select: {
+				id: true,
+				receiptImageUrl: true,
+				totalAmount: true,
+				status: true,
+				createdAt: true,
+				gcashReferenceNumber: true,
+				user: {
+					select: {
+						name: true,
+						email: true,
+					},
+				},
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+		// Filter to only image receipts (not PDFs) since client-side OCR works on images
+		const imageOrders = orders.filter(
+			(order) => order.receiptImageUrl && !order.receiptImageUrl.toLowerCase().endsWith(".pdf"),
+		);
+
+		return { success: true, orders: imageOrders, count: imageOrders.length };
+	} catch (error: any) {
+		console.error("Error fetching all orders with receipts:", error);
+		return {
+			success: false,
+			message: error.message || "Failed to fetch orders",
+			orders: [],
+			count: 0,
+		};
+	}
+}
+
+/**
  * Save extracted reference number for an order
  * Called by client after it processes the image with OCR
  */
-export async function saveExtractedReferenceNumber(orderId: string, referenceNumber: string) {
+export async function saveExtractedReferenceNumber(
+	orderId: string,
+	referenceNumber: string,
+	allowOverwrite: boolean = false,
+) {
 	try {
 		await checkShopAdmin();
 
@@ -87,7 +137,7 @@ export async function saveExtractedReferenceNumber(orderId: string, referenceNum
 			};
 		}
 
-		// Check if order exists and doesn't already have a reference number
+		// Check if order exists
 		const order = await prisma.order.findUnique({
 			where: { id: orderId },
 			select: {
@@ -100,22 +150,26 @@ export async function saveExtractedReferenceNumber(orderId: string, referenceNum
 			return { success: false, message: "Order not found" };
 		}
 
-		if (order.gcashReferenceNumber) {
+		// If order already has a reference number and we're not allowing overwrite, skip
+		if (order.gcashReferenceNumber && !allowOverwrite) {
 			return {
 				success: false,
-				message: "Order already has a reference number",
+				message: "Order already has a reference number (use reprocess to overwrite)",
+				skipped: true,
 			};
 		}
 
-		// Save the reference number
+		// Save the reference number (will overwrite if allowOverwrite is true)
 		await prisma.order.update({
 			where: { id: orderId },
 			data: { gcashReferenceNumber: referenceNumber.trim() },
 		});
 
+		const action = order.gcashReferenceNumber ? "Updated" : "Saved";
 		return {
 			success: true,
-			message: `Reference number saved: ${referenceNumber}`,
+			message: `${action} reference number: ${referenceNumber}`,
+			wasOverwritten: !!order.gcashReferenceNumber,
 		};
 	} catch (error: any) {
 		console.error(`Error saving reference number for order ${orderId}:`, error);
