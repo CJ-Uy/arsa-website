@@ -1,13 +1,14 @@
 import { createWorker } from "tesseract.js";
 import path from "path";
-import https from "https";
 import { parseOcrText, GcashReceiptData } from "./parseReceipt";
 
-// Create an HTTPS agent that ignores SSL certificate errors
-// This is needed for self-signed certificates in production (MinIO, etc.)
-const httpsAgent = new https.Agent({
-	rejectUnauthorized: false, // Allow self-signed certificates
-});
+// Node.js fetch doesn't support rejectUnauthorized directly
+// We need to set it globally for the process
+// This is safe for server-side code as it only affects this Node.js process
+if (process.env.NODE_ENV === "production") {
+	// @ts-ignore - Node.js specific environment variable
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 /**
  * Server-side OCR processing for GCash receipts.
@@ -65,16 +66,11 @@ export async function parseGcashReceiptFromUrl(imageUrl: string): Promise<GcashR
 	try {
 		console.log(`Fetching image from URL: ${imageUrl}`);
 
-		// Configure fetch with custom agent for HTTPS and increased timeout
+		// Configure fetch with increased timeout
+		// SSL certificate validation is disabled globally for production
 		const fetchOptions: RequestInit = {
 			signal: AbortSignal.timeout(30000), // 30 second timeout
 		};
-
-		// Add HTTPS agent if URL is HTTPS
-		if (imageUrl.startsWith("https://")) {
-			// @ts-ignore - Node.js fetch supports agent option
-			fetchOptions.agent = httpsAgent;
-		}
 
 		const response = await fetch(imageUrl, fetchOptions);
 

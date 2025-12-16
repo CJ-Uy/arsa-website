@@ -4,14 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import https from "https";
 import { parseGcashReceiptFromUrl } from "@/lib/gcashReaders/readReceipt.server";
 import { parseGcashPdf } from "@/lib/gcashReaders/readInvoice";
 
-// HTTPS agent for self-signed certificates
-const httpsAgent = new https.Agent({
-	rejectUnauthorized: false,
-});
+// SSL certificate validation is disabled globally in readReceipt.server.ts
+// for production environments with self-signed certificates
 
 async function checkShopAdmin() {
 	const session = await auth.api.getSession({
@@ -73,15 +70,11 @@ export async function processOrderReceipt(orderId: string) {
 		let referenceNumber: string | null = null;
 
 		if (isPDF) {
-			// Fetch and process PDF with SSL handling
+			// Fetch and process PDF
+			// SSL certificate validation is disabled globally for production
 			const fetchOptions: RequestInit = {
 				signal: AbortSignal.timeout(30000), // 30 second timeout
 			};
-
-			if (order.receiptImageUrl.startsWith("https://")) {
-				// @ts-ignore - Node.js fetch supports agent option
-				fetchOptions.agent = httpsAgent;
-			}
 
 			const response = await fetch(order.receiptImageUrl, fetchOptions);
 			if (!response.ok) {

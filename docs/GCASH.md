@@ -1212,6 +1212,7 @@ describe("parseGcashPdf", () => {
    - Example: "Total Amount Sent ₱1,234.56"
 
 3. **Name and Number Pattern**
+
    ```regex
    /([A-Za-z\s,.-]+)\s*\+63\s*([\d\s]+)/
    ```
@@ -1223,6 +1224,7 @@ describe("parseGcashPdf", () => {
 ### PDF Patterns
 
 1. **Date Range Pattern**
+
    ```regex
    /\d{4}-\d{2}-\d{2}TO\d{4}-\d{2}-\d{2}/
    ```
