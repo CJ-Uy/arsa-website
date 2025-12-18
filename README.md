@@ -2,6 +2,8 @@
 
 Official website for the ARSA dorm system featuring a complete e-commerce shop for merchandise, services, and payments.
 
+📚 **[View Full Documentation →](docs/README.md)**
+
 ## 🚀 Features
 
 - **URL Redirect System** - Custom short URLs with click tracking

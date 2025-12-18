@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> 📚 **Additional Documentation**: See the [docs/](docs/) folder for detailed guides on specific features and deployment.
+
 ## Project Overview
 
 This is the ARSA (dorm system) website - a Next.js 15 application for a university dormitory system. The site includes features like a URL redirect system, event calendar, publications, merchandise showcase with a gacha system, and contact information.

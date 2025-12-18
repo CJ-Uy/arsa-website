@@ -86,8 +86,9 @@ export async function exportOrdersData() {
 		});
 
 		// Transform data for export
+		// Only show order-level info (total, receipt, ref no) on the first item
 		const exportData = orders.flatMap((order) =>
-			order.orderItems.map((item) => ({
+			order.orderItems.map((item, index) => ({
 				"Order ID": order.id,
 				"Order Date": new Date(order.createdAt).toLocaleString(),
 				"Customer Name": order.user.name || "N/A",
@@ -99,11 +100,14 @@ export async function exportOrdersData() {
 				Quantity: item.quantity,
 				"Unit Price": item.price,
 				"Item Total": item.price * item.quantity,
-				"Order Total": order.totalAmount,
+				// Only show order total on first item
+				"Order Total": index === 0 ? order.totalAmount : "",
 				"Order Status": order.status,
-				"GCash Ref No": order.gcashReferenceNumber || "N/A",
+				// Only show GCash ref on first item
+				"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "N/A" : "",
 				Notes: order.notes || "",
-				"Receipt URL": order.receiptImageUrl || "",
+				// Only show receipt URL on first item
+				"Receipt URL": index === 0 ? order.receiptImageUrl || "" : "",
 			})),
 		);
 
