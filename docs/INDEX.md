@@ -5,7 +5,8 @@ Welcome to the ARSA Website documentation! All project documentation has been or
 ## 📋 Quick Links
 
 - **[Main README](README.md)** - Project overview and setup
-- **[CLAUDE.md](CLAUDE.md)** - Development guide for Claude Code
+- **[CLAUDE.md](../CLAUDE.md)** - Development guide for Claude Code
+- **[CHANGELOG.md](CHANGELOG.md)** - Project changelog and version history
 - **[Quick Reference](QUICK_REFERENCE.md)** - Developer quick reference
 
 ## 🚀 Deployment & Infrastructure
@@ -74,10 +75,13 @@ Welcome to the ARSA Website documentation! All project documentation has been or
 
 ## 📝 Recent Updates
 
-- **2025-12-18**: Reorganized all documentation into `/docs` folder
-- **2025-12-18**: Added admin orders redesign with verification workflow
-- **2025-12-17**: Implemented client-side batch OCR
-- **2025-12-17**: Added invoice upload with OCR for verification
+- **2025-01-09**: Created comprehensive CHANGELOG.md with full version history
+- **2025-01-09**: Updated CLAUDE.md with complete architecture documentation
+- **2025-01-09**: Audited all routes for mobile compatibility
+- **2024-12-XX**: Added GCash invoice OCR with transaction matching
+- **2024-12-XX**: Implemented client-side batch OCR processing
+- **2024-12-XX**: Added banner system with countdown timers
+- **2024-12-XX**: Enhanced product image carousel with zoom and swipe
 
 ## 🆘 Need Help?
 

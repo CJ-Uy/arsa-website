@@ -97,8 +97,8 @@ export function Footer() {
 						<h3 className="font-semibold">Connect With Us</h3>
 						<div className="space-y-3">
 							<div className="text-muted-foreground flex items-center space-x-2 text-sm">
-								<Mail className="h-4 w-4" />
-								<span>arsa.college.org@student.ateneo.edu</span>
+								<Mail className="h-4 w-4 flex-shrink-0" />
+								<span className="break-all">arsa.college.org@student.ateneo.edu</span>
 							</div>
 							<div className="text-muted-foreground flex items-center space-x-2 text-sm">
 								<Phone className="h-4 w-4" />

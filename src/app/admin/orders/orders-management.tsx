@@ -223,7 +223,7 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 				</div>
 
 				{/* Stats Cards */}
-				<div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+				<div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 					<Card>
 						<CardHeader className="pb-2">
 							<CardTitle className="text-muted-foreground text-sm font-medium">

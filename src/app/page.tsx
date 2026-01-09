@@ -116,14 +116,17 @@ export default function HomePage() {
 			{/* Upcoming Events Section */}
 			<section className="bg-muted/30 py-16">
 				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-					<div className="mb-12 flex items-center justify-between">
+					<div className="mb-12 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<h2 className="text-foreground mb-4 text-3xl font-bold">Upcoming Events</h2>
 							<p className="text-muted-foreground text-lg">
 								Don&apos;t miss out on what&apos;s happening in ARSA
 							</p>
 						</div>
-						<Button className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+						<Button
+							className="bg-primary hover:bg-primary/90 text-primary-foreground hidden sm:flex"
+							asChild
+						>
 							<a href="#" className="flex items-center">
 								View All Events
 								<ArrowRight className="ml-2 h-4 w-4" />
