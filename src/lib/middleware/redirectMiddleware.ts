@@ -19,15 +19,24 @@ export async function redirectMiddleware(req: NextRequest): Promise<NextResponse
 
 		// If a link is found, return a redirect response immediately
 		if (redirect) {
-			// Update the count by one
-			await prisma.redirects.update({
-				where: { id: redirect.id },
-				data: {
-					clicks: {
-						increment: 1,
+			// Update click count and log the individual click
+			await prisma.$transaction([
+				prisma.redirects.update({
+					where: { id: redirect.id },
+					data: {
+						clicks: {
+							increment: 1,
+						},
 					},
-				},
-			});
+				}),
+				prisma.redirectClick.create({
+					data: {
+						redirectId: redirect.id,
+						userAgent: req.headers.get("user-agent") || null,
+						referer: req.headers.get("referer") || null,
+					},
+				}),
+			]);
 
 			return NextResponse.redirect(new URL(redirect.newURL));
 		}

@@ -16,10 +16,26 @@ datasource db {
 }
 
 model Redirects {
-  id           String @id @default(uuid())
+  id           String   @id @default(uuid())
   newURL       String
-  redirectCode String
-  clicks       Int    @default(0)
+  redirectCode String   @unique
+  clicks       Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  clickLogs    RedirectClick[]
+}
+
+model RedirectClick {
+  id         String   @id @default(uuid())
+  redirectId String
+  clickedAt  DateTime @default(now())
+  userAgent  String?
+  referer    String?
+
+  redirect   Redirects @relation(fields: [redirectId], references: [id], onDelete: Cascade)
+
+  @@index([redirectId])
+  @@index([clickedAt])
 }
 
 // Better Auth Models
