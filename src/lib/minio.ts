@@ -21,10 +21,10 @@ export const minioClient = new Minio.Client({
 	transportAgent: httpsAgent,
 });
 
-// Bucket names
+// Bucket names (configurable via environment variables)
 export const BUCKETS = {
-	PRODUCTS: "products",
-	RECEIPTS: "receipts",
+	PRODUCTS: process.env.MINIO_BUCKET_PRODUCTS || "products",
+	RECEIPTS: process.env.MINIO_BUCKET_RECEIPTS || "receipts",
 };
 
 // Initialize buckets

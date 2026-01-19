@@ -40,23 +40,25 @@ model RedirectClick {
 
 // Better Auth Models
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  emailVerified   Boolean   @default(false)
-  name            String?
-  firstName       String?
-  lastName        String?
-  studentId       String?
-  image           String?
-  isShopAdmin     Boolean   @default(false)
-  isRedirectsAdmin Boolean  @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  email            String    @unique
+  emailVerified    Boolean   @default(false)
+  name             String?
+  firstName        String?
+  lastName         String?
+  studentId        String?
+  image            String?
+  isShopAdmin      Boolean   @default(false)
+  isEventsAdmin    Boolean   @default(false)
+  isRedirectsAdmin Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  sessions        Session[]
-  accounts        Account[]
-  orders          Order[]
-  cartItems       CartItem[]
+  sessions         Session[]
+  accounts         Account[]
+  orders           Order[]
+  cartItems        CartItem[]
+  eventAdmins      EventAdmin[]  // Events this user is an admin for
 }
 
 model Session {
@@ -109,39 +111,105 @@ model Verification {
 
 // Shop Models
 model Product {
-  id             String      @id @default(uuid())
-  name           String
-  description    String
-  price          Float
-  category       String      // "merch", "arsari-sari", "other"
-  image          String?     // Kept for backward compatibility
-  imageUrls      String[]    @default([]) // Array of image URLs for carousel
-  stock          Int?        // Optional stock tracking
-  isAvailable    Boolean     @default(true)
-  isPreOrder     Boolean     @default(false) // If true, stock shows order count
-  availableSizes String[]    @default([])    // Array of sizes: ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
-  specialNote    String?     // Optional special note/warning shown during checkout
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id               String      @id @default(uuid())
+  name             String
+  description      String
+  price            Float
+  category         String      // "merch", "arsari-sari", "other"
+  image            String?     // Kept for backward compatibility
+  imageUrls        String[]    @default([]) // Array of image URLs for carousel
+  stock            Int?        // Optional stock tracking
+  isAvailable      Boolean     @default(true)
+  isPreOrder       Boolean     @default(false) // If true, stock shows order count
+  isEventExclusive Boolean     @default(false) // If true, only shows under assigned events, not in All/categories
+  availableSizes   String[]    @default([])    // Array of sizes: ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+  specialNote      String?     // Optional special note/warning shown during checkout
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  orderItems     OrderItem[]
-  cartItems      CartItem[]
+  orderItems          OrderItem[]
+  cartItems           CartItem[]
+  packageItems        PackageItem[]
+  packagePoolOptions  PackagePoolOption[]
+  eventProducts       EventProduct[]
+}
+
+// Package Models (Product Bundles)
+model Package {
+  id               String        @id @default(uuid())
+  name             String
+  description      String
+  price            Float         // Bundle price (usually discounted)
+  image            String?       // Package hero image
+  imageUrls        String[]      @default([])
+  isAvailable      Boolean       @default(true)
+  isEventExclusive Boolean       @default(false) // If true, only shows under assigned events
+  specialNote      String?       // Optional note shown during checkout
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  items         PackageItem[]
+  pools         PackagePool[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  eventProducts EventProduct[]
+}
+
+// Fixed items always included in a package
+model PackageItem {
+  id        String  @id @default(uuid())
+  packageId String
+  productId String
+  quantity  Int     @default(1)
+
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([packageId])
+}
+
+// Selection pools - "Pick X from these products"
+model PackagePool {
+  id          String              @id @default(uuid())
+  packageId   String
+  name        String              // e.g., "Choose your shirts"
+  selectCount Int                 // How many to pick (e.g., 2)
+
+  package     Package             @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  options     PackagePoolOption[]
+
+  @@index([packageId])
+}
+
+model PackagePoolOption {
+  id        String      @id @default(uuid())
+  poolId    String
+  productId String
+
+  pool      PackagePool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  product   Product     @relation(fields: [productId], references: [id])
+
+  @@index([poolId])
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  userId    String
-  productId String
-  quantity  Int      @default(1)
-  size      String?  // Selected size (if applicable)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(uuid())
+  userId            String
+  productId         String?  // Either product OR package (not both)
+  packageId         String?
+  quantity          Int      @default(1)
+  size              String?  // Selected size (for single products)
+  packageSelections Json?    // For packages: stores size selections per item
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product           Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  package           Package? @relation(fields: [packageId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, productId, size])
+  @@index([userId, packageId])
 }
 
 model Order {
@@ -152,27 +220,34 @@ model Order {
   receiptImageUrl      String?
   gcashReferenceNumber String?     // Auto-extracted from receipt image via OCR
   notes                String?
+  eventId              String?     // If order is for a specific event
+  eventData            Json?       // Stores responses to custom event checkout fields
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
   user                 User        @relation(fields: [userId], references: [id])
   orderItems           OrderItem[]
+  event                ShopEvent?  @relation(fields: [eventId], references: [id])
 
   @@index([userId])
   @@index([status])
   @@index([gcashReferenceNumber]) // Index for duplicate detection
+  @@index([eventId])
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float   // Store price at time of order
-  size      String? // Selected size (if applicable)
+  id                String   @id @default(uuid())
+  orderId           String
+  productId         String?  // Either product OR package (not both)
+  packageId         String?
+  quantity          Int
+  price             Float    // Store price at time of order
+  size              String?  // Selected size (for single products)
+  packageSelections Json?    // For packages: snapshot of size selections
 
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           Product? @relation(fields: [productId], references: [id])
+  package           Package? @relation(fields: [packageId], references: [id])
 
   @@index([orderId])
 }
@@ -185,4 +260,102 @@ model Banner {
   deadline  DateTime? // Optional deadline for countdown
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Shop Events (Special Event Tabs)
+model ShopEvent {
+  id              String         @id @default(uuid())
+  name            String         // "Flower Fest 2026"
+  slug            String         @unique // URL-friendly identifier "flower-fest-2026"
+  description     String
+  heroImage       String?        // Event banner/hero image
+  heroImageUrls   String[]       @default([]) // Multiple hero images
+
+  // Tab behavior
+  isActive        Boolean        @default(true)
+  isPriority      Boolean        @default(false) // Makes it the default landing tab
+  tabOrder        Int            @default(0)     // Sort order for tabs
+  tabLabel        String?        // Custom tab label (defaults to name)
+
+  // Timing
+  startDate       DateTime
+  endDate         DateTime
+
+  // Custom component path (for event-specific UI/animations)
+  componentPath   String?        // e.g., "flower-fest-2026" -> loads from events folder
+
+  // Theme configuration (colors, animations for default wrapper)
+  themeConfig     Json?
+
+  // Checkout customization
+  checkoutConfig  Json?          // Additional fields, messages, etc.
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  products        EventProduct[]
+  orders          Order[]
+  admins          EventAdmin[]   // Users assigned as admins for this event
+
+  @@index([isActive])
+  @@index([startDate, endDate])
+}
+
+// Event-specific Admin Assignments
+model EventAdmin {
+  id        String    @id @default(uuid())
+  eventId   String
+  userId    String
+  createdAt DateTime  @default(now())
+
+  event     ShopEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+// Products/Packages assigned to events
+model EventProduct {
+  id         String    @id @default(uuid())
+  eventId    String
+  productId  String?   // Regular product
+  packageId  String?   // Or package
+  sortOrder  Int       @default(0)
+  eventPrice Float?    // Override price for this event (optional)
+
+  event      ShopEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  product    Product?  @relation(fields: [productId], references: [id])
+  package    Package?  @relation(fields: [packageId], references: [id])
+
+  @@index([eventId])
+  @@index([eventId, sortOrder])
+}
+
+// Shop Analytics - Click Tracking
+model ShopClick {
+  id        String   @id @default(uuid())
+  path      String   // "/shop", "/shop?tab=merch", etc.
+  eventId   String?  // If click was on an event tab
+  userAgent String?
+  referer   String?
+  clickedAt DateTime @default(now())
+
+  @@index([clickedAt])
+  @@index([path])
+  @@index([eventId])
+}
+
+// Shop Analytics - Purchase Tracking (for graphs)
+model ShopPurchase {
+  id          String   @id @default(uuid())
+  orderId     String
+  eventId     String?  // If purchase was for an event
+  totalAmount Float
+  itemCount   Int
+  purchasedAt DateTime @default(now())
+
+  @@index([purchasedAt])
+  @@index([eventId])
+  @@index([eventId, purchasedAt])
 }

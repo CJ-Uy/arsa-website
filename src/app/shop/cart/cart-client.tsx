@@ -1,14 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus, Minus, ShoppingBag, Loader2 } from "lucide-react";
+import {
+	Trash2,
+	Plus,
+	Minus,
+	ShoppingBag,
+	Loader2,
+	Gift,
+	ChevronDown,
+	ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { updateCartItemQuantity, removeFromCart } from "../actions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProductImageCarousel } from "@/components/features/product-image-carousel";
+import type { PackageSelections } from "../actions";
 
 // Helper component to format product descriptions with lists
 function ProductDescription({
@@ -18,7 +29,6 @@ function ProductDescription({
 	description: string;
 	compact?: boolean;
 }) {
-	// Split by newlines and identify list items (lines starting with - or •)
 	const lines = description.split("\n");
 	const elements: React.ReactNode[] = [];
 	let currentText: string[] = [];
@@ -59,10 +69,8 @@ function ProductDescription({
 
 	lines.forEach((line) => {
 		const trimmedLine = line.trim();
-		// Check if line is a list item (starts with -, •, or *)
 		if (trimmedLine.match(/^[-•*]\s+/)) {
 			flushText();
-			// Remove the bullet point and add to list
 			currentList.push(trimmedLine.replace(/^[-•*]\s+/, ""));
 		} else if (trimmedLine) {
 			flushList();
@@ -70,26 +78,62 @@ function ProductDescription({
 		}
 	});
 
-	// Flush any remaining content
 	flushText();
 	flushList();
 
 	return <div className={compact ? "space-y-0.5" : "space-y-1"}>{elements}</div>;
 }
 
+type Product = {
+	id: string;
+	name: string;
+	description: string;
+	price: number;
+	image: string | null;
+	imageUrls: string[];
+	stock: number | null;
+};
+
+type PackageItem = {
+	id: string;
+	productId: string;
+	quantity: number;
+	product: Product;
+};
+
+type PackagePoolOption = {
+	id: string;
+	productId: string;
+	product: Product;
+};
+
+type PackagePool = {
+	id: string;
+	name: string;
+	selectCount: number;
+	options: PackagePoolOption[];
+};
+
+type Package = {
+	id: string;
+	name: string;
+	description: string;
+	price: number;
+	image: string | null;
+	imageUrls: string[];
+	items: PackageItem[];
+	pools: PackagePool[];
+};
+
 type CartItem = {
 	id: string;
 	quantity: number;
 	size: string | null;
-	product: {
-		id: string;
-		name: string;
-		description: string;
-		price: number;
-		image: string | null;
-		imageUrls: string[];
-		stock: number | null;
-	};
+	productId: string | null;
+	packageId: string | null;
+	packageSelections: PackageSelections | null;
+	product: Product | null;
+	package: Package | null;
 };
 
 type CartClientProps = {
@@ -101,6 +145,7 @@ export function CartClient({ initialCart }: CartClientProps) {
 	const [cartItems, setCartItems] = useState<CartItem[]>(initialCart);
 	const [loading, setLoading] = useState<string | null>(null);
 	const [checkoutLoading, setCheckoutLoading] = useState(false);
+	const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
 
 	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
 		setLoading(cartItemId);
@@ -117,7 +162,6 @@ export function CartClient({ initialCart }: CartClientProps) {
 					),
 				);
 			}
-			// Dispatch custom event to update cart counter
 			window.dispatchEvent(new Event("cartUpdated"));
 		} else {
 			toast.error(result.message || "Failed to update cart");
@@ -132,14 +176,28 @@ export function CartClient({ initialCart }: CartClientProps) {
 		if (result.success) {
 			setCartItems(cartItems.filter((item) => item.id !== cartItemId));
 			toast.success("Item removed from cart");
-			// Dispatch custom event to update cart counter
 			window.dispatchEvent(new Event("cartUpdated"));
 		} else {
 			toast.error(result.message || "Failed to remove item");
 		}
 	};
 
-	const total = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+	const togglePackageExpanded = (itemId: string) => {
+		setExpandedPackages((prev) => ({
+			...prev,
+			[itemId]: !prev[itemId],
+		}));
+	};
+
+	// Calculate total including both products and packages
+	const total = cartItems.reduce((sum, item) => {
+		if (item.product) {
+			return sum + item.product.price * item.quantity;
+		} else if (item.package) {
+			return sum + item.package.price * item.quantity;
+		}
+		return sum;
+	}, 0);
 
 	const handleCheckout = () => {
 		setCheckoutLoading(true);
@@ -159,90 +217,244 @@ export function CartClient({ initialCart }: CartClientProps) {
 		);
 	}
 
+	// Get product name by ID from package selections
+	const getProductFromPackage = (pkg: Package, productId: string): Product | null => {
+		// Check fixed items
+		const fixedItem = pkg.items.find((item) => item.productId === productId);
+		if (fixedItem) return fixedItem.product;
+
+		// Check pool options
+		for (const pool of pkg.pools) {
+			const option = pool.options.find((opt) => opt.productId === productId);
+			if (option) return option.product;
+		}
+
+		return null;
+	};
+
 	return (
 		<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
 			<div className="space-y-4 lg:col-span-2">
-				{cartItems.map((item) => (
-					<Card key={item.id}>
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex flex-col gap-4 sm:flex-row">
-								<div className="w-32 flex-shrink-0 sm:w-40">
-									<ProductImageCarousel
-										images={
-											item.product.imageUrls.length > 0
-												? item.product.imageUrls
-												: item.product.image
-													? [item.product.image]
-													: []
-										}
-										productName={item.product.name}
-										aspectRatio="square"
-										showThumbnails={false}
-									/>
-								</div>
+				{cartItems.map((item) => {
+					// Package item
+					if (item.package) {
+						const isExpanded = expandedPackages[item.id] ?? false;
+						const selections = item.packageSelections as PackageSelections | null;
 
-								<div className="min-w-0 flex-1">
-									<h3 className="mb-1 text-lg font-semibold">{item.product.name}</h3>
-									{item.size && (
-										<p className="text-muted-foreground mb-1 text-sm">
-											Size: <span className="text-foreground font-medium">{item.size}</span>
-										</p>
-									)}
-									<div className="mb-2">
-										<ProductDescription description={item.product.description} compact={true} />
-									</div>
-									<p className="text-lg font-bold">₱{item.product.price.toFixed(2)}</p>
-								</div>
+						return (
+							<Card key={item.id} className="border-primary/20 border-2">
+								<CardContent className="p-4 sm:p-6">
+									<div className="flex flex-col gap-4 sm:flex-row">
+										<div className="w-32 flex-shrink-0 sm:w-40">
+											<div className="relative">
+												<ProductImageCarousel
+													images={
+														item.package.imageUrls.length > 0
+															? item.package.imageUrls
+															: item.package.image
+																? [item.package.image]
+																: []
+													}
+													productName={item.package.name}
+													aspectRatio="square"
+													showThumbnails={false}
+												/>
+												<Badge className="bg-primary absolute top-2 left-2">
+													<Gift className="mr-1 h-3 w-3" />
+													Package
+												</Badge>
+											</div>
+										</div>
 
-								<div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-between">
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => handleRemove(item.id)}
-										disabled={loading === item.id}
-									>
-										{loading === item.id ? (
-											<Loader2 className="h-4 w-4 animate-spin" />
-										) : (
-											<Trash2 className="h-4 w-4" />
-										)}
-									</Button>
+										<div className="min-w-0 flex-1">
+											<h3 className="mb-1 text-lg font-semibold">{item.package.name}</h3>
+											<div className="mb-2">
+												<ProductDescription description={item.package.description} compact={true} />
+											</div>
 
-									<div className="flex items-center gap-2">
-										<Button
-											variant="outline"
-											size="icon"
-											onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-											disabled={loading === item.id || item.quantity <= 1}
-										>
-											{loading === item.id ? (
-												<Loader2 className="h-4 w-4 animate-spin" />
-											) : (
-												<Minus className="h-4 w-4" />
+											{/* Package selections summary */}
+											<button
+												className="text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 text-sm"
+												onClick={() => togglePackageExpanded(item.id)}
+											>
+												{isExpanded ? (
+													<ChevronUp className="h-4 w-4" />
+												) : (
+													<ChevronDown className="h-4 w-4" />
+												)}
+												{isExpanded ? "Hide details" : "Show details"}
+											</button>
+
+											{isExpanded && selections && (
+												<div className="bg-muted/50 mb-3 rounded-lg p-3">
+													<p className="mb-2 text-sm font-medium">Your selections:</p>
+													<ul className="space-y-1 text-sm">
+														{selections.fixedItems.map((sel, idx) => {
+															const product = getProductFromPackage(item.package!, sel.productId);
+															return (
+																<li key={idx} className="text-muted-foreground">
+																	• {product?.name || "Unknown product"}
+																	{sel.size && (
+																		<span className="text-foreground ml-1">({sel.size})</span>
+																	)}
+																</li>
+															);
+														})}
+														{selections.poolSelections.map((pool) =>
+															pool.selections.map((sel, idx) => {
+																const product = getProductFromPackage(item.package!, sel.productId);
+																return (
+																	<li key={`${pool.poolId}-${idx}`} className="text-primary">
+																		• {product?.name || "Unknown product"}
+																		{sel.size && (
+																			<span className="text-foreground ml-1">({sel.size})</span>
+																		)}
+																	</li>
+																);
+															}),
+														)}
+													</ul>
+												</div>
 											)}
-										</Button>
-										<span className="w-12 text-center font-semibold">{item.quantity}</span>
-										<Button
-											variant="outline"
-											size="icon"
-											onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-											disabled={
-												loading === item.id ||
-												(item.product.stock !== null && item.quantity >= item.product.stock)
-											}
-										>
-											{loading === item.id ? (
-												<Loader2 className="h-4 w-4 animate-spin" />
-											) : (
-												<Plus className="h-4 w-4" />
-											)}
-										</Button>
+
+											<p className="text-lg font-bold">₱{item.package.price.toFixed(2)}</p>
+										</div>
+
+										<div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-between">
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => handleRemove(item.id)}
+												disabled={loading === item.id}
+											>
+												{loading === item.id ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<Trash2 className="h-4 w-4" />
+												)}
+											</Button>
+
+											<div className="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="icon"
+													onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+													disabled={loading === item.id || item.quantity <= 1}
+												>
+													{loading === item.id ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Minus className="h-4 w-4" />
+													)}
+												</Button>
+												<span className="w-12 text-center font-semibold">{item.quantity}</span>
+												<Button
+													variant="outline"
+													size="icon"
+													onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+													disabled={loading === item.id}
+												>
+													{loading === item.id ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Plus className="h-4 w-4" />
+													)}
+												</Button>
+											</div>
+										</div>
 									</div>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-				))}
+								</CardContent>
+							</Card>
+						);
+					}
+
+					// Regular product item
+					if (item.product) {
+						return (
+							<Card key={item.id}>
+								<CardContent className="p-4 sm:p-6">
+									<div className="flex flex-col gap-4 sm:flex-row">
+										<div className="w-32 flex-shrink-0 sm:w-40">
+											<ProductImageCarousel
+												images={
+													item.product.imageUrls.length > 0
+														? item.product.imageUrls
+														: item.product.image
+															? [item.product.image]
+															: []
+												}
+												productName={item.product.name}
+												aspectRatio="square"
+												showThumbnails={false}
+											/>
+										</div>
+
+										<div className="min-w-0 flex-1">
+											<h3 className="mb-1 text-lg font-semibold">{item.product.name}</h3>
+											{item.size && (
+												<p className="text-muted-foreground mb-1 text-sm">
+													Size: <span className="text-foreground font-medium">{item.size}</span>
+												</p>
+											)}
+											<div className="mb-2">
+												<ProductDescription description={item.product.description} compact={true} />
+											</div>
+											<p className="text-lg font-bold">₱{item.product.price.toFixed(2)}</p>
+										</div>
+
+										<div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-between">
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => handleRemove(item.id)}
+												disabled={loading === item.id}
+											>
+												{loading === item.id ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<Trash2 className="h-4 w-4" />
+												)}
+											</Button>
+
+											<div className="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="icon"
+													onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+													disabled={loading === item.id || item.quantity <= 1}
+												>
+													{loading === item.id ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Minus className="h-4 w-4" />
+													)}
+												</Button>
+												<span className="w-12 text-center font-semibold">{item.quantity}</span>
+												<Button
+													variant="outline"
+													size="icon"
+													onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+													disabled={
+														loading === item.id ||
+														(item.product.stock !== null && item.quantity >= item.product.stock)
+													}
+												>
+													{loading === item.id ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Plus className="h-4 w-4" />
+													)}
+												</Button>
+											</div>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						);
+					}
+
+					return null;
+				})}
 			</div>
 
 			<div className="lg:col-span-1">

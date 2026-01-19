@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, Check, AlertCircle, Loader2, Gift, FileText, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,20 +10,40 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { createOrder } from "../actions";
 import { extractRefNumberFromPdf } from "../gcashActions";
 import { toast } from "sonner";
 import { parseGcashReceiptClient } from "@/lib/gcashReaders/readReceipt.client";
 
+type Product = {
+	id: string;
+	name: string;
+	price: number;
+	specialNote: string | null;
+};
+
+type Package = {
+	id: string;
+	name: string;
+	price: number;
+};
+
 type CartItem = {
 	id: string;
 	quantity: number;
-	product: {
-		id: string;
-		name: string;
-		price: number;
-		specialNote: string | null;
-	};
+	size: string | null;
+	productId: string | null;
+	packageId: string | null;
+	product: Product | null;
+	package: Package | null;
 };
 
 type User = {
@@ -35,12 +55,36 @@ type User = {
 	email: string;
 };
 
+type CheckoutField = {
+	id: string;
+	label: string;
+	type: "text" | "textarea" | "select" | "checkbox" | "date";
+	required: boolean;
+	placeholder?: string;
+	options?: string[];
+	maxLength?: number;
+};
+
+type CheckoutConfig = {
+	headerMessage?: string;
+	additionalFields: CheckoutField[];
+	termsMessage?: string;
+	confirmationMessage?: string;
+};
+
+type EventInfo = {
+	id: string;
+	name: string;
+	checkoutConfig: CheckoutConfig | null;
+} | null;
+
 type CheckoutClientProps = {
 	cart: CartItem[];
 	user: User;
+	event?: EventInfo;
 };
 
-export function CheckoutClient({ cart, user }: CheckoutClientProps) {
+export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 	const router = useRouter();
 	const [firstName, setFirstName] = useState(user.firstName || "");
 	const [lastName, setLastName] = useState(user.lastName || "");
@@ -52,11 +96,33 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
 	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
 
-	const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+	// Event-specific field values
+	const [eventFieldValues, setEventFieldValues] = useState<Record<string, string | boolean>>({});
 
-	// Collect all unique special notes from cart items
+	// Calculate total including both products and packages
+	const total = cart.reduce((sum, item) => {
+		if (item.product) {
+			return sum + item.product.price * item.quantity;
+		} else if (item.package) {
+			return sum + item.package.price * item.quantity;
+		}
+		return sum;
+	}, 0);
+
+	// Get checkout config from event
+	const checkoutConfig = event?.checkoutConfig;
+	const additionalFields = checkoutConfig?.additionalFields || [];
+
+	// Update event field value
+	const updateEventField = (fieldId: string, value: string | boolean) => {
+		setEventFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+	};
+
+	// Collect all unique special notes from cart items (only from products)
 	const specialNotes = Array.from(
-		new Set(cart.map((item) => item.product.specialNote).filter((note): note is string => !!note)),
+		new Set(
+			cart.filter((item) => item.product?.specialNote).map((item) => item.product!.specialNote!),
+		),
 	);
 
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,7 +217,25 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 			return;
 		}
 
-		if (!receiptFile || !receiptPreview) {
+		// Validate required event fields
+		for (const field of additionalFields) {
+			if (field.required) {
+				const value = eventFieldValues[field.id];
+				if (field.type === "checkbox") {
+					if (value !== true) {
+						toast.error(`Please check "${field.label}"`);
+						return;
+					}
+				} else if (!value || (typeof value === "string" && !value.trim())) {
+					toast.error(`Please fill in "${field.label}"`);
+					return;
+				}
+			}
+		}
+
+		// For PDF receipts, we allow submission without preview
+		const hasPdfReceipt = receiptFile && receiptFile.type === "application/pdf";
+		if (!receiptFile || (!receiptPreview && !hasPdfReceipt)) {
 			toast.error("Please upload a receipt");
 			return;
 		}
@@ -177,7 +261,21 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 
 			const { url: receiptUrl } = await uploadResponse.json();
 
-			// Create order with the MinIO URL, user info, and GCash reference number
+			// Build event data if present
+			const eventData = event
+				? {
+						eventName: event.name,
+						fields: additionalFields.reduce(
+							(acc, field) => {
+								acc[field.label] = eventFieldValues[field.id] ?? "";
+								return acc;
+							},
+							{} as Record<string, string | boolean>,
+						),
+					}
+				: undefined;
+
+			// Create order with the MinIO URL, user info, GCash reference number, and event data
 			const result = await createOrder(
 				receiptUrl,
 				notes || undefined,
@@ -185,10 +283,13 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 				lastName.trim(),
 				studentId.trim() || undefined,
 				gcashRefNumber || undefined,
+				event?.id,
+				eventData,
 			);
 
 			if (result.success) {
-				toast.success("Order placed successfully!");
+				const successMessage = checkoutConfig?.confirmationMessage || "Order placed successfully!";
+				toast.success(successMessage);
 				router.push(`/shop/orders/${result.orderId}`);
 			} else {
 				toast.error(result.message || "Failed to create order");
@@ -258,6 +359,99 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 							</div>
 						</CardContent>
 					</Card>
+
+					{/* Event-specific fields */}
+					{event && additionalFields.length > 0 && (
+						<Card className="border-primary/20 border-2">
+							<CardHeader>
+								<CardTitle className="flex items-center gap-2">
+									<Gift className="h-5 w-5" />
+									{event.name} Details
+								</CardTitle>
+								{checkoutConfig?.headerMessage && (
+									<CardDescription>{checkoutConfig.headerMessage}</CardDescription>
+								)}
+							</CardHeader>
+							<CardContent className="space-y-4">
+								{additionalFields.map((field) => (
+									<div key={field.id}>
+										<Label htmlFor={field.id}>
+											{field.label}
+											{field.required && " *"}
+										</Label>
+
+										{field.type === "text" && (
+											<Input
+												id={field.id}
+												type="text"
+												placeholder={field.placeholder}
+												value={(eventFieldValues[field.id] as string) || ""}
+												onChange={(e) => updateEventField(field.id, e.target.value)}
+												maxLength={field.maxLength}
+												required={field.required}
+												className="mt-2"
+											/>
+										)}
+
+										{field.type === "textarea" && (
+											<Textarea
+												id={field.id}
+												placeholder={field.placeholder}
+												value={(eventFieldValues[field.id] as string) || ""}
+												onChange={(e) => updateEventField(field.id, e.target.value)}
+												maxLength={field.maxLength}
+												required={field.required}
+												rows={3}
+												className="mt-2"
+											/>
+										)}
+
+										{field.type === "select" && field.options && (
+											<Select
+												value={(eventFieldValues[field.id] as string) || ""}
+												onValueChange={(value) => updateEventField(field.id, value)}
+											>
+												<SelectTrigger className="mt-2">
+													<SelectValue placeholder={field.placeholder || "Select an option"} />
+												</SelectTrigger>
+												<SelectContent>
+													{field.options.map((option) => (
+														<SelectItem key={option} value={option}>
+															{option}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										)}
+
+										{field.type === "checkbox" && (
+											<div className="mt-2 flex items-center gap-2">
+												<Checkbox
+													id={field.id}
+													checked={(eventFieldValues[field.id] as boolean) || false}
+													onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
+												/>
+												<Label htmlFor={field.id} className="cursor-pointer font-normal">
+													{field.placeholder || field.label}
+												</Label>
+											</div>
+										)}
+
+										{field.type === "date" && (
+											<Input
+												id={field.id}
+												type="date"
+												value={(eventFieldValues[field.id] as string) || ""}
+												onChange={(e) => updateEventField(field.id, e.target.value)}
+												required={field.required}
+												className="mt-2"
+											/>
+										)}
+									</div>
+								))}
+							</CardContent>
+						</Card>
+					)}
 
 					<Card>
 						<CardHeader>
@@ -349,7 +543,7 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 											) : receiptFile && receiptFile.type === "application/pdf" ? (
 												<div className="space-y-4">
 													<div className="text-muted-foreground flex items-center justify-center">
-														<Package className="mr-2 h-12 w-12" />
+														<FileText className="mr-2 h-12 w-12" />
 													</div>
 													<div className="space-y-2">
 														<div className="flex items-center justify-center text-green-600">
@@ -427,17 +621,33 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 					<Card className="sticky top-4">
 						<CardHeader>
 							<CardTitle>Order Summary</CardTitle>
+							{event && (
+								<Badge variant="secondary" className="w-fit">
+									<Gift className="mr-1 h-3 w-3" />
+									{event.name}
+								</Badge>
+							)}
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
-								{cart.map((item) => (
-									<div key={item.id} className="flex justify-between text-sm">
-										<span className="text-muted-foreground">
-											{item.product.name} × {item.quantity}
-										</span>
-										<span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
-									</div>
-								))}
+								{cart.map((item) => {
+									const name = item.product?.name || item.package?.name || "Unknown";
+									const price = item.product?.price || item.package?.price || 0;
+									const isPackage = !!item.package;
+
+									return (
+										<div key={item.id} className="flex justify-between text-sm">
+											<span className="text-muted-foreground flex items-center gap-1">
+												{isPackage && <Gift className="h-3 w-3" />}
+												{name}
+												{item.size && <span className="text-xs">({item.size})</span>}
+												{" × "}
+												{item.quantity}
+											</span>
+											<span>₱{(price * item.quantity).toFixed(2)}</span>
+										</div>
+									);
+								})}
 							</div>
 
 							<div className="border-t pt-4">
@@ -459,7 +669,8 @@ export function CheckoutClient({ cart, user }: CheckoutClientProps) {
 							</Button>
 
 							<p className="text-muted-foreground text-center text-xs">
-								By placing an order, you agree to our terms and conditions
+								{checkoutConfig?.termsMessage ||
+									"By placing an order, you agree to our terms and conditions"}
 							</p>
 						</CardContent>
 					</Card>

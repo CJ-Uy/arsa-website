@@ -1,4 +1,4 @@
-import { getProducts } from "./actions";
+import { getProducts, getPackages, getActiveEvents } from "./actions";
 import { ShopClient } from "./shop-client";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -11,7 +11,12 @@ export default async function ARSAShopPage() {
 		headers: await headers(),
 	});
 
-	const { products } = await getProducts();
+	// Fetch products, packages, and active events in parallel
+	const [productsResult, packagesResult, eventsResult] = await Promise.all([
+		getProducts(),
+		getPackages(),
+		getActiveEvents(),
+	]);
 
 	return (
 		<div className="container mx-auto px-4 py-10">
@@ -22,7 +27,12 @@ export default async function ARSAShopPage() {
 				</p>
 			</div>
 
-			<ShopClient initialProducts={products} session={session} />
+			<ShopClient
+				initialProducts={productsResult.products}
+				initialPackages={packagesResult.packages}
+				initialEvents={eventsResult.events}
+				session={session}
+			/>
 		</div>
 	);
 }

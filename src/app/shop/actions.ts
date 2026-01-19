@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -34,7 +35,7 @@ export async function addToCart(productId: string, quantity: number = 1, size?: 
 			return { success: false, message: "Please select a size" };
 		}
 
-		if (!product.isPreOrder && product.stock < quantity) {
+		if (!product.isPreOrder && product.stock !== null && product.stock < quantity) {
 			return { success: false, message: "Insufficient stock" };
 		}
 
@@ -151,6 +152,24 @@ export async function getCart() {
 					where: { userId: session.user.id },
 					include: {
 						product: true,
+						package: {
+							include: {
+								items: {
+									include: {
+										product: true,
+									},
+								},
+								pools: {
+									include: {
+										options: {
+											include: {
+												product: true,
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					orderBy: { createdAt: "desc" },
 				});
@@ -164,6 +183,103 @@ export async function getCart() {
 	}
 }
 
+// Package Selections type for cart items
+export type PackageSelections = {
+	fixedItems: Array<{
+		productId: string;
+		itemIndex: number;
+		size: string | null;
+	}>;
+	poolSelections: Array<{
+		poolId: string;
+		selections: Array<{
+			productId: string;
+			size: string | null;
+		}>;
+	}>;
+};
+
+// Add package to cart with selections
+export async function addPackageToCart(
+	packageId: string,
+	quantity: number = 1,
+	selections: PackageSelections,
+) {
+	try {
+		const session = await getSession();
+		if (!session?.user) {
+			return { success: false, message: "You must be logged in to add items to cart" };
+		}
+
+		const pkg = await prisma.package.findUnique({
+			where: { id: packageId },
+			include: {
+				items: { include: { product: true } },
+				pools: { include: { options: { include: { product: true } } } },
+			},
+		});
+
+		if (!pkg || !pkg.isAvailable) {
+			return { success: false, message: "Package not available" };
+		}
+
+		// Validate selections
+		// Check that all fixed items have sizes if required
+		for (const item of pkg.items) {
+			const itemSelections = selections.fixedItems.filter((s) => s.productId === item.productId);
+
+			// Check we have the right number of selections for quantity
+			if (itemSelections.length !== item.quantity) {
+				// Allow if product doesn't require size
+				if (item.product.availableSizes.length > 0 && itemSelections.length < item.quantity) {
+					return {
+						success: false,
+						message: `Please select sizes for all ${item.product.name} items`,
+					};
+				}
+			}
+		}
+
+		// Validate pool selections
+		for (const pool of pkg.pools) {
+			const poolSelection = selections.poolSelections.find((s) => s.poolId === pool.id);
+			if (!poolSelection || poolSelection.selections.length !== pool.selectCount) {
+				return {
+					success: false,
+					message: `Please select ${pool.selectCount} items from "${pool.name}"`,
+				};
+			}
+
+			// Validate selected products are in the pool
+			const validProductIds = pool.options.map((o) => o.productId);
+			for (const selection of poolSelection.selections) {
+				if (!validProductIds.includes(selection.productId)) {
+					return { success: false, message: "Invalid product selection" };
+				}
+			}
+		}
+
+		// Create cart item with selections
+		await prisma.cartItem.create({
+			data: {
+				userId: session.user.id,
+				packageId,
+				quantity,
+				packageSelections: selections,
+			},
+		});
+
+		// Invalidate cart cache
+		cache.delete(cacheKeys.cart(session.user.id));
+
+		revalidatePath("/shop");
+		return { success: true, message: "Package added to cart" };
+	} catch (error) {
+		console.error("Add package to cart error:", error);
+		return { success: false, message: "Failed to add package to cart" };
+	}
+}
+
 // Order Actions
 export async function createOrder(
 	receiptImageUrl: string,
@@ -172,6 +288,8 @@ export async function createOrder(
 	lastName?: string,
 	studentId?: string,
 	gcashReferenceNumber?: string,
+	eventId?: string,
+	eventData?: Record<string, any>,
 ) {
 	try {
 		const session = await getSession();
@@ -232,21 +350,31 @@ export async function createOrder(
 			});
 		}
 
-		// Get cart items
+		// Get cart items with products and packages
 		const cartItems = await prisma.cartItem.findMany({
 			where: { userId: session.user.id },
-			include: { product: true },
+			include: {
+				product: true,
+				package: true,
+			},
 		});
 
 		if (cartItems.length === 0) {
 			return { success: false, message: "Cart is empty" };
 		}
 
-		// Calculate total
-		const totalAmount = cartItems.reduce(
-			(sum, item) => sum + item.product.price * item.quantity,
-			0,
-		);
+		// Calculate total (products and packages)
+		let totalAmount = 0;
+		let itemCount = 0;
+		for (const item of cartItems) {
+			if (item.product) {
+				totalAmount += item.product.price * item.quantity;
+				itemCount += item.quantity;
+			} else if (item.package) {
+				totalAmount += item.package.price * item.quantity;
+				itemCount += item.quantity;
+			}
+		}
 
 		// Create order with order items
 		const order = await prisma.order.create({
@@ -257,14 +385,40 @@ export async function createOrder(
 				gcashReferenceNumber,
 				notes,
 				status: "pending",
+				eventId: eventId || null,
+				eventData: eventData ? (eventData as Prisma.InputJsonValue) : Prisma.JsonNull,
 				orderItems: {
-					create: cartItems.map((item) => ({
-						productId: item.productId,
-						quantity: item.quantity,
-						price: item.product.price,
-						size: item.size,
-					})),
+					create: cartItems.map((item) => {
+						if (item.product) {
+							return {
+								productId: item.productId,
+								quantity: item.quantity,
+								price: item.product.price,
+								size: item.size,
+							};
+						} else {
+							// Package item
+							return {
+								packageId: item.packageId,
+								quantity: item.quantity,
+								price: item.package!.price,
+								packageSelections: item.packageSelections
+									? (item.packageSelections as Prisma.InputJsonValue)
+									: Prisma.JsonNull,
+							};
+						}
+					}),
 				},
+			},
+		});
+
+		// Create purchase analytics record
+		await prisma.shopPurchase.create({
+			data: {
+				orderId: order.id,
+				eventId: eventId || null,
+				totalAmount,
+				itemCount,
 			},
 		});
 
@@ -272,6 +426,9 @@ export async function createOrder(
 		await prisma.cartItem.deleteMany({
 			where: { userId: session.user.id },
 		});
+
+		// Invalidate cart cache
+		cache.delete(cacheKeys.cart(session.user.id));
 
 		revalidatePath("/shop");
 		return { success: true, orderId: order.id, message: "Order created successfully" };
@@ -330,5 +487,113 @@ export async function getProducts(category?: string) {
 	} catch (error) {
 		console.error("Get products error:", error);
 		return { success: false, products: [] };
+	}
+}
+
+// Package Actions
+export async function getPackages() {
+	try {
+		const packages = await withCache(
+			"packages:all",
+			600000, // 10 minutes cache
+			async () => {
+				return await prisma.package.findMany({
+					where: { isAvailable: true },
+					include: {
+						items: {
+							include: {
+								product: true,
+							},
+						},
+						pools: {
+							include: {
+								options: {
+									include: {
+										product: true,
+									},
+								},
+							},
+						},
+					},
+					orderBy: { createdAt: "desc" },
+				});
+			},
+		);
+
+		return { success: true, packages };
+	} catch (error) {
+		console.error("Get packages error:", error);
+		return { success: false, packages: [] };
+	}
+}
+
+// Event Actions
+export async function getActiveEvents() {
+	try {
+		const now = new Date();
+		const events = await withCache(
+			"events:active",
+			60000, // 1 minute cache (events can change status)
+			async () => {
+				return await prisma.shopEvent.findMany({
+					where: {
+						isActive: true,
+						startDate: { lte: now },
+						endDate: { gte: now },
+					},
+					include: {
+						products: {
+							include: {
+								product: true,
+								package: {
+									include: {
+										items: { include: { product: true } },
+										pools: { include: { options: { include: { product: true } } } },
+									},
+								},
+							},
+							orderBy: { sortOrder: "asc" },
+						},
+					},
+					orderBy: [{ isPriority: "desc" }, { tabOrder: "asc" }],
+				});
+			},
+		);
+
+		return { success: true, events };
+	} catch (error) {
+		console.error("Get active events error:", error);
+		return { success: false, events: [] };
+	}
+}
+
+export async function getEventBySlug(slug: string) {
+	try {
+		const event = await prisma.shopEvent.findUnique({
+			where: { slug },
+			include: {
+				products: {
+					include: {
+						product: true,
+						package: {
+							include: {
+								items: { include: { product: true } },
+								pools: { include: { options: { include: { product: true } } } },
+							},
+						},
+					},
+					orderBy: { sortOrder: "asc" },
+				},
+			},
+		});
+
+		if (!event) {
+			return { success: false, event: null, message: "Event not found" };
+		}
+
+		return { success: true, event };
+	} catch (error) {
+		console.error("Get event error:", error);
+		return { success: false, event: null, message: "Failed to fetch event" };
 	}
 }
