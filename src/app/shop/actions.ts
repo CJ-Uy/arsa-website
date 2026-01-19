@@ -354,7 +354,11 @@ export async function createOrder(
 		const cartItems = await prisma.cartItem.findMany({
 			where: { userId: session.user.id },
 			include: {
-				product: true,
+				product: {
+					include: {
+						eventProducts: true,
+					},
+				},
 				package: true,
 			},
 		});
@@ -363,12 +367,39 @@ export async function createOrder(
 			return { success: false, message: "Cart is empty" };
 		}
 
+		// Helper to get correct product price
+		const getProductPrice = (item: (typeof cartItems)[0]) => {
+			if (!item.product) return 0;
+
+			// 1. Check for size-specific pricing
+			if (item.size && item.product.sizePricing) {
+				const sizePricing = item.product.sizePricing as Record<string, number>;
+				if (sizePricing[item.size]) {
+					return sizePricing[item.size];
+				}
+			}
+
+			// 2. Check for event-specific pricing
+			if (eventId && item.product.eventProducts) {
+				const eventProduct = (item.product.eventProducts as any[]).find(
+					(ep: any) => ep.eventId === eventId,
+				);
+				if (eventProduct?.eventPrice) {
+					return eventProduct.eventPrice;
+				}
+			}
+
+			// 3. Fall back to base price
+			return item.product.price;
+		};
+
 		// Calculate total (products and packages)
 		let totalAmount = 0;
 		let itemCount = 0;
 		for (const item of cartItems) {
 			if (item.product) {
-				totalAmount += item.product.price * item.quantity;
+				const itemPrice = getProductPrice(item);
+				totalAmount += itemPrice * item.quantity;
 				itemCount += item.quantity;
 			} else if (item.package) {
 				totalAmount += item.package.price * item.quantity;
@@ -393,7 +424,7 @@ export async function createOrder(
 							return {
 								productId: item.productId,
 								quantity: item.quantity,
-								price: item.product.price,
+								price: getProductPrice(item),
 								size: item.size,
 							};
 						} else {
@@ -477,6 +508,19 @@ export async function getProducts(category?: string) {
 					where: {
 						isAvailable: true,
 						...(category && { category }),
+					},
+					include: {
+						eventProducts: {
+							include: {
+								event: {
+									select: {
+										id: true,
+										name: true,
+										slug: true,
+									},
+								},
+							},
+						},
 					},
 					orderBy: { createdAt: "desc" },
 				});

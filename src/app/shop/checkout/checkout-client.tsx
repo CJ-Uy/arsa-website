@@ -28,6 +28,7 @@ type Product = {
 	name: string;
 	price: number;
 	specialNote: string | null;
+	sizePricing: Record<string, number> | null;
 };
 
 type Package = {
@@ -96,13 +97,29 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
 	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
 
+	// Helper to get correct product price based on size
+	const getProductPrice = (item: CartItem) => {
+		if (!item.product) return 0;
+
+		// Check for size-specific pricing
+		if (item.size && item.product.sizePricing) {
+			const sizePrice = item.product.sizePricing[item.size];
+			if (sizePrice) {
+				return sizePrice;
+			}
+		}
+
+		// Fall back to base price
+		return item.product.price;
+	};
+
 	// Event-specific field values
 	const [eventFieldValues, setEventFieldValues] = useState<Record<string, string | boolean>>({});
 
 	// Calculate total including both products and packages
 	const total = cart.reduce((sum, item) => {
 		if (item.product) {
-			return sum + item.product.price * item.quantity;
+			return sum + getProductPrice(item) * item.quantity;
 		} else if (item.package) {
 			return sum + item.package.price * item.quantity;
 		}

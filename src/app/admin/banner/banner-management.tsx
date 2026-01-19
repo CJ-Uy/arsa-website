@@ -107,14 +107,16 @@ export function BannerManagement({ initialBanners }: BannerManagementProps) {
 	const formatDeadline = (deadline: Date | null) => {
 		if (!deadline) return "No deadline";
 		// Format in Philippines timezone (UTC+8)
-		return new Date(deadline).toLocaleString("en-PH", {
-			timeZone: "Asia/Manila",
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		}) + " (PHT)";
+		return (
+			new Date(deadline).toLocaleString("en-PH", {
+				timeZone: "Asia/Manila",
+				year: "numeric",
+				month: "short",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			}) + " (PHT)"
+		);
 	};
 
 	// Convert UTC date to datetime-local input value (in Manila timezone)
@@ -172,7 +174,8 @@ export function BannerManagement({ initialBanners }: BannerManagementProps) {
 								<Label htmlFor="deadline">Deadline (Optional) - Philippines Time</Label>
 								<Input id="deadline" name="deadline" type="datetime-local" />
 								<p className="text-muted-foreground text-xs">
-									Set a deadline to show a countdown timer. Time is in Philippine Standard Time (UTC+8)
+									Set a deadline to show a countdown timer. Time is in Philippine Standard Time
+									(UTC+8)
 								</p>
 							</div>
 							<div className="flex items-center space-x-2">

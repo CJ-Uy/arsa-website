@@ -38,8 +38,18 @@ const productSchema = z.object({
 	stock: z.number().int().min(0, "Stock cannot be negative").nullable(),
 	isAvailable: z.boolean(),
 	isPreOrder: z.boolean(),
+	isEventExclusive: z.boolean().default(false),
 	availableSizes: z.array(z.string()),
+	sizePricing: z.record(z.string(), z.number()).nullable().optional(),
 	specialNote: z.string().optional(),
+	assignedEvents: z
+		.array(
+			z.object({
+				eventId: z.string(),
+				eventPrice: z.number().nullable(),
+			}),
+		)
+		.default([]),
 });
 
 export async function createProduct(data: z.infer<typeof productSchema>) {
@@ -47,9 +57,20 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 		await checkShopAdmin();
 
 		const validated = productSchema.parse(data);
+		const { assignedEvents, ...productData } = validated;
 
 		await prisma.product.create({
-			data: validated,
+			data: {
+				...productData,
+				// Create event assignments
+				eventProducts: {
+					create: assignedEvents.map((event, index) => ({
+						eventId: event.eventId,
+						eventPrice: event.eventPrice,
+						sortOrder: index,
+					})),
+				},
+			},
 		});
 
 		// Invalidate product cache so changes show immediately
@@ -68,10 +89,26 @@ export async function updateProduct(id: string, data: z.infer<typeof productSche
 		await checkShopAdmin();
 
 		const validated = productSchema.parse(data);
+		const { assignedEvents, ...productData } = validated;
+
+		// Delete existing event assignments
+		await prisma.eventProduct.deleteMany({
+			where: { productId: id },
+		});
 
 		await prisma.product.update({
 			where: { id },
-			data: validated,
+			data: {
+				...productData,
+				// Recreate event assignments
+				eventProducts: {
+					create: assignedEvents.map((event, index) => ({
+						eventId: event.eventId,
+						eventPrice: event.eventPrice,
+						sortOrder: index,
+					})),
+				},
+			},
 		});
 
 		// Invalidate product cache so changes show immediately

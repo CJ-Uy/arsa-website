@@ -49,10 +49,14 @@ type Product = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string | null;
+	isEventExclusive: boolean;
+	sizePricing: Record<string, number> | null;
+	eventProducts: Array<{ eventId: string; eventPrice: number | null }>;
 };
 
 type ProductsManagementProps = {
 	initialProducts: Product[];
+	availableEvents: Array<{ id: string; name: string }>;
 };
 
 type ProductFormData = {
@@ -67,9 +71,12 @@ type ProductFormData = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string;
+	isEventExclusive: boolean;
+	sizePricing: Record<string, number>;
+	assignedEvents: Array<{ eventId: string; eventPrice: number | null }>;
 };
 
-export function ProductsManagement({ initialProducts }: ProductsManagementProps) {
+export function ProductsManagement({ initialProducts, availableEvents }: ProductsManagementProps) {
 	const [products, setProducts] = useState<Product[]>(initialProducts);
 	const [showDialog, setShowDialog] = useState(false);
 	const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -105,6 +112,9 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			isPreOrder: false,
 			availableSizes: [],
 			specialNote: "",
+			isEventExclusive: false,
+			sizePricing: {},
+			assignedEvents: [],
 		});
 		setEditingProduct(null);
 	};
@@ -124,6 +134,9 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 				isPreOrder: product.isPreOrder,
 				availableSizes: product.availableSizes,
 				specialNote: product.specialNote || "",
+				isEventExclusive: product.isEventExclusive,
+				sizePricing: product.sizePricing || {},
+				assignedEvents: product.eventProducts || [],
 			});
 		} else {
 			resetForm();
@@ -634,6 +647,137 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 									</div>
 								))}
 							</div>
+						</div>
+
+						{/* Size-Specific Pricing */}
+						{formData.availableSizes.length > 0 && (
+							<div className="space-y-3">
+								<div className="flex items-center justify-between">
+									<Label>Size-Specific Pricing (Optional)</Label>
+									<p className="text-muted-foreground text-xs">
+										Leave empty to use base price for all sizes
+									</p>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									{formData.availableSizes.map((size) => (
+										<div key={size} className="flex items-center gap-2">
+											<Label className="w-12 text-sm">{size}:</Label>
+											<Input
+												type="number"
+												step="0.01"
+												placeholder={`₱${formData.price}`}
+												value={formData.sizePricing[size] || ""}
+												onChange={(e) => {
+													const value = e.target.value;
+													const newPricing = { ...formData.sizePricing };
+													if (value) {
+														newPricing[size] = parseFloat(value);
+													} else {
+														delete newPricing[size];
+													}
+													setFormData({
+														...formData,
+														sizePricing: newPricing,
+													});
+												}}
+											/>
+										</div>
+									))}
+								</div>
+								<p className="text-muted-foreground text-xs">
+									Shop will show price range (e.g., "₱100 - ₱200") if sizes have different prices
+								</p>
+							</div>
+						)}
+
+						{/* Event Assignment */}
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<Label>Event Assignment (Optional)</Label>
+								<div className="flex items-center space-x-2">
+									<Switch
+										id="isEventExclusive"
+										checked={formData.isEventExclusive}
+										onCheckedChange={(checked) =>
+											setFormData({ ...formData, isEventExclusive: checked })
+										}
+									/>
+									<Label htmlFor="isEventExclusive" className="text-sm font-normal">
+										Event Exclusive
+									</Label>
+								</div>
+							</div>
+							<p className="text-muted-foreground text-xs">
+								{formData.isEventExclusive
+									? "This product will ONLY appear under assigned event tabs"
+									: "This product will appear in All/categories AND assigned event tabs"}
+							</p>
+
+							{availableEvents.length > 0 && (
+								<div className="space-y-2">
+									{availableEvents.map((event) => {
+										const isAssigned =
+											formData.assignedEvents?.some((e) => e.eventId === event.id) ?? false;
+										const eventData = formData.assignedEvents?.find((e) => e.eventId === event.id);
+
+										return (
+											<Card key={event.id} className="p-3">
+												<div className="flex items-start justify-between gap-3">
+													<div className="flex flex-1 items-center space-x-2">
+														<input
+															type="checkbox"
+															checked={isAssigned}
+															onChange={(e) => {
+																if (e.target.checked) {
+																	setFormData({
+																		...formData,
+																		assignedEvents: [
+																			...formData.assignedEvents,
+																			{ eventId: event.id, eventPrice: null },
+																		],
+																	});
+																} else {
+																	setFormData({
+																		...formData,
+																		assignedEvents: formData.assignedEvents.filter(
+																			(ev) => ev.eventId !== event.id,
+																		),
+																	});
+																}
+															}}
+														/>
+														<Label className="cursor-pointer font-medium">{event.name}</Label>
+													</div>
+
+													{isAssigned && (
+														<div className="flex items-center gap-2">
+															<Label className="text-xs whitespace-nowrap">Event Price:</Label>
+															<Input
+																type="number"
+																step="0.01"
+																placeholder={`₱${formData.price}`}
+																className="w-24"
+																value={eventData?.eventPrice || ""}
+																onChange={(e) => {
+																	const value = e.target.value;
+																	setFormData({
+																		...formData,
+																		assignedEvents: formData.assignedEvents.map((ev) =>
+																			ev.eventId === event.id
+																				? { ...ev, eventPrice: value ? parseFloat(value) : null }
+																				: ev,
+																		),
+																	});
+																}}
+															/>
+														</div>
+													)}
+												</div>
+											</Card>
+										);
+									})}
+								</div>
+							)}
 						</div>
 
 						{/* Pre-Order Mode */}

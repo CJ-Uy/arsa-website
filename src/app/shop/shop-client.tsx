@@ -109,7 +109,19 @@ type Product = {
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
+	isEventExclusive: boolean;
 	availableSizes: string[];
+	sizePricing: Record<string, number> | null;
+	eventProducts?: Array<{
+		id: string;
+		eventId: string;
+		eventPrice: number | null;
+		event: {
+			id: string;
+			name: string;
+			slug: string;
+		};
+	}>;
 };
 
 type PackageItem = {
@@ -247,20 +259,56 @@ export function ShopClient({
 		return null;
 	}, [selectedCategory, events]);
 
+	// Price display helper - handles size-specific pricing and event pricing
+	const getProductPriceDisplay = useCallback(
+		(product: Product) => {
+			// Check if product has size-specific pricing
+			if (product.sizePricing && Object.keys(product.sizePricing).length > 0) {
+				const prices = Object.values(product.sizePricing);
+				const minPrice = Math.min(...prices);
+				const maxPrice = Math.max(...prices);
+
+				if (minPrice === maxPrice) {
+					return `₱${minPrice.toFixed(2)}`;
+				}
+				return `₱${minPrice.toFixed(2)} - ₱${maxPrice.toFixed(2)}`;
+			}
+
+			// Check if product has event-specific pricing
+			if (activeEvent && product.eventProducts) {
+				const eventProduct = product.eventProducts.find((ep) => ep.eventId === activeEvent.id);
+				if (eventProduct?.eventPrice) {
+					return `₱${eventProduct.eventPrice.toFixed(2)}`;
+				}
+			}
+
+			return `₱${product.price.toFixed(2)}`;
+		},
+		[activeEvent],
+	);
+
 	// Memoize filtered, searched, and sorted products
 	const filteredProducts = useMemo(() => {
 		let filtered: Product[] = [];
 
 		// If viewing an event, show event products
 		if (activeEvent) {
-			filtered = activeEvent.products
-				.filter((ep) => ep.product)
-				.map((ep) => ep.product!)
-				.filter(Boolean);
-		} else if (selectedCategory === "all") {
-			filtered = products;
+			// Show products assigned to this event
+			filtered = products.filter((product) => {
+				const hasEventAssignment = product.eventProducts?.some(
+					(ep) => ep.eventId === activeEvent.id,
+				);
+				return hasEventAssignment;
+			});
 		} else {
-			filtered = products.filter((p) => p.category === selectedCategory);
+			// Regular category tabs (All, Arsari-Sari, Other)
+			// Filter out event-exclusive products
+			filtered = products.filter((p) => !p.isEventExclusive);
+
+			// Apply category filter
+			if (selectedCategory !== "all") {
+				filtered = filtered.filter((p) => p.category === selectedCategory);
+			}
 		}
 
 		// Apply search filter
@@ -486,7 +534,13 @@ export function ShopClient({
 		// Category tabs
 		const categoryTabs = [
 			{ value: "all", label: "All", isEvent: false, isPriority: false, themeConfig: null },
-			{ value: "arsari-sari", label: "Arsari-Sari", isEvent: false, isPriority: false, themeConfig: null },
+			{
+				value: "arsari-sari",
+				label: "Arsari-Sari",
+				isEvent: false,
+				isPriority: false,
+				themeConfig: null,
+			},
 			{ value: "other", label: "Other", isEvent: false, isPriority: false, themeConfig: null },
 		];
 
@@ -532,25 +586,20 @@ export function ShopClient({
 										)}
 										style={
 											isEvent && themeColor
-												? {
+												? ({
 														"--tab-color": themeColor,
-													} as React.CSSProperties
+													} as React.CSSProperties)
 												: undefined
 										}
 									>
 										{isEvent && (
 											<Sparkles
-												className={cn(
-													"h-3 w-3",
-													tab.themeConfig?.tabGlow && "animate-pulse",
-												)}
+												className={cn("h-3 w-3", tab.themeConfig?.tabGlow && "animate-pulse")}
 												style={themeColor ? { color: themeColor } : undefined}
 											/>
 										)}
 										<span className="text-xs sm:text-sm">{tab.label}</span>
-										{tab.isPriority && (
-											<Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-										)}
+										{tab.isPriority && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
 									</TabsTrigger>
 								);
 							})}
@@ -773,7 +822,7 @@ export function ShopClient({
 								</CardHeader>
 								<CardContent className="flex-1 space-y-3">
 									<div className="flex items-center justify-between">
-										<span className="text-2xl font-bold">₱{product.price.toFixed(2)}</span>
+										<span className="text-2xl font-bold">{getProductPriceDisplay(product)}</span>
 									</div>
 
 									{/* Size Selection */}

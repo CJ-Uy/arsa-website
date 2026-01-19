@@ -92,6 +92,7 @@ type Product = {
 	image: string | null;
 	imageUrls: string[];
 	stock: number | null;
+	sizePricing: Record<string, number> | null;
 };
 
 type PackageItem = {
@@ -147,6 +148,22 @@ export function CartClient({ initialCart }: CartClientProps) {
 	const [checkoutLoading, setCheckoutLoading] = useState(false);
 	const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
 
+	// Helper to get correct product price based on size
+	const getProductPrice = (item: CartItem) => {
+		if (!item.product) return 0;
+
+		// Check for size-specific pricing
+		if (item.size && item.product.sizePricing) {
+			const sizePrice = item.product.sizePricing[item.size];
+			if (sizePrice) {
+				return sizePrice;
+			}
+		}
+
+		// Fall back to base price
+		return item.product.price;
+	};
+
 	const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
 		setLoading(cartItemId);
 		const result = await updateCartItemQuantity(cartItemId, newQuantity);
@@ -192,7 +209,7 @@ export function CartClient({ initialCart }: CartClientProps) {
 	// Calculate total including both products and packages
 	const total = cartItems.reduce((sum, item) => {
 		if (item.product) {
-			return sum + item.product.price * item.quantity;
+			return sum + getProductPrice(item) * item.quantity;
 		} else if (item.package) {
 			return sum + item.package.price * item.quantity;
 		}
@@ -399,7 +416,7 @@ export function CartClient({ initialCart }: CartClientProps) {
 											<div className="mb-2">
 												<ProductDescription description={item.product.description} compact={true} />
 											</div>
-											<p className="text-lg font-bold">₱{item.product.price.toFixed(2)}</p>
+											<p className="text-lg font-bold">₱{getProductPrice(item).toFixed(2)}</p>
 										</div>
 
 										<div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-between">
