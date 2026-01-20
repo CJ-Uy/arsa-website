@@ -10,10 +10,13 @@ This is the ARSA (Ateneo Resident Students Association) website - a Next.js 15 a
 
 - **Public Pages**: Home, About, Calendar, Publications (Bridges Magazine), Merchandise showcase with gacha system, Resources, Contact
 - **E-Commerce Shop**: Full-featured shop with cart, checkout, order history, and GCash payment integration with OCR
-- **Admin Dashboard**: Product management, order management with verification workflow, banner management
+- **Shop Events System**: Event-based product organization with custom themes, checkout fields, and analytics
+- **Package System**: Product bundles with fixed items and selection pools ("Pick N from X" options)
+- **Admin Dashboard**: Product, package, event, order, and banner management with role-based access
 - **URL Shortener**: Custom short URL system with click tracking and analytics
 - **Authentication**: Better Auth with Google OAuth integration
 - **Storage**: MinIO (S3-compatible) for product images and receipt storage
+- **Analytics**: Shop click tracking and purchase analytics per event
 
 ## Development Commands
 
@@ -70,14 +73,30 @@ npx prisma studio        # Open Prisma Studio for database management
 
 **E-Commerce Shop**
 
-- `Product` - Products with multiple images, size variants (XXXS-XXXL), pre-order support, categories (merch/arsari-sari/other)
-- `CartItem` - Shopping cart with size-aware items
-- `Order` - Orders with status workflow, receipt storage, GCash reference numbers, customer notes
-- `OrderItem` - Order line items with size and price snapshots
+- `Product` - Products with multiple images, size variants (XXXS-XXXL), pre-order support, categories (merch/arsari-sari/other), event exclusivity
+- `Package` - Product bundles with fixed items and selection pools
+- `PackageItem` - Fixed items included in packages (quantity support)
+- `PackagePool` - Selection pools for packages ("Pick X from Y")
+- `PackagePoolOption` - Available products in a selection pool
+- `CartItem` - Shopping cart with size-aware items for products and packages
+- `Order` - Orders with status workflow, receipt storage, GCash reference numbers, event association, custom checkout data
+- `OrderItem` - Order line items with size and price snapshots for products and packages
+
+**Shop Events System**
+
+- `ShopEvent` - Event tabs with custom themes, hero images, timing, priority, checkout customization, custom component paths
+- `EventProduct` - Many-to-many relation linking products/packages to events with optional event-specific pricing
+- `EventAdmin` - Event-specific admin assignments (in addition to global shop admins)
+
+**Shop Analytics**
+
+- `ShopClick` - Click tracking for shop pages and event tabs
+- `ShopPurchase` - Purchase tracking for analytics and event performance graphs
 
 **URL Redirect System**
 
-- `Redirects` - Short URL codes with click tracking and analytics
+- `Redirects` - Short URL codes with click tracking
+- `RedirectClick` - Detailed click logs with user agent and referrer tracking
 
 **Content Management**
 
@@ -189,13 +208,20 @@ All pages use the App Router structure in [src/app/](src/app/):
 - `/shop/orders` - Order history
 - `/shop/orders/[orderId]` - Individual order details
 
-**Admin Routes** (isShopAdmin Required):
+**Admin Routes** (isShopAdmin or isEventsAdmin Required):
 
 - `/admin` - Admin dashboard homepage
 - `/admin/orders` - Order management with Excel export, tabbed interface (Orders/Verify)
 - `/admin/orders` (Verify Tab) - OCR processing, invoice upload, manual verification
-- `/admin/products` - Product management with CRUD operations
+- `/admin/products` - Product management with CRUD operations, event assignment
+- `/admin/packages` - Package management (bundles with fixed items and selection pools)
+- `/admin/events` - Event management with theme customization, checkout config, admin assignments, product/package assignment
 - `/admin/banner` - Banner/announcement management with countdown timers
+
+**Note on Event Admin Access:**
+- `isShopAdmin = true`: Full access to all shop features including all events
+- `isEventsAdmin = true`: Full access to all events (cannot manage shop admins)
+- Event-specific admins (via `EventAdmin`): Access only to assigned events
 
 **Redirect Dashboard** (isRedirectsAdmin Required):
 
@@ -220,13 +246,22 @@ Located in [src/app/api/](src/app/api/):
 
 Located throughout the app:
 
-- `src/app/shop/actions.ts` - Shop operations (cart management, order creation)
+**Shop Actions:**
+- `src/app/shop/actions.ts` - Shop operations (cart management, order creation, event-aware checkout)
 - `src/app/shop/gcashActions.ts` - GCash PDF reference extraction
+
+**Admin Order Actions:**
 - `src/app/admin/orders/actions.ts` - Order management, status updates, Excel export
 - `src/app/admin/orders/batchOcrActions.ts` - Server-side batch OCR (legacy)
 - `src/app/admin/orders/clientBatchOcrActions.ts` - Client-side batch OCR actions
 - `src/app/admin/orders/invoiceActions.ts` - Invoice upload and OCR processing
-- `src/app/admin/products/actions.ts` - Product CRUD operations
+
+**Admin Product/Package/Event Actions:**
+- `src/app/admin/products/actions.ts` - Product CRUD with event assignment
+- `src/app/admin/packages/actions.ts` - Package CRUD with fixed items and selection pools
+- `src/app/admin/events/actions.ts` - Event CRUD, admin management, analytics, product/package assignment
+
+**Other Admin Actions:**
 - `src/app/admin/banner/actions.ts` - Banner management
 - `src/app/redirects/actions.ts` - URL redirect CRUD with authentication
 
@@ -238,6 +273,100 @@ Located throughout the app:
 - **Theme System**: CSS variables for light/dark modes with next-themes
 - **Notifications**: Sonner for toast notifications (configured in root layout)
 - **Mobile-First**: Responsive design with Tailwind breakpoints (sm, md, lg, xl)
+
+## Shop Events System
+
+The shop features a powerful event-based organization system that allows products and packages to be grouped into themed event tabs with custom UI, pricing, and checkout flows.
+
+### Event Features
+
+**Core Capabilities:**
+- **Event Tabs**: Events appear as tabs in the shop interface during their active date range
+- **Custom Theming**: Each event can have custom colors, animations (confetti, hearts, snow, sparkles, petals), and styling
+- **Hero Images**: Multiple hero images per event displayed in carousels
+- **Priority System**: Set one event as the default landing tab
+- **Tab Ordering**: Control the order of event tabs
+- **Custom Components**: Events can load custom React components for unique experiences (e.g., [src/app/shop/events/2026/flower-fest-2026/](src/app/shop/events/2026/flower-fest-2026/))
+
+**Product/Package Assignment:**
+- Products and packages can be assigned to multiple events
+- Event-specific pricing overrides base price
+- Event-exclusive items (only appear under event tabs, not in All/categories)
+- Sort order control for display within events
+
+**Custom Checkout:**
+- Additional checkout fields per event (text, textarea, select, checkbox, date)
+- Required/optional field support
+- Custom header messages and confirmation messages
+- Custom terms and conditions per event
+- Responses stored in `Order.eventData` as JSON
+
+**Admin Access Control:**
+- Global shop admins: Full access to all events
+- Global events admins: Full event access (cannot manage admins)
+- Event-specific admins: Access only to assigned events
+- Admin management interface in events dashboard
+
+**Analytics:**
+- Click tracking per event tab (`ShopClick` model)
+- Purchase analytics per event (`ShopPurchase` model)
+- Event performance metrics and graphs
+
+### Event Management
+
+**Location**: [src/app/admin/events/](src/app/admin/events/)
+
+**Key Files:**
+- `page.tsx` - Server component with auth check and data fetching
+- `events-management.tsx` - Full CRUD interface with tabbed UI (Basic Info, Products, Theme, Checkout, Admins, Analytics)
+- `actions.ts` - Server actions for event operations
+
+**Event Creation Workflow:**
+1. Basic Info: Name, slug, description, dates, status, priority
+2. Hero Images: Upload multiple images for carousel
+3. Products Tab: Assign products/packages with optional event pricing
+4. Theme Tab: Colors, animations, background patterns, header text
+5. Checkout Tab: Custom fields, messages, terms
+6. Admins Tab: Assign event-specific admins
+7. Analytics Tab: View click and purchase statistics
+
+## Package System
+
+The package system allows creating product bundles with two types of contents:
+
+### Package Types
+
+**Fixed Items:**
+- Products always included in the package
+- Quantity support (e.g., 2x of Product A, 1x of Product B)
+- Managed via `PackageItem` model
+
+**Selection Pools:**
+- "Pick N from these options" functionality
+- Example: "Choose 3 shirts from 8 options"
+- Customer selects which items they want during checkout
+- Managed via `PackagePool` and `PackagePoolOption` models
+
+### Package Features
+
+- **Bundle Pricing**: Usually discounted compared to individual items
+- **Multiple Images**: Image carousel support
+- **Event Assignment**: Can be assigned to events just like products
+- **Event-Exclusive**: Optional flag to only show in event tabs
+- **Size Selections**: For items with sizes, customers select sizes for each item in package
+- **Cart Integration**: Full cart support with package selection snapshots
+- **Order Integration**: Package selections stored in `OrderItem.packageSelections` as JSON
+
+### Package Management
+
+**Location**: [src/app/admin/packages/](src/app/admin/packages/)
+
+**Package Creation Workflow:**
+1. Basic Info: Name, description, bundle price, images
+2. Fixed Items: Add products that are always included (with quantities)
+3. Selection Pools: Create pools with selection count and available products
+4. Event Assignment: Assign to events with optional event pricing
+5. Availability: Control availability status
 
 ## Shop System & GCash Integration
 
@@ -348,9 +477,34 @@ The system uses **Better Auth** for user authentication:
 - Google OAuth only (no email/password login)
 - Auto-populates `firstName` and `lastName` from Google OAuth
 - Session-based authentication with IP and user agent tracking
-- Admin access controlled via `isShopAdmin` and `isRedirectsAdmin` flags on User model
+- Admin access controlled via `isShopAdmin`, `isEventsAdmin`, and `isRedirectsAdmin` flags on User model
+- Event-specific admin access via `EventAdmin` model (many-to-many User ↔ ShopEvent)
 - Role-based access control for admin dashboards
 - User roles fetched from `/api/user/roles` endpoint
+
+### Admin Role Summary
+
+**isShopAdmin (Boolean on User model):**
+- Full access to products, packages, orders, events, banner management
+- Can manage all events and assign event-specific admins
+- Can manage shop-wide settings
+
+**isEventsAdmin (Boolean on User model):**
+- Full access to all events (create, edit, delete)
+- Can assign products/packages to events
+- Cannot manage event-specific admins
+- Cannot access products/packages/orders management
+
+**isRedirectsAdmin (Boolean on User model):**
+- Full access to URL redirect system
+- Can create, edit, delete redirects
+- Can view click analytics
+
+**Event-Specific Admin (via EventAdmin model):**
+- Access only to assigned events
+- Can edit event details, assign products/packages
+- Cannot delete events
+- Cannot assign other admins
 
 ### Build Configuration
 
@@ -387,6 +541,31 @@ The application is designed **mobile-first** with responsive Tailwind classes:
 
 **Note**: Tables in admin dashboards may require horizontal scrolling on mobile devices.
 
+## Recommended Admin Workflow
+
+### Event-First Product Management
+
+The shop system is designed with an **event-first workflow** to streamline product management:
+
+**Step 1: Create Events** ([/admin/events](src/app/admin/events/))
+- Navigate to the Events dashboard
+- Create events with dates, themes, and custom checkout fields
+- Events will appear as tabs in the shop during their active period
+
+**Step 2: Create Products** ([/admin/products](src/app/admin/products/))
+- When creating a product, the **Event Assignment** section appears prominently near the top of the form (after description)
+- Select which events the product should appear under
+- Optionally set event-specific pricing (e.g., discounted price for a specific event)
+- Toggle "Event Exclusive" if the product should ONLY appear under event tabs (not in "All" or category tabs)
+
+**Benefits of this workflow:**
+- Products are assigned to events during creation, not as an afterthought
+- Clear visibility into which events a product belongs to
+- Event-specific pricing can be set immediately
+- Products can be reused across multiple events with different prices
+
+**Note:** Products can still be managed from the Events dashboard if needed, but the recommended flow is to assign during product creation.
+
 ## Recent Features
 
 ### GCash Invoice OCR (Latest)
@@ -395,6 +574,13 @@ The application is designed **mobile-first** with responsive Tailwind classes:
 - OCR extraction of transaction tables
 - Automatic matching of transactions with orders by reference number
 - Manual verification dashboard for unmatched payments
+
+### Event-First Product Workflow
+
+- Event assignment section moved to top of product creation form
+- Visual highlighting with colored card and prominent styling
+- Clear messaging about event exclusive vs shared products
+- Message shown when no events are available, directing admins to create events first
 
 ### Client-Side Batch OCR
 
@@ -442,13 +628,17 @@ The application is designed **mobile-first** with responsive Tailwind classes:
 
 ## Development Tips
 
-1. **Database changes**: Always run `npx prisma generate` after schema changes
+1. **Database changes**: Always run `npx prisma generate` after schema changes, then restart dev server
 2. **Cache management**: Use `/api/cache-stats` to monitor cache performance
 3. **OCR testing**: Test with real GCash receipts, processing time is ~8-12 seconds
 4. **Image uploads**: Images are automatically optimized to WebP at 1200x1200px max
-5. **Admin access**: Set `isShopAdmin` or `isRedirectsAdmin` flags directly in database
-6. **Docker deployment**: Use standalone output mode for minimal image size
-7. **Mobile testing**: Test on actual mobile devices for touch gestures and responsiveness
+5. **Admin access**: Set `isShopAdmin`, `isEventsAdmin`, or `isRedirectsAdmin` flags directly in database via Prisma Studio
+6. **Event admin assignment**: Use the admin management interface in the events dashboard (UI-based)
+7. **Docker deployment**: Use standalone output mode for minimal image size
+8. **Mobile testing**: Test on actual mobile devices for touch gestures and responsiveness
+9. **Event timing**: Events only appear as tabs when current date is between `startDate` and `endDate`
+10. **Package testing**: Test packages with both fixed items and selection pools for complete coverage
+11. **Event theming**: Test custom theme configs in different color schemes and animations
 
 ## Useful Links
 
@@ -457,3 +647,5 @@ The application is designed **mobile-first** with responsive Tailwind classes:
 - **Deployment Guide**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - **GCash OCR**: [docs/GCASH.md](docs/GCASH.md)
 - **Shop Setup**: [docs/SHOP_SETUP.md](docs/SHOP_SETUP.md)
+- **E-Shop Architecture**: [docs/ESHOP_SYSTEM.md](docs/ESHOP_SYSTEM.md) - Complete e-commerce implementation guide
+- **GCash OCR System**: [docs/GCASH_OCR_SYSTEM.md](docs/GCASH_OCR_SYSTEM.md) - Portable OCR implementation guide

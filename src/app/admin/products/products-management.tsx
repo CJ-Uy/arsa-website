@@ -463,6 +463,109 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 							/>
 						</div>
 
+						{/* Event Assignment - Moved up for prominence */}
+						<Card className="border-primary/50 bg-primary/5">
+							<CardContent className="pt-6">
+								<div className="space-y-3">
+									<div className="flex items-center justify-between">
+										<div>
+											<Label className="text-base font-semibold">Event Assignment</Label>
+											<p className="text-muted-foreground mt-1 text-sm">
+												Assign this product to event tabs in the shop
+											</p>
+										</div>
+										<div className="flex items-center space-x-2">
+											<Switch
+												id="isEventExclusive"
+												checked={formData.isEventExclusive}
+												onCheckedChange={(checked) =>
+													setFormData({ ...formData, isEventExclusive: checked })
+												}
+											/>
+											<Label htmlFor="isEventExclusive" className="text-sm font-normal">
+												Event Exclusive
+											</Label>
+										</div>
+									</div>
+									<p className="text-muted-foreground text-xs">
+										{formData.isEventExclusive
+											? "⚠️ This product will ONLY appear under assigned event tabs"
+											: "ℹ️ This product will appear in All/categories AND assigned event tabs"}
+									</p>
+
+									{availableEvents.length > 0 ? (
+										<div className="space-y-2">
+											{availableEvents.map((event) => {
+												const isAssigned =
+													formData.assignedEvents?.some((e) => e.eventId === event.id) ?? false;
+												const eventData = formData.assignedEvents?.find((e) => e.eventId === event.id);
+
+												return (
+													<Card key={event.id} className="p-3">
+														<div className="flex items-start justify-between gap-3">
+															<div className="flex flex-1 items-center space-x-2">
+																<input
+																	type="checkbox"
+																	checked={isAssigned}
+																	onChange={(e) => {
+																		if (e.target.checked) {
+																			setFormData({
+																				...formData,
+																				assignedEvents: [
+																					...formData.assignedEvents,
+																					{ eventId: event.id, eventPrice: null },
+																				],
+																			});
+																		} else {
+																			setFormData({
+																				...formData,
+																				assignedEvents: formData.assignedEvents.filter(
+																					(ev) => ev.eventId !== event.id,
+																				),
+																			});
+																		}
+																	}}
+																/>
+																<Label className="cursor-pointer font-medium">{event.name}</Label>
+															</div>
+
+															{isAssigned && (
+																<div className="flex items-center gap-2">
+																	<Label className="whitespace-nowrap text-xs">Event Price:</Label>
+																	<Input
+																		type="number"
+																		step="0.01"
+																		placeholder={`₱${formData.price}`}
+																		className="w-24"
+																		value={eventData?.eventPrice || ""}
+																		onChange={(e) => {
+																			const value = e.target.value;
+																			setFormData({
+																				...formData,
+																				assignedEvents: formData.assignedEvents.map((ev) =>
+																					ev.eventId === event.id
+																						? { ...ev, eventPrice: value ? parseFloat(value) : null }
+																						: ev,
+																				),
+																			});
+																		}}
+																	/>
+																</div>
+															)}
+														</div>
+													</Card>
+												);
+											})}
+										</div>
+									) : (
+										<p className="text-muted-foreground text-sm italic">
+											No active events available. Create an event first in the Events page.
+										</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+
 						<div>
 							<Label htmlFor="specialNote">Checkout Warning (Optional)</Label>
 							<Textarea
@@ -689,96 +792,6 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 								</p>
 							</div>
 						)}
-
-						{/* Event Assignment */}
-						<div className="space-y-3">
-							<div className="flex items-center justify-between">
-								<Label>Event Assignment (Optional)</Label>
-								<div className="flex items-center space-x-2">
-									<Switch
-										id="isEventExclusive"
-										checked={formData.isEventExclusive}
-										onCheckedChange={(checked) =>
-											setFormData({ ...formData, isEventExclusive: checked })
-										}
-									/>
-									<Label htmlFor="isEventExclusive" className="text-sm font-normal">
-										Event Exclusive
-									</Label>
-								</div>
-							</div>
-							<p className="text-muted-foreground text-xs">
-								{formData.isEventExclusive
-									? "This product will ONLY appear under assigned event tabs"
-									: "This product will appear in All/categories AND assigned event tabs"}
-							</p>
-
-							{availableEvents.length > 0 && (
-								<div className="space-y-2">
-									{availableEvents.map((event) => {
-										const isAssigned =
-											formData.assignedEvents?.some((e) => e.eventId === event.id) ?? false;
-										const eventData = formData.assignedEvents?.find((e) => e.eventId === event.id);
-
-										return (
-											<Card key={event.id} className="p-3">
-												<div className="flex items-start justify-between gap-3">
-													<div className="flex flex-1 items-center space-x-2">
-														<input
-															type="checkbox"
-															checked={isAssigned}
-															onChange={(e) => {
-																if (e.target.checked) {
-																	setFormData({
-																		...formData,
-																		assignedEvents: [
-																			...formData.assignedEvents,
-																			{ eventId: event.id, eventPrice: null },
-																		],
-																	});
-																} else {
-																	setFormData({
-																		...formData,
-																		assignedEvents: formData.assignedEvents.filter(
-																			(ev) => ev.eventId !== event.id,
-																		),
-																	});
-																}
-															}}
-														/>
-														<Label className="cursor-pointer font-medium">{event.name}</Label>
-													</div>
-
-													{isAssigned && (
-														<div className="flex items-center gap-2">
-															<Label className="text-xs whitespace-nowrap">Event Price:</Label>
-															<Input
-																type="number"
-																step="0.01"
-																placeholder={`₱${formData.price}`}
-																className="w-24"
-																value={eventData?.eventPrice || ""}
-																onChange={(e) => {
-																	const value = e.target.value;
-																	setFormData({
-																		...formData,
-																		assignedEvents: formData.assignedEvents.map((ev) =>
-																			ev.eventId === event.id
-																				? { ...ev, eventPrice: value ? parseFloat(value) : null }
-																				: ev,
-																		),
-																	});
-																}}
-															/>
-														</div>
-													)}
-												</div>
-											</Card>
-										);
-									})}
-								</div>
-							)}
-						</div>
 
 						{/* Pre-Order Mode */}
 						<div className="flex items-center space-x-2">
