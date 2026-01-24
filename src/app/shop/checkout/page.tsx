@@ -5,23 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getCart } from "../actions";
 import { CheckoutClient } from "./checkout-client";
 
-// Types for checkout config
-type CheckoutField = {
-	id: string;
-	label: string;
-	type: "text" | "textarea" | "select" | "checkbox" | "date";
-	required: boolean;
-	placeholder?: string;
-	options?: string[];
-	maxLength?: number;
-};
-
-type CheckoutConfig = {
-	headerMessage?: string;
-	additionalFields: CheckoutField[];
-	termsMessage?: string;
-	confirmationMessage?: string;
-};
+// Import types from the shared types file
+import type { CheckoutConfig } from "../events/types";
 
 export default async function CheckoutPage() {
 	const session = await auth.api.getSession({

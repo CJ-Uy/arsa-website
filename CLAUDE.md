@@ -219,6 +219,7 @@ All pages use the App Router structure in [src/app/](src/app/):
 - `/admin/banner` - Banner/announcement management with countdown timers
 
 **Note on Event Admin Access:**
+
 - `isShopAdmin = true`: Full access to all shop features including all events
 - `isEventsAdmin = true`: Full access to all events (cannot manage shop admins)
 - Event-specific admins (via `EventAdmin`): Access only to assigned events
@@ -247,21 +248,25 @@ Located in [src/app/api/](src/app/api/):
 Located throughout the app:
 
 **Shop Actions:**
+
 - `src/app/shop/actions.ts` - Shop operations (cart management, order creation, event-aware checkout)
 - `src/app/shop/gcashActions.ts` - GCash PDF reference extraction
 
 **Admin Order Actions:**
+
 - `src/app/admin/orders/actions.ts` - Order management, status updates, Excel export
 - `src/app/admin/orders/batchOcrActions.ts` - Server-side batch OCR (legacy)
 - `src/app/admin/orders/clientBatchOcrActions.ts` - Client-side batch OCR actions
 - `src/app/admin/orders/invoiceActions.ts` - Invoice upload and OCR processing
 
 **Admin Product/Package/Event Actions:**
+
 - `src/app/admin/products/actions.ts` - Product CRUD with event assignment
 - `src/app/admin/packages/actions.ts` - Package CRUD with fixed items and selection pools
 - `src/app/admin/events/actions.ts` - Event CRUD, admin management, analytics, product/package assignment
 
 **Other Admin Actions:**
+
 - `src/app/admin/banner/actions.ts` - Banner management
 - `src/app/redirects/actions.ts` - URL redirect CRUD with authentication
 
@@ -281,6 +286,7 @@ The shop features a powerful event-based organization system that allows product
 ### Event Features
 
 **Core Capabilities:**
+
 - **Event Tabs**: Events appear as tabs in the shop interface during their active date range
 - **Custom Theming**: Each event can have custom colors, animations (confetti, hearts, snow, sparkles, petals), and styling
 - **Hero Images**: Multiple hero images per event displayed in carousels
@@ -289,12 +295,14 @@ The shop features a powerful event-based organization system that allows product
 - **Custom Components**: Events can load custom React components for unique experiences (e.g., [src/app/shop/events/2026/flower-fest-2026/](src/app/shop/events/2026/flower-fest-2026/))
 
 **Product/Package Assignment:**
+
 - Products and packages can be assigned to multiple events
 - Event-specific pricing overrides base price
 - Event-exclusive items (only appear under event tabs, not in All/categories)
 - Sort order control for display within events
 
 **Custom Checkout:**
+
 - Additional checkout fields per event (text, textarea, select, checkbox, date)
 - Required/optional field support
 - Custom header messages and confirmation messages
@@ -302,12 +310,14 @@ The shop features a powerful event-based organization system that allows product
 - Responses stored in `Order.eventData` as JSON
 
 **Admin Access Control:**
+
 - Global shop admins: Full access to all events
 - Global events admins: Full event access (cannot manage admins)
 - Event-specific admins: Access only to assigned events
 - Admin management interface in events dashboard
 
 **Analytics:**
+
 - Click tracking per event tab (`ShopClick` model)
 - Purchase analytics per event (`ShopPurchase` model)
 - Event performance metrics and graphs
@@ -317,11 +327,13 @@ The shop features a powerful event-based organization system that allows product
 **Location**: [src/app/admin/events/](src/app/admin/events/)
 
 **Key Files:**
+
 - `page.tsx` - Server component with auth check and data fetching
 - `events-management.tsx` - Full CRUD interface with tabbed UI (Basic Info, Products, Theme, Checkout, Admins, Analytics)
 - `actions.ts` - Server actions for event operations
 
 **Event Creation Workflow:**
+
 1. Basic Info: Name, slug, description, dates, status, priority
 2. Hero Images: Upload multiple images for carousel
 3. Products Tab: Assign products/packages with optional event pricing
@@ -337,11 +349,13 @@ The package system allows creating product bundles with two types of contents:
 ### Package Types
 
 **Fixed Items:**
+
 - Products always included in the package
 - Quantity support (e.g., 2x of Product A, 1x of Product B)
 - Managed via `PackageItem` model
 
 **Selection Pools:**
+
 - "Pick N from these options" functionality
 - Example: "Choose 3 shirts from 8 options"
 - Customer selects which items they want during checkout
@@ -362,6 +376,7 @@ The package system allows creating product bundles with two types of contents:
 **Location**: [src/app/admin/packages/](src/app/admin/packages/)
 
 **Package Creation Workflow:**
+
 1. Basic Info: Name, description, bundle price, images
 2. Fixed Items: Add products that are always included (with quantities)
 3. Selection Pools: Create pools with selection count and available products
@@ -485,22 +500,26 @@ The system uses **Better Auth** for user authentication:
 ### Admin Role Summary
 
 **isShopAdmin (Boolean on User model):**
+
 - Full access to products, packages, orders, events, banner management
 - Can manage all events and assign event-specific admins
 - Can manage shop-wide settings
 
 **isEventsAdmin (Boolean on User model):**
+
 - Full access to all events (create, edit, delete)
 - Can assign products/packages to events
 - Cannot manage event-specific admins
 - Cannot access products/packages/orders management
 
 **isRedirectsAdmin (Boolean on User model):**
+
 - Full access to URL redirect system
 - Can create, edit, delete redirects
 - Can view click analytics
 
 **Event-Specific Admin (via EventAdmin model):**
+
 - Access only to assigned events
 - Can edit event details, assign products/packages
 - Cannot delete events
@@ -548,17 +567,20 @@ The application is designed **mobile-first** with responsive Tailwind classes:
 The shop system is designed with an **event-first workflow** to streamline product management:
 
 **Step 1: Create Events** ([/admin/events](src/app/admin/events/))
+
 - Navigate to the Events dashboard
 - Create events with dates, themes, and custom checkout fields
 - Events will appear as tabs in the shop during their active period
 
 **Step 2: Create Products** ([/admin/products](src/app/admin/products/))
+
 - When creating a product, the **Event Assignment** section appears prominently near the top of the form (after description)
 - Select which events the product should appear under
 - Optionally set event-specific pricing (e.g., discounted price for a specific event)
 - Toggle "Event Exclusive" if the product should ONLY appear under event tabs (not in "All" or category tabs)
 
 **Benefits of this workflow:**
+
 - Products are assigned to events during creation, not as an afterthought
 - Clear visibility into which events a product belongs to
 - Event-specific pricing can be set immediately

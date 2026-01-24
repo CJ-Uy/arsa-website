@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Check, AlertCircle, Loader2, Gift, FileText, Calendar } from "lucide-react";
+import {
+	Upload,
+	Check,
+	AlertCircle,
+	Loader2,
+	Gift,
+	FileText,
+	Calendar,
+	Plus,
+	Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,10 +28,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { createOrder } from "../actions";
 import { extractRefNumberFromPdf } from "../gcashActions";
 import { toast } from "sonner";
 import { parseGcashReceiptClient } from "@/lib/gcashReaders/readReceipt.client";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
+
+// Type for repeater row data
+type RepeaterRowData = Record<string, string>;
 
 type Product = {
 	id: string;
@@ -56,14 +72,62 @@ type User = {
 	email: string;
 };
 
+type RepeaterColumn = {
+	id: string;
+	label: string;
+	type: "text" | "date" | "time" | "select";
+	placeholder?: string;
+	options?: string[];
+	width?: "sm" | "md" | "lg";
+};
+
+type FieldCondition = {
+	fieldId: string;
+	value: string | string[];
+};
+
+type CheckoutFieldType =
+	| "text"
+	| "textarea"
+	| "select"
+	| "checkbox"
+	| "date"
+	| "time"
+	| "number"
+	| "email"
+	| "phone"
+	| "radio"
+	| "repeater"
+	| "message";
+
 type CheckoutField = {
 	id: string;
 	label: string;
-	type: "text" | "textarea" | "select" | "checkbox" | "date";
+	type: CheckoutFieldType;
 	required: boolean;
 	placeholder?: string;
 	options?: string[];
 	maxLength?: number;
+	// Number field constraints
+	min?: number;
+	max?: number;
+	step?: number;
+	// Conditional display
+	showWhen?: FieldCondition;
+	// Message content (for type: "message")
+	messageContent?: string;
+	// Repeater-specific fields
+	columns?: RepeaterColumn[];
+	minRows?: number;
+	maxRows?: number;
+	defaultRows?: number;
+};
+
+type PaymentOption = {
+	id: string;
+	title: string;
+	instructions: string;
+	imageUrl?: string;
 };
 
 type CheckoutConfig = {
@@ -71,6 +135,10 @@ type CheckoutConfig = {
 	additionalFields: CheckoutField[];
 	termsMessage?: string;
 	confirmationMessage?: string;
+	cutoffTime?: string;
+	cutoffMessage?: string;
+	cutoffDaysOffset?: number;
+	paymentOptions?: PaymentOption[];
 };
 
 type EventInfo = {
@@ -96,6 +164,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 	const [loading, setLoading] = useState(false);
 	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
 	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
+	const [selectedPaymentOption, setSelectedPaymentOption] = useState<string | null>(null);
 
 	// Helper to get correct product price based on size
 	const getProductPrice = (item: CartItem) => {
@@ -113,8 +182,56 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		return item.product.price;
 	};
 
+	// Check if past delivery cutoff time
+	const checkCutoffWarning = () => {
+		const cutoffConfig = event?.checkoutConfig;
+		if (!cutoffConfig?.cutoffTime || !cutoffConfig?.cutoffMessage) return null;
+
+		const now = new Date();
+		const [hours, minutes] = cutoffConfig.cutoffTime.split(":").map(Number);
+		const cutoffToday = new Date(now);
+		cutoffToday.setHours(hours, minutes, 0, 0);
+
+		if (now > cutoffToday) {
+			// Past cutoff - calculate delivery date
+			const daysOffset = cutoffConfig.cutoffDaysOffset || 2;
+			const deliveryDate = new Date(now);
+			deliveryDate.setDate(deliveryDate.getDate() + daysOffset);
+
+			const formattedDate = deliveryDate.toLocaleDateString("en-US", {
+				month: "long",
+				day: "numeric",
+				year: "numeric",
+			});
+
+			// Replace {deliveryDate} placeholder in message
+			const message = cutoffConfig.cutoffMessage.replace("{deliveryDate}", formattedDate);
+			return message;
+		}
+
+		return null;
+	};
+
+	const cutoffWarning = checkCutoffWarning();
+
 	// Event-specific field values
 	const [eventFieldValues, setEventFieldValues] = useState<Record<string, string | boolean>>({});
+
+	// Repeater field values (stored separately as arrays of row objects)
+	const [repeaterValues, setRepeaterValues] = useState<Record<string, RepeaterRowData[]>>(() => {
+		// Initialize with default rows for each repeater field
+		const initial: Record<string, RepeaterRowData[]> = {};
+		const fields = event?.checkoutConfig?.additionalFields || [];
+		fields.forEach((field) => {
+			if (field.type === "repeater") {
+				const defaultRows = field.defaultRows || field.minRows || 1;
+				initial[field.id] = Array(defaultRows)
+					.fill(null)
+					.map(() => ({}));
+			}
+		});
+		return initial;
+	});
 
 	// Calculate total including both products and packages
 	const total = cart.reduce((sum, item) => {
@@ -133,6 +250,55 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 	// Update event field value
 	const updateEventField = (fieldId: string, value: string | boolean) => {
 		setEventFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+	};
+
+	// Repeater helper functions
+	const addRepeaterRow = (fieldId: string, maxRows?: number) => {
+		setRepeaterValues((prev) => {
+			const currentRows = prev[fieldId] || [];
+			if (maxRows && currentRows.length >= maxRows) {
+				toast.error(`Maximum ${maxRows} rows allowed`);
+				return prev;
+			}
+			return { ...prev, [fieldId]: [...currentRows, {}] };
+		});
+	};
+
+	const removeRepeaterRow = (fieldId: string, rowIndex: number, minRows?: number) => {
+		setRepeaterValues((prev) => {
+			const currentRows = prev[fieldId] || [];
+			if (minRows && currentRows.length <= minRows) {
+				toast.error(`Minimum ${minRows} rows required`);
+				return prev;
+			}
+			return { ...prev, [fieldId]: currentRows.filter((_, i) => i !== rowIndex) };
+		});
+	};
+
+	const updateRepeaterCell = (
+		fieldId: string,
+		rowIndex: number,
+		columnId: string,
+		value: string,
+	) => {
+		setRepeaterValues((prev) => {
+			const currentRows = [...(prev[fieldId] || [])];
+			currentRows[rowIndex] = { ...currentRows[rowIndex], [columnId]: value };
+			return { ...prev, [fieldId]: currentRows };
+		});
+	};
+
+	// Check if a field should be visible based on conditional logic
+	const isFieldVisible = (field: CheckoutField): boolean => {
+		if (!field.showWhen) return true;
+
+		const { fieldId, value } = field.showWhen;
+		const currentValue = eventFieldValues[fieldId];
+
+		if (Array.isArray(value)) {
+			return value.includes(currentValue as string);
+		}
+		return currentValue === value;
 	};
 
 	// Collect all unique special notes from cart items (only from products)
@@ -228,24 +394,45 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 			return;
 		}
 
-		// Validate student ID format if provided
-		if (studentId.trim() && !/^2\d{5}$/.test(studentId.trim())) {
-			toast.error("Student ID must be in format 2XXXXX (e.g., 212345)");
-			return;
-		}
+		// Student ID validation removed - accepting any format
 
-		// Validate required event fields
+		// Validate required event fields (only if visible and not a message)
 		for (const field of additionalFields) {
+			// Skip validation for message fields (display only) or hidden fields
+			if (field.type === "message" || !isFieldVisible(field)) {
+				continue;
+			}
+
 			if (field.required) {
-				const value = eventFieldValues[field.id];
-				if (field.type === "checkbox") {
+				if (field.type === "repeater") {
+					// Validate repeater fields
+					const rows = repeaterValues[field.id] || [];
+					const minRows = field.minRows || 1;
+					if (rows.length < minRows) {
+						toast.error(`"${field.label}" requires at least ${minRows} row(s)`);
+						return;
+					}
+					// Check if all required columns are filled
+					for (let i = 0; i < rows.length; i++) {
+						for (const col of field.columns || []) {
+							if (!rows[i][col.id] || !rows[i][col.id].trim()) {
+								toast.error(`Please fill in all fields in "${field.label}" row ${i + 1}`);
+								return;
+							}
+						}
+					}
+				} else if (field.type === "checkbox") {
+					const value = eventFieldValues[field.id];
 					if (value !== true) {
 						toast.error(`Please check "${field.label}"`);
 						return;
 					}
-				} else if (!value || (typeof value === "string" && !value.trim())) {
-					toast.error(`Please fill in "${field.label}"`);
-					return;
+				} else {
+					const value = eventFieldValues[field.id];
+					if (!value || (typeof value === "string" && !value.trim())) {
+						toast.error(`Please fill in "${field.label}"`);
+						return;
+					}
 				}
 			}
 		}
@@ -278,16 +465,25 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 
 			const { url: receiptUrl } = await uploadResponse.json();
 
-			// Build event data if present
+			// Build event data if present (only include visible fields, skip message fields)
 			const eventData = event
 				? {
 						eventName: event.name,
 						fields: additionalFields.reduce(
 							(acc, field) => {
-								acc[field.label] = eventFieldValues[field.id] ?? "";
+								// Skip message fields and hidden fields
+								if (field.type === "message" || !isFieldVisible(field)) {
+									return acc;
+								}
+								if (field.type === "repeater") {
+									// For repeaters, include the array of row data
+									acc[field.label] = repeaterValues[field.id] || [];
+								} else {
+									acc[field.label] = eventFieldValues[field.id] ?? "";
+								}
 								return acc;
 							},
-							{} as Record<string, string | boolean>,
+							{} as Record<string, string | boolean | RepeaterRowData[]>,
 						),
 					}
 				: undefined;
@@ -360,14 +556,13 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 								<Input
 									id="studentId"
 									type="text"
-									placeholder="212345"
+									placeholder="e.g., 212345, 2012-12345"
 									value={studentId}
 									onChange={(e) => setStudentId(e.target.value)}
-									maxLength={6}
 									className="mt-2"
 								/>
 								<p className="text-muted-foreground mt-1 text-xs">
-									Format: 2XXXXX (e.g., 212345) - Helps us verify your identity for pickup
+									Helps us verify your identity for pickup
 								</p>
 							</div>
 							<div>
@@ -388,84 +583,339 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 								{checkoutConfig?.headerMessage && (
 									<CardDescription>{checkoutConfig.headerMessage}</CardDescription>
 								)}
+								{cutoffWarning && (
+									<Alert className="mt-3 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+										<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+										<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+											{cutoffWarning}
+										</AlertDescription>
+									</Alert>
+								)}
 							</CardHeader>
 							<CardContent className="space-y-4">
-								{additionalFields.map((field) => (
-									<div key={field.id}>
-										<Label htmlFor={field.id}>
-											{field.label}
-											{field.required && " *"}
-										</Label>
+								{additionalFields.map((field) => {
+									// Check if field should be visible
+									if (!isFieldVisible(field)) return null;
 
-										{field.type === "text" && (
-											<Input
-												id={field.id}
-												type="text"
-												placeholder={field.placeholder}
-												value={(eventFieldValues[field.id] as string) || ""}
-												onChange={(e) => updateEventField(field.id, e.target.value)}
-												maxLength={field.maxLength}
-												required={field.required}
-												className="mt-2"
-											/>
-										)}
-
-										{field.type === "textarea" && (
-											<Textarea
-												id={field.id}
-												placeholder={field.placeholder}
-												value={(eventFieldValues[field.id] as string) || ""}
-												onChange={(e) => updateEventField(field.id, e.target.value)}
-												maxLength={field.maxLength}
-												required={field.required}
-												rows={3}
-												className="mt-2"
-											/>
-										)}
-
-										{field.type === "select" && field.options && (
-											<Select
-												value={(eventFieldValues[field.id] as string) || ""}
-												onValueChange={(value) => updateEventField(field.id, value)}
-											>
-												<SelectTrigger className="mt-2">
-													<SelectValue placeholder={field.placeholder || "Select an option"} />
-												</SelectTrigger>
-												<SelectContent>
-													{field.options.map((option) => (
-														<SelectItem key={option} value={option}>
-															{option}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										)}
-
-										{field.type === "checkbox" && (
-											<div className="mt-2 flex items-center gap-2">
-												<Checkbox
-													id={field.id}
-													checked={(eventFieldValues[field.id] as boolean) || false}
-													onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
-												/>
-												<Label htmlFor={field.id} className="cursor-pointer font-normal">
-													{field.placeholder || field.label}
+									return (
+										<div key={field.id}>
+											{field.type !== "message" && (
+												<Label htmlFor={field.id}>
+													{field.label}
+													{field.required && " *"}
 												</Label>
-											</div>
-										)}
+											)}
 
-										{field.type === "date" && (
-											<Input
-												id={field.id}
-												type="date"
-												value={(eventFieldValues[field.id] as string) || ""}
-												onChange={(e) => updateEventField(field.id, e.target.value)}
-												required={field.required}
-												className="mt-2"
-											/>
-										)}
-									</div>
-								))}
+											{field.type === "message" && field.messageContent && (
+												<div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+													<p className="text-sm text-blue-800 dark:text-blue-200">
+														{field.messageContent}
+													</p>
+												</div>
+											)}
+
+											{field.type === "text" && (
+												<Input
+													id={field.id}
+													type="text"
+													placeholder={field.placeholder}
+													value={(eventFieldValues[field.id] as string) || ""}
+													onChange={(e) => updateEventField(field.id, e.target.value)}
+													maxLength={field.maxLength}
+													required={field.required}
+													className="mt-2"
+												/>
+											)}
+
+											{field.type === "textarea" && (
+												<Textarea
+													id={field.id}
+													placeholder={field.placeholder}
+													value={(eventFieldValues[field.id] as string) || ""}
+													onChange={(e) => updateEventField(field.id, e.target.value)}
+													maxLength={field.maxLength}
+													required={field.required}
+													rows={3}
+													className="mt-2"
+												/>
+											)}
+
+											{field.type === "select" && field.options && (
+												<Select
+													value={(eventFieldValues[field.id] as string) || ""}
+													onValueChange={(value) => updateEventField(field.id, value)}
+												>
+													<SelectTrigger className="mt-2">
+														<SelectValue placeholder={field.placeholder || "Select an option"} />
+													</SelectTrigger>
+													<SelectContent>
+														{field.options.map((option) => (
+															<SelectItem key={option} value={option}>
+																{option}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											)}
+
+											{field.type === "checkbox" && (
+												<div className="mt-2 flex items-center gap-2">
+													<Checkbox
+														id={field.id}
+														checked={(eventFieldValues[field.id] as boolean) || false}
+														onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
+													/>
+													<Label htmlFor={field.id} className="cursor-pointer font-normal">
+														{field.placeholder || field.label}
+													</Label>
+												</div>
+											)}
+
+											{field.type === "date" && (
+												<div className="mt-2">
+													<DatePicker
+														value={
+															eventFieldValues[field.id]
+																? new Date(eventFieldValues[field.id] as string)
+																: undefined
+														}
+														onChange={(date) =>
+															updateEventField(
+																field.id,
+																date
+																	? date.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" })
+																	: "",
+															)
+														}
+														placeholder={field.placeholder || "Select date"}
+													/>
+												</div>
+											)}
+
+											{field.type === "time" && (
+												<div className="mt-2">
+													<TimePicker
+														value={
+															eventFieldValues[field.id]
+																? (eventFieldValues[field.id] as string)
+																: ""
+														}
+														onChange={(time) => updateEventField(field.id, time)}
+													/>
+												</div>
+											)}
+
+											{field.type === "number" && (
+												<Input
+													id={field.id}
+													type="number"
+													placeholder={field.placeholder}
+													value={(eventFieldValues[field.id] as string) || ""}
+													onChange={(e) => updateEventField(field.id, e.target.value)}
+													min={field.min}
+													max={field.max}
+													step={field.step}
+													required={field.required}
+													className="mt-2"
+												/>
+											)}
+
+											{field.type === "email" && (
+												<Input
+													id={field.id}
+													type="email"
+													placeholder={field.placeholder || "email@example.com"}
+													value={(eventFieldValues[field.id] as string) || ""}
+													onChange={(e) => updateEventField(field.id, e.target.value)}
+													required={field.required}
+													className="mt-2"
+												/>
+											)}
+
+											{field.type === "phone" && (
+												<Input
+													id={field.id}
+													type="tel"
+													placeholder={field.placeholder || "+63 XXX XXX XXXX"}
+													value={(eventFieldValues[field.id] as string) || ""}
+													onChange={(e) => updateEventField(field.id, e.target.value)}
+													required={field.required}
+													className="mt-2"
+												/>
+											)}
+
+											{field.type === "radio" && field.options && (
+												<RadioGroup
+													value={(eventFieldValues[field.id] as string) || ""}
+													onValueChange={(value) => updateEventField(field.id, value)}
+													className="mt-2 space-y-2"
+												>
+													{field.options.map((option) => (
+														<div key={option} className="flex items-center space-x-2">
+															<RadioGroupItem value={option} id={`${field.id}-${option}`} />
+															<Label
+																htmlFor={`${field.id}-${option}`}
+																className="cursor-pointer font-normal"
+															>
+																{option}
+															</Label>
+														</div>
+													))}
+												</RadioGroup>
+											)}
+
+											{field.type === "repeater" && field.columns && (
+												<div className="mt-3 space-y-3">
+													{/* Column headers for desktop */}
+													<div className="hidden gap-2 md:flex">
+														{field.columns.map((col) => (
+															<div key={col.id} className="flex-1 text-sm font-medium">
+																{col.label}
+															</div>
+														))}
+														<div className="w-10"></div>
+													</div>
+
+													{/* Rows */}
+													{(repeaterValues[field.id] || []).map((row, rowIndex) => (
+														<div
+															key={rowIndex}
+															className="rounded-lg border bg-slate-50 p-3 md:flex md:items-center md:gap-2 md:bg-transparent md:p-0 dark:bg-slate-900 dark:md:bg-transparent"
+														>
+															{/* Mobile: Show row number */}
+															<div className="mb-2 flex items-center justify-between md:hidden">
+																<span className="text-muted-foreground text-sm font-medium">
+																	Entry {rowIndex + 1}
+																</span>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	size="sm"
+																	onClick={() =>
+																		removeRepeaterRow(field.id, rowIndex, field.minRows)
+																	}
+																	disabled={
+																		(repeaterValues[field.id]?.length || 0) <= (field.minRows || 1)
+																	}
+																	className="text-destructive hover:text-destructive h-8 w-8 p-0"
+																>
+																	<Trash2 className="h-4 w-4" />
+																</Button>
+															</div>
+
+															{field.columns?.map((col) => (
+																<div key={col.id} className="mb-2 md:mb-0 md:flex-1">
+																	{/* Mobile label */}
+																	<label className="text-muted-foreground mb-1 block text-xs md:hidden">
+																		{col.label}
+																	</label>
+
+																	{col.type === "text" && (
+																		<Input
+																			value={row[col.id] || ""}
+																			onChange={(e) =>
+																				updateRepeaterCell(
+																					field.id,
+																					rowIndex,
+																					col.id,
+																					e.target.value,
+																				)
+																			}
+																			placeholder={col.placeholder || col.label}
+																		/>
+																	)}
+
+																	{col.type === "date" && (
+																		<DatePicker
+																			value={row[col.id] ? new Date(row[col.id]) : undefined}
+																			onChange={(date) =>
+																				updateRepeaterCell(
+																					field.id,
+																					rowIndex,
+																					col.id,
+																					date
+																						? date.toLocaleDateString("en-CA", {
+																								timeZone: "Asia/Manila",
+																							})
+																						: "",
+																				)
+																			}
+																			placeholder={col.placeholder || "Select date"}
+																		/>
+																	)}
+
+																	{col.type === "time" && (
+																		<TimePicker
+																			value={row[col.id] || ""}
+																			onChange={(time) =>
+																				updateRepeaterCell(field.id, rowIndex, col.id, time)
+																			}
+																			placeholder={col.placeholder || "Select time"}
+																		/>
+																	)}
+
+																	{col.type === "select" && col.options && (
+																		<Select
+																			value={row[col.id] || ""}
+																			onValueChange={(value) =>
+																				updateRepeaterCell(field.id, rowIndex, col.id, value)
+																			}
+																		>
+																			<SelectTrigger>
+																				<SelectValue placeholder={col.placeholder || "Select..."} />
+																			</SelectTrigger>
+																			<SelectContent>
+																				{col.options.map((opt) => (
+																					<SelectItem key={opt} value={opt}>
+																						{opt}
+																					</SelectItem>
+																				))}
+																			</SelectContent>
+																		</Select>
+																	)}
+																</div>
+															))}
+
+															{/* Desktop delete button */}
+															<Button
+																type="button"
+																variant="ghost"
+																size="icon"
+																onClick={() => removeRepeaterRow(field.id, rowIndex, field.minRows)}
+																disabled={
+																	(repeaterValues[field.id]?.length || 0) <= (field.minRows || 1)
+																}
+																className="text-destructive hover:text-destructive hidden h-10 w-10 md:flex"
+															>
+																<Trash2 className="h-4 w-4" />
+															</Button>
+														</div>
+													))}
+
+													{/* Add row button */}
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() => addRepeaterRow(field.id, field.maxRows)}
+														disabled={
+															(repeaterValues[field.id]?.length || 0) >= (field.maxRows || 50)
+														}
+														className="w-full"
+													>
+														<Plus className="mr-2 h-4 w-4" />
+														Add Entry
+														{field.minRows && (
+															<span className="text-muted-foreground ml-2 text-xs">
+																(min: {field.minRows})
+															</span>
+														)}
+													</Button>
+												</div>
+											)}
+										</div>
+									);
+								})}
 							</CardContent>
 						</Card>
 					)}
@@ -473,40 +923,101 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 					<Card>
 						<CardHeader>
 							<CardTitle>Payment Instructions</CardTitle>
-							<CardDescription>Please follow these steps to complete your payment</CardDescription>
+							<CardDescription>
+								{event?.checkoutConfig?.paymentOptions &&
+								event.checkoutConfig.paymentOptions.length > 0
+									? "Choose a payment method and complete your payment"
+									: "Please follow these steps to complete your payment"}
+							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
-							<Alert>
-								<AlertCircle className="h-4 w-4" />
-								<AlertDescription>
-									<ol className="mt-2 list-inside list-decimal space-y-2">
-										<li>
-											Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
-											<strong>0916 361 1002</strong>
-										</li>
-										<li>Take a screenshot of the receipt</li>
-										<li>Upload the screenshot below</li>
-										<li>Add any special instructions (optional)</li>
-										<li>Click "Place Order"</li>
-									</ol>
-								</AlertDescription>
-							</Alert>
+							{event?.checkoutConfig?.paymentOptions &&
+							event.checkoutConfig.paymentOptions.length > 0 ? (
+								<>
+									{/* Custom Payment Options */}
+									<div className="space-y-4">
+										{event.checkoutConfig.paymentOptions.map((option) => (
+											<Card
+												key={option.id}
+												className={`cursor-pointer transition-all ${
+													selectedPaymentOption === option.id
+														? "border-primary ring-primary ring-2 ring-offset-2"
+														: "hover:border-primary/50"
+												}`}
+												onClick={() => setSelectedPaymentOption(option.id)}
+											>
+												<CardHeader className="pb-3">
+													<div className="flex items-center gap-2">
+														<input
+															type="radio"
+															checked={selectedPaymentOption === option.id}
+															onChange={() => setSelectedPaymentOption(option.id)}
+															className="h-4 w-4"
+														/>
+														<CardTitle className="text-lg">{option.title}</CardTitle>
+													</div>
+												</CardHeader>
+												<CardContent className="space-y-3">
+													<p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+														{option.instructions}
+													</p>
+													{option.imageUrl && (
+														<div className="rounded-lg border-2 bg-white p-3">
+															{/* eslint-disable-next-line @next/next/no-img-element */}
+															<img
+																src={option.imageUrl}
+																alt={`${option.title} QR Code`}
+																className="w-full object-contain"
+															/>
+														</div>
+													)}
+												</CardContent>
+											</Card>
+										))}
+									</div>
+									<Alert>
+										<AlertCircle className="h-4 w-4" />
+										<AlertDescription>
+											<ol className="mt-2 list-inside list-decimal space-y-2">
+												<li>Select a payment method above</li>
+												<li>Send ₱{total.toFixed(2)} using the selected method</li>
+												<li>Take a screenshot of the receipt</li>
+												<li>Upload the screenshot below</li>
+												<li>Click "Place Order"</li>
+											</ol>
+										</AlertDescription>
+									</Alert>
+								</>
+							) : (
+								<>
+									{/* Default GCash Payment Instructions */}
+									<Alert>
+										<AlertCircle className="h-4 w-4" />
+										<AlertDescription>
+											<ol className="mt-2 list-inside list-decimal space-y-2">
+												<li>
+													Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
+													<strong>0916 361 1002</strong>
+												</li>
+												<li>Take a screenshot of the receipt</li>
+												<li>Upload the screenshot below</li>
+												<li>Add any special instructions (optional)</li>
+												<li>Click "Place Order"</li>
+											</ol>
+										</AlertDescription>
+									</Alert>
 
-							{/* GCash QR Code */}
-							<div className="flex justify-center">
-								<div className="rounded-lg border bg-white p-4">
-									<div className="h-64 w-64">
+									{/* Default GCash QR Code */}
+									<div className="rounded-lg border-2 bg-white p-3">
+										{/* eslint-disable-next-line @next/next/no-img-element */}
 										<img
 											src="/images/gcash_qr.jpg"
 											alt="GCash QR Code"
-											className="h-full w-full object-contain"
+											className="w-full object-contain"
 										/>
 									</div>
-									<p className="text-muted-foreground mt-2 text-center text-sm">
-										Scan with GCash app
-									</p>
-								</div>
-							</div>
+								</>
+							)}
 
 							<div>
 								<Label htmlFor="receipt">GCash Receipt Screenshot *</Label>

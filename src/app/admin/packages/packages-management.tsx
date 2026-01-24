@@ -35,6 +35,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 } from "lucide-react";
+import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -413,19 +414,27 @@ export function PackagesManagement({
 					packages.map((pkg) => (
 						<Card key={pkg.id} className="border-primary/20 border-2">
 							<CardHeader>
-								<div className="bg-muted relative mb-4 flex aspect-video items-center justify-center overflow-hidden rounded-lg">
+								<div className="relative mb-4">
 									{pkg.imageUrls && pkg.imageUrls.length > 0 ? (
-										<img
-											src={pkg.imageUrls[0]}
-											alt={pkg.name}
-											className="h-full w-full object-cover"
+										<ProductImageCarousel
+											images={pkg.imageUrls}
+											productName={pkg.name}
+											aspectRatio="landscape"
+											showThumbnails={false}
 										/>
 									) : pkg.image ? (
-										<img src={pkg.image} alt={pkg.name} className="h-full w-full object-cover" />
+										<ProductImageCarousel
+											images={[pkg.image]}
+											productName={pkg.name}
+											aspectRatio="landscape"
+											showThumbnails={false}
+										/>
 									) : (
-										<Package className="text-muted-foreground h-16 w-16" />
+										<div className="bg-muted flex aspect-video items-center justify-center rounded-lg">
+											<Package className="text-muted-foreground h-16 w-16" />
+										</div>
 									)}
-									<Badge className="bg-primary absolute top-2 left-2">Package</Badge>
+									<Badge className="bg-primary absolute top-2 left-2 z-10">Package</Badge>
 								</div>
 								<div className="flex items-start justify-between">
 									<CardTitle className="text-lg">{pkg.name}</CardTitle>

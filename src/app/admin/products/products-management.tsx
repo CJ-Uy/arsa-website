@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 import { toast } from "sonner";
 import { Package, Plus, Edit2, Trash2, Upload, X, RotateCw, GripVertical } from "lucide-react";
+import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -367,28 +368,25 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 					products.map((product) => (
 						<Card key={product.id}>
 							<CardHeader>
-								<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
+								<div className="mb-4">
 									{product.imageUrls && product.imageUrls.length > 0 ? (
-										<>
-											<img
-												src={product.imageUrls[0]}
-												alt={product.name}
-												className="h-full w-full object-cover"
-											/>
-											{product.imageUrls.length > 1 && (
-												<div className="bg-background/80 absolute right-2 bottom-2 rounded-full px-2 py-1 text-xs backdrop-blur-sm">
-													+{product.imageUrls.length - 1}
-												</div>
-											)}
-										</>
+										<ProductImageCarousel
+											images={product.imageUrls}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={false}
+										/>
 									) : product.image ? (
-										<img
-											src={product.image}
-											alt={product.name}
-											className="h-full w-full object-cover"
+										<ProductImageCarousel
+											images={[product.image]}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={false}
 										/>
 									) : (
-										<Package className="text-muted-foreground h-16 w-16" />
+										<div className="bg-muted flex aspect-square items-center justify-center rounded-lg">
+											<Package className="text-muted-foreground h-16 w-16" />
+										</div>
 									)}
 								</div>
 								<div className="flex items-start justify-between">
@@ -498,7 +496,9 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 											{availableEvents.map((event) => {
 												const isAssigned =
 													formData.assignedEvents?.some((e) => e.eventId === event.id) ?? false;
-												const eventData = formData.assignedEvents?.find((e) => e.eventId === event.id);
+												const eventData = formData.assignedEvents?.find(
+													(e) => e.eventId === event.id,
+												);
 
 												return (
 													<Card key={event.id} className="p-3">
@@ -531,7 +531,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 
 															{isAssigned && (
 																<div className="flex items-center gap-2">
-																	<Label className="whitespace-nowrap text-xs">Event Price:</Label>
+																	<Label className="text-xs whitespace-nowrap">Event Price:</Label>
 																	<Input
 																		type="number"
 																		step="0.01"
@@ -544,7 +544,10 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 																				...formData,
 																				assignedEvents: formData.assignedEvents.map((ev) =>
 																					ev.eventId === event.id
-																						? { ...ev, eventPrice: value ? parseFloat(value) : null }
+																						? {
+																								...ev,
+																								eventPrice: value ? parseFloat(value) : null,
+																							}
 																						: ev,
 																				),
 																			});

@@ -84,6 +84,7 @@ model Product {
 ```
 
 **Key Features:**
+
 - Multiple images for product carousel
 - Optional stock tracking (or hide stock completely)
 - Pre-order mode (stock count = number of orders)
@@ -154,6 +155,7 @@ model PackagePoolOption {
 ```
 
 **Key Features:**
+
 - Fixed items (always included with quantity support)
 - Selection pools ("Choose 3 from these 8 shirts")
 - Same event assignment and pricing system as products
@@ -229,6 +231,7 @@ model ShopEvent {
 ```
 
 **Key Features:**
+
 - Date-range visibility (only shows between start and end dates)
 - Priority system for default landing tab
 - Custom theming (colors, animations, patterns)
@@ -257,6 +260,7 @@ model EventProduct {
 ```
 
 **Key Features:**
+
 - Many-to-many relationship (products/packages can be in multiple events)
 - Event-specific pricing overrides
 - Sort order control within events
@@ -280,6 +284,7 @@ model EventAdmin {
 ```
 
 **Key Features:**
+
 - Allows assigning specific users as admins for specific events
 - Separate from global shop admins
 - Many-to-many User ↔ ShopEvent
@@ -326,6 +331,7 @@ model CartItem {
 ```
 
 **Key Features:**
+
 - Stores size selections for products
 - Stores complex selections for packages (fixed items + pool choices)
 - User-scoped (each user has their own cart)
@@ -384,6 +390,7 @@ model OrderItem {
 ```
 
 **Key Features:**
+
 - Status workflow: pending → paid → confirmed → completed (or cancelled)
 - GCash reference number for payment verification
 - Event association for event-specific orders
@@ -424,6 +431,7 @@ model ShopPurchase {
 ```
 
 **Key Features:**
+
 - Separate from orders (for faster analytics queries)
 - Event-specific tracking
 - User agent and referer tracking for click analytics
@@ -446,6 +454,7 @@ model User {
 ```
 
 **Admin Roles:**
+
 - `isShopAdmin`: Full access to products, packages, orders, events
 - `isEventsAdmin`: Full access to events (cannot manage admins)
 - Event-specific admin (via `EventAdmin`): Access to assigned events only
@@ -467,47 +476,47 @@ const [activeTab, setActiveTab] = useState<ShopTab>("all");
 
 // Fetch products based on active tab
 if (activeTab === "all") {
-  // Show all non-event-exclusive products
-  products = await prisma.product.findMany({
-    where: {
-      isAvailable: true,
-      isEventExclusive: false,
-    },
-  });
+	// Show all non-event-exclusive products
+	products = await prisma.product.findMany({
+		where: {
+			isAvailable: true,
+			isEventExclusive: false,
+		},
+	});
 } else if (["merch", "arsari-sari", "other"].includes(activeTab)) {
-  // Show category products
-  products = await prisma.product.findMany({
-    where: {
-      category: activeTab,
-      isAvailable: true,
-      isEventExclusive: false,
-    },
-  });
+	// Show category products
+	products = await prisma.product.findMany({
+		where: {
+			category: activeTab,
+			isAvailable: true,
+			isEventExclusive: false,
+		},
+	});
 } else {
-  // Event tab - fetch event with products
-  const event = await prisma.shopEvent.findUnique({
-    where: { slug: activeTab },
-    include: {
-      products: {
-        include: {
-          product: true,
-          package: {
-            include: {
-              items: { include: { product: true } },
-              pools: { include: { options: { include: { product: true } } } },
-            },
-          },
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-  });
+	// Event tab - fetch event with products
+	const event = await prisma.shopEvent.findUnique({
+		where: { slug: activeTab },
+		include: {
+			products: {
+				include: {
+					product: true,
+					package: {
+						include: {
+							items: { include: { product: true } },
+							pools: { include: { options: { include: { product: true } } } },
+						},
+					},
+				},
+				orderBy: { sortOrder: "asc" },
+			},
+		},
+	});
 
-  // Apply event pricing overrides
-  products = event.products.map(ep => ({
-    ...(ep.product || ep.package),
-    price: ep.eventPrice || (ep.product?.price || ep.package?.price),
-  }));
+	// Apply event pricing overrides
+	products = event.products.map((ep) => ({
+		...(ep.product || ep.package),
+		price: ep.eventPrice || ep.product?.price || ep.package?.price,
+	}));
 }
 ```
 
@@ -519,19 +528,19 @@ if (activeTab === "all") {
 // Fetch active events
 const now = new Date();
 const activeEvents = await prisma.shopEvent.findMany({
-  where: {
-    isActive: true,
-    startDate: { lte: now },
-    endDate: { gte: now },
-  },
-  orderBy: [
-    { isPriority: "desc" },  // Priority events first
-    { tabOrder: "asc" },
-  ],
+	where: {
+		isActive: true,
+		startDate: { lte: now },
+		endDate: { gte: now },
+	},
+	orderBy: [
+		{ isPriority: "desc" }, // Priority events first
+		{ tabOrder: "asc" },
+	],
 });
 
 // Determine default tab
-const defaultTab = activeEvents.find(e => e.isPriority)?.slug || "all";
+const defaultTab = activeEvents.find((e) => e.isPriority)?.slug || "all";
 ```
 
 ### 3. Size-Aware Product Display
@@ -540,21 +549,19 @@ const defaultTab = activeEvents.find(e => e.isPriority)?.slug || "all";
 
 ```typescript
 function getProductPriceDisplay(product: Product) {
-  // If size-specific pricing exists
-  if (product.sizePricing && product.availableSizes.length > 0) {
-    const prices = product.availableSizes.map(size =>
-      product.sizePricing[size] || product.price
-    );
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
+	// If size-specific pricing exists
+	if (product.sizePricing && product.availableSizes.length > 0) {
+		const prices = product.availableSizes.map((size) => product.sizePricing[size] || product.price);
+		const min = Math.min(...prices);
+		const max = Math.max(...prices);
 
-    if (min === max) {
-      return `₱${min.toFixed(2)}`;
-    }
-    return `₱${min.toFixed(2)} - ₱${max.toFixed(2)}`;
-  }
+		if (min === max) {
+			return `₱${min.toFixed(2)}`;
+		}
+		return `₱${min.toFixed(2)} - ₱${max.toFixed(2)}`;
+	}
 
-  return `₱${product.price.toFixed(2)}`;
+	return `₱${product.price.toFixed(2)}`;
 }
 ```
 
@@ -655,38 +662,38 @@ function PackageSelectionDialog({ package }: Props) {
 "use server";
 
 export async function createProduct(data: ProductFormData) {
-  // Validate input
-  if (!data.name || !data.description || data.price <= 0) {
-    return { success: false, message: "Invalid input" };
-  }
+	// Validate input
+	if (!data.name || !data.description || data.price <= 0) {
+		return { success: false, message: "Invalid input" };
+	}
 
-  // Create product with event assignments
-  const product = await prisma.product.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      category: data.category,
-      imageUrls: data.imageUrls,
-      image: data.imageUrls[0] || null,  // First image as main
-      stock: data.stock,
-      isAvailable: data.isAvailable,
-      isPreOrder: data.isPreOrder,
-      isEventExclusive: data.isEventExclusive,
-      availableSizes: data.availableSizes,
-      sizePricing: data.sizePricing,
-      specialNote: data.specialNote,
-      eventProducts: {
-        create: data.assignedEvents.map((event, index) => ({
-          eventId: event.eventId,
-          eventPrice: event.eventPrice,
-          sortOrder: index,
-        })),
-      },
-    },
-  });
+	// Create product with event assignments
+	const product = await prisma.product.create({
+		data: {
+			name: data.name,
+			description: data.description,
+			price: data.price,
+			category: data.category,
+			imageUrls: data.imageUrls,
+			image: data.imageUrls[0] || null, // First image as main
+			stock: data.stock,
+			isAvailable: data.isAvailable,
+			isPreOrder: data.isPreOrder,
+			isEventExclusive: data.isEventExclusive,
+			availableSizes: data.availableSizes,
+			sizePricing: data.sizePricing,
+			specialNote: data.specialNote,
+			eventProducts: {
+				create: data.assignedEvents.map((event, index) => ({
+					eventId: event.eventId,
+					eventPrice: event.eventPrice,
+					sortOrder: index,
+				})),
+			},
+		},
+	});
 
-  return { success: true, product };
+	return { success: true, product };
 }
 ```
 
@@ -699,6 +706,7 @@ export async function createProduct(data: ProductFormData) {
 #### 1. Fixed Items Package
 
 **Example:** "Dorm Essentials Bundle"
+
 - 1x Laundry Bag
 - 2x Hangers
 - 1x Storage Box
@@ -724,6 +732,7 @@ export async function createProduct(data: ProductFormData) {
 #### 2. Selection Pool Package
 
 **Example:** "Custom Shirt Bundle"
+
 - Choose 3 shirts from 8 options
 - Bundle price: ₱450 (vs ₱600 for 3 individual shirts)
 
@@ -754,6 +763,7 @@ export async function createProduct(data: ProductFormData) {
 #### 3. Mixed Package
 
 **Example:** "Complete Outfit Bundle"
+
 - 1x Pants (fixed)
 - Choose 2 shirts from 5 options (pool)
 - Bundle price: ₱800
@@ -828,47 +838,45 @@ type PackageSelections = {
 
 ```typescript
 function validatePackageSelections(
-  package: Package,
-  selections: PackageSelections
+	package: Package,
+	selections: PackageSelections,
 ): { valid: boolean; error?: string } {
-  // Check all fixed items have selections if they need sizes
-  for (const item of package.items) {
-    if (item.product.availableSizes.length > 0) {
-      if (!selections.fixedItems[item.productId]?.size) {
-        return {
-          valid: false,
-          error: `Please select size for ${item.product.name}`,
-        };
-      }
-    }
-  }
+	// Check all fixed items have selections if they need sizes
+	for (const item of package.items) {
+		if (item.product.availableSizes.length > 0) {
+			if (!selections.fixedItems[item.productId]?.size) {
+				return {
+					valid: false,
+					error: `Please select size for ${item.product.name}`,
+				};
+			}
+		}
+	}
 
-  // Check all pools have correct number of selections
-  for (const pool of package.pools) {
-    const poolSelections = selections.pools[pool.id]?.selections || [];
-    if (poolSelections.length !== pool.selectCount) {
-      return {
-        valid: false,
-        error: `Please select exactly ${pool.selectCount} items for ${pool.name}`,
-      };
-    }
+	// Check all pools have correct number of selections
+	for (const pool of package.pools) {
+		const poolSelections = selections.pools[pool.id]?.selections || [];
+		if (poolSelections.length !== pool.selectCount) {
+			return {
+				valid: false,
+				error: `Please select exactly ${pool.selectCount} items for ${pool.name}`,
+			};
+		}
 
-    // Check all selections have sizes if needed
-    for (const selection of poolSelections) {
-      const product = pool.options.find(
-        opt => opt.productId === selection.productId
-      )?.product;
+		// Check all selections have sizes if needed
+		for (const selection of poolSelections) {
+			const product = pool.options.find((opt) => opt.productId === selection.productId)?.product;
 
-      if (product?.availableSizes.length > 0 && !selection.size) {
-        return {
-          valid: false,
-          error: `Please select size for ${product.name}`,
-        };
-      }
-    }
-  }
+			if (product?.availableSizes.length > 0 && !selection.size) {
+				return {
+					valid: false,
+					error: `Please select size for ${product.name}`,
+				};
+			}
+		}
+	}
 
-  return { valid: true };
+	return { valid: true };
 }
 ```
 
@@ -1026,22 +1034,22 @@ export default function FlowerFest2026({ event, products, onAddToCart }: EventCo
 ```typescript
 // In event management dashboard
 async function addEventAdmin(eventId: string, userEmail: string) {
-  const user = await prisma.user.findUnique({
-    where: { email: userEmail },
-  });
+	const user = await prisma.user.findUnique({
+		where: { email: userEmail },
+	});
 
-  if (!user) {
-    return { success: false, message: "User not found" };
-  }
+	if (!user) {
+		return { success: false, message: "User not found" };
+	}
 
-  await prisma.eventAdmin.create({
-    data: {
-      eventId,
-      userId: user.id,
-    },
-  });
+	await prisma.eventAdmin.create({
+		data: {
+			eventId,
+			userId: user.id,
+		},
+	});
 
-  return { success: true };
+	return { success: true };
 }
 ```
 
@@ -1055,34 +1063,34 @@ async function addEventAdmin(eventId: string, userEmail: string) {
 
 ```typescript
 async function addToCart(userId: string, productId: string, size?: string, quantity: number = 1) {
-  // Check if item already exists in cart
-  const existingItem = await prisma.cartItem.findFirst({
-    where: {
-      userId,
-      productId,
-      size: size || null,
-    },
-  });
+	// Check if item already exists in cart
+	const existingItem = await prisma.cartItem.findFirst({
+		where: {
+			userId,
+			productId,
+			size: size || null,
+		},
+	});
 
-  if (existingItem) {
-    // Update quantity
-    await prisma.cartItem.update({
-      where: { id: existingItem.id },
-      data: { quantity: existingItem.quantity + quantity },
-    });
-  } else {
-    // Create new cart item
-    await prisma.cartItem.create({
-      data: {
-        userId,
-        productId,
-        size,
-        quantity,
-      },
-    });
-  }
+	if (existingItem) {
+		// Update quantity
+		await prisma.cartItem.update({
+			where: { id: existingItem.id },
+			data: { quantity: existingItem.quantity + quantity },
+		});
+	} else {
+		// Create new cart item
+		await prisma.cartItem.create({
+			data: {
+				userId,
+				productId,
+				size,
+				quantity,
+			},
+		});
+	}
 
-  return { success: true };
+	return { success: true };
 }
 ```
 
@@ -1090,36 +1098,36 @@ async function addToCart(userId: string, productId: string, size?: string, quant
 
 ```typescript
 async function addPackageToCart(
-  userId: string,
-  packageId: string,
-  packageSelections: PackageSelections,
-  quantity: number = 1
+	userId: string,
+	packageId: string,
+	packageSelections: PackageSelections,
+	quantity: number = 1,
 ) {
-  // Validate selections
-  const pkg = await prisma.package.findUnique({
-    where: { id: packageId },
-    include: {
-      items: { include: { product: true } },
-      pools: { include: { options: { include: { product: true } } } },
-    },
-  });
+	// Validate selections
+	const pkg = await prisma.package.findUnique({
+		where: { id: packageId },
+		include: {
+			items: { include: { product: true } },
+			pools: { include: { options: { include: { product: true } } } },
+		},
+	});
 
-  const validation = validatePackageSelections(pkg, packageSelections);
-  if (!validation.valid) {
-    return { success: false, message: validation.error };
-  }
+	const validation = validatePackageSelections(pkg, packageSelections);
+	if (!validation.valid) {
+		return { success: false, message: validation.error };
+	}
 
-  // Add to cart
-  await prisma.cartItem.create({
-    data: {
-      userId,
-      packageId,
-      packageSelections,
-      quantity,
-    },
-  });
+	// Add to cart
+	await prisma.cartItem.create({
+		data: {
+			userId,
+			packageId,
+			packageSelections,
+			quantity,
+		},
+	});
 
-  return { success: true };
+	return { success: true };
 }
 ```
 
@@ -1127,48 +1135,48 @@ async function addPackageToCart(
 
 ```typescript
 async function getCart(userId: string) {
-  const cartItems = await prisma.cartItem.findMany({
-    where: { userId },
-    include: {
-      product: true,
-      package: {
-        include: {
-          items: { include: { product: true } },
-          pools: { include: { options: { include: { product: true } } } },
-        },
-      },
-    },
-  });
+	const cartItems = await prisma.cartItem.findMany({
+		where: { userId },
+		include: {
+			product: true,
+			package: {
+				include: {
+					items: { include: { product: true } },
+					pools: { include: { options: { include: { product: true } } } },
+				},
+			},
+		},
+	});
 
-  const items = cartItems.map(item => {
-    let price: number;
+	const items = cartItems.map((item) => {
+		let price: number;
 
-    if (item.product) {
-      // Product price
-      if (item.size && item.product.sizePricing?.[item.size]) {
-        price = item.product.sizePricing[item.size];
-      } else {
-        price = item.product.price;
-      }
-    } else if (item.package) {
-      // Package price
-      price = item.package.price;
-    }
+		if (item.product) {
+			// Product price
+			if (item.size && item.product.sizePricing?.[item.size]) {
+				price = item.product.sizePricing[item.size];
+			} else {
+				price = item.product.price;
+			}
+		} else if (item.package) {
+			// Package price
+			price = item.package.price;
+		}
 
-    return {
-      ...item,
-      unitPrice: price,
-      totalPrice: price * item.quantity,
-    };
-  });
+		return {
+			...item,
+			unitPrice: price,
+			totalPrice: price * item.quantity,
+		};
+	});
 
-  const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+	const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  return {
-    items,
-    subtotal,
-    itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-  };
+	return {
+		items,
+		subtotal,
+		itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+	};
 }
 ```
 
@@ -1269,61 +1277,63 @@ async function renderCheckoutForm(eventId?: string) {
 
 ```typescript
 async function createOrder(data: CheckoutData) {
-  const cart = await getCart(data.userId);
+	const cart = await getCart(data.userId);
 
-  // Extract event data if present
-  const eventData = data.eventId ? {
-    [field.id]: data[field.id]
-  } : null;
+	// Extract event data if present
+	const eventData = data.eventId
+		? {
+				[field.id]: data[field.id],
+			}
+		: null;
 
-  const order = await prisma.order.create({
-    data: {
-      userId: data.userId,
-      totalAmount: cart.subtotal,
-      status: "pending",
-      receiptImageUrl: data.receiptUrl,
-      gcashReferenceNumber: data.extractedRefNumber,  // From OCR
-      notes: data.notes,
-      eventId: data.eventId,
-      eventData: eventData,
-      orderItems: {
-        create: cart.items.map(item => ({
-          productId: item.productId,
-          packageId: item.packageId,
-          quantity: item.quantity,
-          price: item.unitPrice,
-          size: item.size,
-          packageSelections: item.packageSelections,
-        })),
-      },
-    },
-    include: {
-      orderItems: {
-        include: {
-          product: true,
-          package: true,
-        },
-      },
-    },
-  });
+	const order = await prisma.order.create({
+		data: {
+			userId: data.userId,
+			totalAmount: cart.subtotal,
+			status: "pending",
+			receiptImageUrl: data.receiptUrl,
+			gcashReferenceNumber: data.extractedRefNumber, // From OCR
+			notes: data.notes,
+			eventId: data.eventId,
+			eventData: eventData,
+			orderItems: {
+				create: cart.items.map((item) => ({
+					productId: item.productId,
+					packageId: item.packageId,
+					quantity: item.quantity,
+					price: item.unitPrice,
+					size: item.size,
+					packageSelections: item.packageSelections,
+				})),
+			},
+		},
+		include: {
+			orderItems: {
+				include: {
+					product: true,
+					package: true,
+				},
+			},
+		},
+	});
 
-  // Create analytics record
-  await prisma.shopPurchase.create({
-    data: {
-      orderId: order.id,
-      eventId: data.eventId,
-      totalAmount: cart.subtotal,
-      itemCount: cart.itemCount,
-      purchasedAt: new Date(),
-    },
-  });
+	// Create analytics record
+	await prisma.shopPurchase.create({
+		data: {
+			orderId: order.id,
+			eventId: data.eventId,
+			totalAmount: cart.subtotal,
+			itemCount: cart.itemCount,
+			purchasedAt: new Date(),
+		},
+	});
 
-  // Clear cart
-  await prisma.cartItem.deleteMany({
-    where: { userId: data.userId },
-  });
+	// Clear cart
+	await prisma.cartItem.deleteMany({
+		where: { userId: data.userId },
+	});
 
-  return order;
+	return order;
 }
 ```
 
@@ -1391,45 +1401,47 @@ Order Total | Order Status | GCash Ref No | Notes | Receipt URL
 import * as XLSX from "xlsx";
 
 async function exportOrdersToExcel(orders: Order[]) {
-  const rows = [];
+	const rows = [];
 
-  for (const order of orders) {
-    for (let i = 0; i < order.orderItems.length; i++) {
-      const item = order.orderItems[i];
-      const isFirstRow = i === 0;
+	for (const order of orders) {
+		for (let i = 0; i < order.orderItems.length; i++) {
+			const item = order.orderItems[i];
+			const isFirstRow = i === 0;
 
-      rows.push({
-        // Order info (only on first row)
-        "Order ID": isFirstRow ? order.id : "",
-        "Order Date": isFirstRow ? order.createdAt.toLocaleDateString() : "",
-        "Customer Name": isFirstRow ? order.user.name : "",
-        "Email": isFirstRow ? order.user.email : "",
-        "Student ID": isFirstRow ? order.user.studentId : "",
+			rows.push({
+				// Order info (only on first row)
+				"Order ID": isFirstRow ? order.id : "",
+				"Order Date": isFirstRow ? order.createdAt.toLocaleDateString() : "",
+				"Customer Name": isFirstRow ? order.user.name : "",
+				Email: isFirstRow ? order.user.email : "",
+				"Student ID": isFirstRow ? order.user.studentId : "",
 
-        // Item info (on every row)
-        "Product Name": item.product?.name || item.package?.name,
-        "Description": item.product?.description || item.package?.description,
-        "Size": item.size || "N/A",
-        "Quantity": item.quantity,
-        "Unit Price": item.price,
-        "Item Total": item.price * item.quantity,
+				// Item info (on every row)
+				"Product Name": item.product?.name || item.package?.name,
+				Description: item.product?.description || item.package?.description,
+				Size: item.size || "N/A",
+				Quantity: item.quantity,
+				"Unit Price": item.price,
+				"Item Total": item.price * item.quantity,
 
-        // Order totals (only on first row)
-        "Order Total": isFirstRow ? order.totalAmount : "",
-        "Order Status": isFirstRow ? order.status : "",
-        "GCash Ref No": isFirstRow ? order.gcashReferenceNumber : "",
-        "Notes": isFirstRow ? order.notes : "",
-        "Receipt URL": isFirstRow ? order.receiptImageUrl : "",
-      });
-    }
-  }
+				// Order totals (only on first row)
+				"Order Total": isFirstRow ? order.totalAmount : "",
+				"Order Status": isFirstRow ? order.status : "",
+				"GCash Ref No": isFirstRow ? order.gcashReferenceNumber : "",
+				Notes: isFirstRow ? order.notes : "",
+				"Receipt URL": isFirstRow ? order.receiptImageUrl : "",
+			});
+		}
+	}
 
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+	const worksheet = XLSX.utils.json_to_sheet(rows);
+	const workbook = XLSX.utils.book_new();
+	XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
 
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  return new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+	const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+	return new Blob([excelBuffer], {
+		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	});
 }
 ```
 
@@ -1516,20 +1528,20 @@ async function exportOrdersToExcel(orders: Order[]) {
 ```typescript
 // Track shop page clicks
 async function trackShopClick(path: string, eventId?: string) {
-  await prisma.shopClick.create({
-    data: {
-      path,
-      eventId,
-      userAgent: req.headers["user-agent"],
-      referer: req.headers.referer,
-      clickedAt: new Date(),
-    },
-  });
+	await prisma.shopClick.create({
+		data: {
+			path,
+			eventId,
+			userAgent: req.headers["user-agent"],
+			referer: req.headers.referer,
+			clickedAt: new Date(),
+		},
+	});
 }
 
 // Usage: Track when user switches tabs
 useEffect(() => {
-  trackShopClick(`/shop?tab=${activeTab}`, eventId);
+	trackShopClick(`/shop?tab=${activeTab}`, eventId);
 }, [activeTab]);
 ```
 
@@ -1540,20 +1552,22 @@ useEffect(() => {
 ```typescript
 // Automatically created during order creation
 async function createOrder(data: CheckoutData) {
-  const order = await prisma.order.create({ /* ... */ });
+	const order = await prisma.order.create({
+		/* ... */
+	});
 
-  // Track purchase for analytics
-  await prisma.shopPurchase.create({
-    data: {
-      orderId: order.id,
-      eventId: data.eventId,
-      totalAmount: order.totalAmount,
-      itemCount: order.orderItems.length,
-      purchasedAt: new Date(),
-    },
-  });
+	// Track purchase for analytics
+	await prisma.shopPurchase.create({
+		data: {
+			orderId: order.id,
+			eventId: data.eventId,
+			totalAmount: order.totalAmount,
+			itemCount: order.orderItems.length,
+			purchasedAt: new Date(),
+		},
+	});
 
-  return order;
+	return order;
 }
 ```
 
@@ -1563,36 +1577,36 @@ async function createOrder(data: CheckoutData) {
 
 ```typescript
 async function getEventAnalytics(eventId: string, dateRange: { start: Date; end: Date }) {
-  // Click analytics
-  const clicks = await prisma.shopClick.groupBy({
-    by: ["clickedAt"],
-    where: {
-      eventId,
-      clickedAt: { gte: dateRange.start, lte: dateRange.end },
-    },
-    _count: true,
-  });
+	// Click analytics
+	const clicks = await prisma.shopClick.groupBy({
+		by: ["clickedAt"],
+		where: {
+			eventId,
+			clickedAt: { gte: dateRange.start, lte: dateRange.end },
+		},
+		_count: true,
+	});
 
-  // Purchase analytics
-  const purchases = await prisma.shopPurchase.groupBy({
-    by: ["purchasedAt"],
-    where: {
-      eventId,
-      purchasedAt: { gte: dateRange.start, lte: dateRange.end },
-    },
-    _sum: { totalAmount: true, itemCount: true },
-    _count: true,
-  });
+	// Purchase analytics
+	const purchases = await prisma.shopPurchase.groupBy({
+		by: ["purchasedAt"],
+		where: {
+			eventId,
+			purchasedAt: { gte: dateRange.start, lte: dateRange.end },
+		},
+		_sum: { totalAmount: true, itemCount: true },
+		_count: true,
+	});
 
-  return {
-    clicks: clicks.map(c => ({ date: c.clickedAt, count: c._count })),
-    purchases: purchases.map(p => ({
-      date: p.purchasedAt,
-      orderCount: p._count,
-      totalRevenue: p._sum.totalAmount,
-      itemCount: p._sum.itemCount,
-    })),
-  };
+	return {
+		clicks: clicks.map((c) => ({ date: c.clickedAt, count: c._count })),
+		purchases: purchases.map((p) => ({
+			date: p.purchasedAt,
+			orderCount: p._count,
+			totalRevenue: p._sum.totalAmount,
+			itemCount: p._sum.itemCount,
+		})),
+	};
 }
 ```
 
@@ -1735,11 +1749,13 @@ async function getEventAnalytics(eventId: string, dateRange: { start: Date; end:
 ### Stock Management
 
 **Pre-Order Mode:**
+
 - When `isPreOrder = true`, stock count represents number of orders received
 - Display shows "X orders received" instead of "X in stock"
 - No stock limits applied
 
 **Regular Mode:**
+
 - Track inventory with `stock` field
 - Prevent orders when stock = 0 (unless pre-order)
 - Decrement stock on order creation (optional)
@@ -1754,6 +1770,7 @@ async function getEventAnalytics(eventId: string, dateRange: { start: Date; end:
 ### Price Calculations
 
 **Priority:**
+
 1. Event-specific price (if ordering from event and event price is set)
 2. Size-specific price (if product has size and size-specific pricing exists)
 3. Base price
@@ -1772,6 +1789,7 @@ async function getEventAnalytics(eventId: string, dateRange: { start: Date; end:
 - What happens if product is deleted while in someone's cart?
 
 **Recommended Solutions:**
+
 - EventAdmin records remain even if user becomes shop admin (redundant but safe)
 - Redirect to events list if event is deleted during viewing
 - Handle missing products gracefully in cart (show "Product no longer available")
@@ -1794,6 +1812,7 @@ This e-shop system provides:
 10. **Payment Integration**: GCash with OCR support
 
 The system is designed to be:
+
 - **Scalable**: Handles multiple events, products, and orders
 - **Maintainable**: Clear separation of concerns
 - **Extensible**: Easy to add new features

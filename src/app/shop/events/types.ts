@@ -9,14 +9,65 @@ export type ThemeConfig = {
 	headerText?: string;
 };
 
+// Column definition for repeater fields
+export type RepeaterColumn = {
+	id: string;
+	label: string;
+	type: "text" | "date" | "time" | "select";
+	placeholder?: string;
+	options?: string[]; // For select type
+	width?: "sm" | "md" | "lg"; // Column width hint
+};
+
+// Conditional visibility - show field only when another field has specific value(s)
+export type FieldCondition = {
+	fieldId: string; // ID of the field to check
+	value: string | string[]; // Value(s) that trigger showing this field
+};
+
+// All supported checkout field types
+export type CheckoutFieldType =
+	| "text" // Single line text input
+	| "textarea" // Multi-line text area
+	| "select" // Dropdown selection
+	| "checkbox" // Single checkbox (yes/no)
+	| "date" // Date picker
+	| "time" // Time picker
+	| "number" // Numeric input
+	| "email" // Email with validation
+	| "phone" // Phone number
+	| "radio" // Radio button group
+	| "repeater" // Multiple rows table
+	| "message"; // Display-only informational message
+
 export type CheckoutField = {
 	id: string;
 	label: string;
-	type: "text" | "textarea" | "select" | "checkbox" | "date";
+	type: CheckoutFieldType;
 	required: boolean;
 	placeholder?: string;
-	options?: string[];
+	options?: string[]; // For select, radio types
 	maxLength?: number;
+	// Number field constraints
+	min?: number;
+	max?: number;
+	step?: number;
+	// Conditional display
+	showWhen?: FieldCondition; // Only show when condition is met
+	// Message field content (for type: "message")
+	messageContent?: string; // Rich text/markdown content to display
+	// Repeater-specific fields
+	columns?: RepeaterColumn[]; // Column definitions for repeater
+	minRows?: number; // Minimum required rows (e.g., 3)
+	maxRows?: number; // Optional maximum rows
+	defaultRows?: number; // Initial row count
+};
+
+export type PaymentOption = {
+	id: string;
+	title: string; // e.g., "GCash - Juan Dela Cruz", "Bank Transfer - BDO"
+	instructions: string; // Payment details
+	imageUrl?: string; // QR code or payment instruction image
 };
 
 export type CheckoutConfig = {
@@ -24,6 +75,12 @@ export type CheckoutConfig = {
 	additionalFields: CheckoutField[];
 	termsMessage?: string;
 	confirmationMessage?: string;
+	// Delivery cutoff settings
+	cutoffTime?: string; // Time in HH:MM format (24-hour), e.g., "16:00" for 4PM
+	cutoffMessage?: string; // Message to show when past cutoff
+	cutoffDaysOffset?: number; // Number of days to add to delivery (default: 2)
+	// Custom payment instructions
+	paymentOptions?: PaymentOption[]; // Multiple payment methods
 };
 
 export type Product = {

@@ -3,8 +3,11 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, ArrowLeft, Megaphone, CalendarHeart, Gift } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Unauthorized } from "./unauthorized";
+import { Suspense } from "react";
+import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({
@@ -39,6 +42,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
 	return (
 		<div className="min-h-screen">
+			{/* Navigation Progress Bar */}
+			<Suspense fallback={null}>
+				<NavigationProgress />
+			</Suspense>
+
 			{/* Shop Header */}
 			<header className="border-b">
 				<div className="container mx-auto flex items-center justify-between px-4 py-4">
@@ -69,46 +77,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 					</p>
 				</div>
 
-				<div className="mb-8 flex flex-wrap gap-2">
-					{isShopAdmin && (
-						<>
-							<Link href="/admin/orders">
-								<Button variant="outline" size="sm">
-									<ShoppingCart className="mr-2 h-4 w-4" />
-									Orders
-								</Button>
-							</Link>
-							<Link href="/admin/products">
-								<Button variant="outline" size="sm">
-									<Package className="mr-2 h-4 w-4" />
-									Products
-								</Button>
-							</Link>
-							<Link href="/admin/packages">
-								<Button variant="outline" size="sm">
-									<Gift className="mr-2 h-4 w-4" />
-									Packages
-								</Button>
-							</Link>
-						</>
-					)}
-					{canAccessEvents && (
-						<Link href="/admin/events">
-							<Button variant="outline" size="sm">
-								<CalendarHeart className="mr-2 h-4 w-4" />
-								Events
-							</Button>
-						</Link>
-					)}
-					{isShopAdmin && (
-						<Link href="/admin/banner">
-							<Button variant="outline" size="sm">
-								<Megaphone className="mr-2 h-4 w-4" />
-								Banner
-							</Button>
-						</Link>
-					)}
-				</div>
+				<AdminNav
+					items={[
+						...(isShopAdmin
+							? [
+									{ href: "/admin/orders", label: "Orders", iconKey: "orders" as const },
+									{ href: "/admin/products", label: "Products", iconKey: "products" as const },
+									{ href: "/admin/packages", label: "Packages", iconKey: "packages" as const },
+								]
+							: []),
+						...(canAccessEvents
+							? [{ href: "/admin/events", label: "Events", iconKey: "events" as const }]
+							: []),
+						...(isShopAdmin
+							? [{ href: "/admin/banner", label: "Banner", iconKey: "banner" as const }]
+							: []),
+					]}
+				/>
 
 				{children}
 			</div>

@@ -96,13 +96,14 @@ In the Philippines, GCash is a popular payment method but lacks direct API integ
 
 ```json
 {
-  "dependencies": {
-    "tesseract.js": "^5.0.0"  // Client-side OCR engine
-  }
+	"dependencies": {
+		"tesseract.js": "^5.0.0" // Client-side OCR engine
+	}
 }
 ```
 
 **Why client-side?**
+
 - Faster processing (runs in browser)
 - No server load
 - Better scalability
@@ -112,16 +113,17 @@ In the Philippines, GCash is a popular payment method but lacks direct API integ
 
 ```json
 {
-  "dependencies": {
-    "tesseract.js": "^5.0.0",    // Node.js OCR
-    "canvas": "^2.11.0",          // Image processing
-    "pdf-parse": "^1.1.1",        // PDF parsing (for invoices)
-    "sharp": "^0.32.0"            // Image optimization
-  }
+	"dependencies": {
+		"tesseract.js": "^5.0.0", // Node.js OCR
+		"canvas": "^2.11.0", // Image processing
+		"pdf-parse": "^1.1.1", // PDF parsing (for invoices)
+		"sharp": "^0.32.0" // Image optimization
+	}
 }
 ```
 
 **When to use server-side:**
+
 - Client device has limited resources
 - Need to process PDFs (invoices)
 - Want centralized processing control
@@ -183,26 +185,26 @@ import { createWorker } from "tesseract.js";
 let worker: Tesseract.Worker | null = null;
 
 export async function initializeOCR() {
-  if (worker) return worker;
+	if (worker) return worker;
 
-  worker = await createWorker("eng", 1, {
-    workerPath: "/tesseract/worker.min.js",
-    langPath: "/tesseract/lang-data",
-    corePath: "/tesseract/tesseract-core.wasm",
-  });
+	worker = await createWorker("eng", 1, {
+		workerPath: "/tesseract/worker.min.js",
+		langPath: "/tesseract/lang-data",
+		corePath: "/tesseract/tesseract-core.wasm",
+	});
 
-  await worker.setParameters({
-    tessedit_char_whitelist: "0123456789- ",  // Only numbers, hyphens, spaces
-  });
+	await worker.setParameters({
+		tessedit_char_whitelist: "0123456789- ", // Only numbers, hyphens, spaces
+	});
 
-  return worker;
+	return worker;
 }
 
 export async function terminateOCR() {
-  if (worker) {
-    await worker.terminate();
-    worker = null;
-  }
+	if (worker) {
+		await worker.terminate();
+		worker = null;
+	}
 }
 ```
 
@@ -214,51 +216,53 @@ import { initializeOCR } from "./tesseract-client";
 import { parseGCashReceipt } from "./parseReceipt";
 
 export async function readGCashReceiptClient(file: File): Promise<{
-  success: boolean;
-  referenceNumber?: string;
-  amount?: number;
-  recipient?: string;
-  rawText?: string;
-  error?: string;
+	success: boolean;
+	referenceNumber?: string;
+	amount?: number;
+	recipient?: string;
+	rawText?: string;
+	error?: string;
 }> {
-  try {
-    // Initialize OCR worker
-    const worker = await initializeOCR();
+	try {
+		// Initialize OCR worker
+		const worker = await initializeOCR();
 
-    // Convert file to image URL
-    const imageUrl = URL.createObjectURL(file);
+		// Convert file to image URL
+		const imageUrl = URL.createObjectURL(file);
 
-    // Process image with Tesseract
-    const { data: { text } } = await worker.recognize(imageUrl);
+		// Process image with Tesseract
+		const {
+			data: { text },
+		} = await worker.recognize(imageUrl);
 
-    // Clean up
-    URL.revokeObjectURL(imageUrl);
+		// Clean up
+		URL.revokeObjectURL(imageUrl);
 
-    // Parse the OCR text
-    const parsed = parseGCashReceipt(text);
+		// Parse the OCR text
+		const parsed = parseGCashReceipt(text);
 
-    if (!parsed.referenceNumber) {
-      return {
-        success: false,
-        error: "Could not find reference number in receipt",
-        rawText: text,
-      };
-    }
+		if (!parsed.referenceNumber) {
+			return {
+				success: false,
+				error: "Could not find reference number in receipt",
+				rawText: text,
+			};
+		}
 
-    return {
-      success: true,
-      referenceNumber: parsed.referenceNumber,
-      amount: parsed.amount,
-      recipient: parsed.recipient,
-      rawText: text,
-    };
-  } catch (error) {
-    console.error("OCR Error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			referenceNumber: parsed.referenceNumber,
+			amount: parsed.amount,
+			recipient: parsed.recipient,
+			rawText: text,
+		};
+	} catch (error) {
+		console.error("OCR Error:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 ```
 
@@ -377,34 +381,36 @@ import Tesseract from "tesseract.js";
 import { parseGCashReceipt } from "./parseReceipt";
 
 export async function readGCashReceiptServer(imageUrl: string) {
-  try {
-    // Fetch image from storage
-    const response = await fetch(imageUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+	try {
+		// Fetch image from storage
+		const response = await fetch(imageUrl);
+		const arrayBuffer = await response.arrayBuffer();
+		const buffer = Buffer.from(arrayBuffer);
 
-    // Process with Tesseract
-    const { data: { text } } = await Tesseract.recognize(buffer, "eng", {
-      tessedit_char_whitelist: "0123456789- ",
-    });
+		// Process with Tesseract
+		const {
+			data: { text },
+		} = await Tesseract.recognize(buffer, "eng", {
+			tessedit_char_whitelist: "0123456789- ",
+		});
 
-    // Parse the text
-    const parsed = parseGCashReceipt(text);
+		// Parse the text
+		const parsed = parseGCashReceipt(text);
 
-    return {
-      success: !!parsed.referenceNumber,
-      referenceNumber: parsed.referenceNumber,
-      amount: parsed.amount,
-      recipient: parsed.recipient,
-      rawText: text,
-    };
-  } catch (error) {
-    console.error("Server OCR Error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: !!parsed.referenceNumber,
+			referenceNumber: parsed.referenceNumber,
+			amount: parsed.amount,
+			recipient: parsed.recipient,
+			rawText: text,
+		};
+	} catch (error) {
+		console.error("Server OCR Error:", error);
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 ```
 
@@ -446,107 +452,107 @@ Jan 20, 2026 2:30 PM
 // src/lib/gcashReaders/parseReceipt.ts
 
 export interface ParsedReceipt {
-  referenceNumber?: string;
-  amount?: number;
-  recipient?: string;
-  date?: Date;
+	referenceNumber?: string;
+	amount?: number;
+	recipient?: string;
+	date?: Date;
 }
 
 export function parseGCashReceipt(ocrText: string): ParsedReceipt {
-  const result: ParsedReceipt = {};
+	const result: ParsedReceipt = {};
 
-  // Normalize text (remove extra spaces, convert to uppercase)
-  const normalized = ocrText.replace(/\s+/g, " ").toUpperCase();
+	// Normalize text (remove extra spaces, convert to uppercase)
+	const normalized = ocrText.replace(/\s+/g, " ").toUpperCase();
 
-  // Extract Reference Number
-  result.referenceNumber = extractReferenceNumber(normalized);
+	// Extract Reference Number
+	result.referenceNumber = extractReferenceNumber(normalized);
 
-  // Extract Amount
-  result.amount = extractAmount(normalized);
+	// Extract Amount
+	result.amount = extractAmount(normalized);
 
-  // Extract Recipient
-  result.recipient = extractRecipient(normalized);
+	// Extract Recipient
+	result.recipient = extractRecipient(normalized);
 
-  return result;
+	return result;
 }
 
 function extractReferenceNumber(text: string): string | undefined {
-  // Patterns to match GCash reference numbers
-  const patterns = [
-    // Standard format: "Reference No." followed by 13 digits
-    /REFERENCE\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{13})/i,
+	// Patterns to match GCash reference numbers
+	const patterns = [
+		// Standard format: "Reference No." followed by 13 digits
+		/REFERENCE\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{13})/i,
 
-    // With spaces: "1234 567 890 123"
-    /REFERENCE\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{4}\s*\d{3}\s*\d{3}\s*\d{3})/i,
+		// With spaces: "1234 567 890 123"
+		/REFERENCE\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{4}\s*\d{3}\s*\d{3}\s*\d{3})/i,
 
-    // OCR errors: "Ref" instead of "Reference"
-    /REF(?:ERENCE)?\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{13})/i,
+		// OCR errors: "Ref" instead of "Reference"
+		/REF(?:ERENCE)?\s*(?:NO\.?|NUMBER)?\s*:?\s*(\d{13})/i,
 
-    // Just 13 digits in a row
-    /(\d{13})/,
+		// Just 13 digits in a row
+		/(\d{13})/,
 
-    // 13 digits with spaces/hyphens
-    /(\d{4}[\s-]\d{3}[\s-]\d{3}[\s-]\d{3})/,
-  ];
+		// 13 digits with spaces/hyphens
+		/(\d{4}[\s-]\d{3}[\s-]\d{3}[\s-]\d{3})/,
+	];
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      // Remove all non-digit characters
-      const cleaned = match[1].replace(/\D/g, "");
+	for (const pattern of patterns) {
+		const match = text.match(pattern);
+		if (match) {
+			// Remove all non-digit characters
+			const cleaned = match[1].replace(/\D/g, "");
 
-      // Validate length
-      if (cleaned.length === 13) {
-        return cleaned;
-      }
-    }
-  }
+			// Validate length
+			if (cleaned.length === 13) {
+				return cleaned;
+			}
+		}
+	}
 
-  return undefined;
+	return undefined;
 }
 
 function extractAmount(text: string): number | undefined {
-  // Patterns to match amounts
-  const patterns = [
-    // "₱ 500.00" or "PHP 500.00"
-    /(?:₱|PHP)\s*([0-9,]+\.?\d{0,2})/i,
+	// Patterns to match amounts
+	const patterns = [
+		// "₱ 500.00" or "PHP 500.00"
+		/(?:₱|PHP)\s*([0-9,]+\.?\d{0,2})/i,
 
-    // "Amount: 500.00"
-    /AMOUNT\s*:?\s*([0-9,]+\.?\d{0,2})/i,
+		// "Amount: 500.00"
+		/AMOUNT\s*:?\s*([0-9,]+\.?\d{0,2})/i,
 
-    // "Amount Sent 500.00"
-    /AMOUNT\s*SENT\s*([0-9,]+\.?\d{0,2})/i,
-  ];
+		// "Amount Sent 500.00"
+		/AMOUNT\s*SENT\s*([0-9,]+\.?\d{0,2})/i,
+	];
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      // Remove commas and convert to number
-      const amount = parseFloat(match[1].replace(/,/g, ""));
-      if (!isNaN(amount) && amount > 0) {
-        return amount;
-      }
-    }
-  }
+	for (const pattern of patterns) {
+		const match = text.match(pattern);
+		if (match) {
+			// Remove commas and convert to number
+			const amount = parseFloat(match[1].replace(/,/g, ""));
+			if (!isNaN(amount) && amount > 0) {
+				return amount;
+			}
+		}
+	}
 
-  return undefined;
+	return undefined;
 }
 
 function extractRecipient(text: string): string | undefined {
-  // Pattern to match recipient name/number after "To"
-  const patterns = [
-    /TO\s*:?\s*([A-Z\s]+)\s*(?:\d{11})/i,  // Name followed by mobile number
-    /TO\s*:?\s*([A-Z][A-Z\s]{2,30})/i,     // Just name
-  ];
+	// Pattern to match recipient name/number after "To"
+	const patterns = [
+		/TO\s*:?\s*([A-Z\s]+)\s*(?:\d{11})/i, // Name followed by mobile number
+		/TO\s*:?\s*([A-Z][A-Z\s]{2,30})/i, // Just name
+	];
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      return match[1].trim();
-    }
-  }
+	for (const pattern of patterns) {
+		const match = text.match(pattern);
+		if (match) {
+			return match[1].trim();
+		}
+	}
 
-  return undefined;
+	return undefined;
 }
 ```
 
@@ -554,12 +560,12 @@ function extractRecipient(text: string): string | undefined {
 
 **Common OCR Errors:**
 
-| Actual | OCR Might Read | Fix |
-|--------|----------------|-----|
-| Reference No. | Ref No., Reference Number, RefNo | Multiple pattern variations |
-| 1234567890123 | 1234 567 890 123 | Remove all spaces/hyphens |
-| ₱ 500.00 | P 500.00, PHP 500.00 | Match multiple currency symbols |
-| To: Juan | To Juan, T0 Juan | Flexible pattern matching |
+| Actual        | OCR Might Read                   | Fix                             |
+| ------------- | -------------------------------- | ------------------------------- |
+| Reference No. | Ref No., Reference Number, RefNo | Multiple pattern variations     |
+| 1234567890123 | 1234 567 890 123                 | Remove all spaces/hyphens       |
+| ₱ 500.00      | P 500.00, PHP 500.00             | Match multiple currency symbols |
+| To: Juan      | To Juan, T0 Juan                 | Flexible pattern matching       |
 
 **Robust Parsing Strategy:**
 
@@ -601,30 +607,30 @@ import pdf from "pdf-parse";
 import { parseInvoiceTable } from "./parseInvoiceTable";
 
 export async function processGCashInvoice(file: File) {
-  try {
-    // Convert File to Buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+	try {
+		// Convert File to Buffer
+		const arrayBuffer = await file.arrayBuffer();
+		const buffer = Buffer.from(arrayBuffer);
 
-    // Parse PDF
-    const data = await pdf(buffer);
-    const text = data.text;
+		// Parse PDF
+		const data = await pdf(buffer);
+		const text = data.text;
 
-    // Extract transactions table
-    const transactions = parseInvoiceTable(text);
+		// Extract transactions table
+		const transactions = parseInvoiceTable(text);
 
-    return {
-      success: true,
-      transactions,
-      totalFound: transactions.length,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to parse PDF",
-      transactions: [],
-    };
-  }
+		return {
+			success: true,
+			transactions,
+			totalFound: transactions.length,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : "Failed to parse PDF",
+			transactions: [],
+		};
+	}
 }
 ```
 
@@ -634,47 +640,45 @@ export async function processGCashInvoice(file: File) {
 // src/lib/gcashReaders/parseInvoiceTable.ts
 
 export interface InvoiceTransaction {
-  date: string;
-  referenceNumber: string;
-  amount: number;
-  status: string;
+	date: string;
+	referenceNumber: string;
+	amount: number;
+	status: string;
 }
 
 export function parseInvoiceTable(text: string): InvoiceTransaction[] {
-  const transactions: InvoiceTransaction[] = [];
+	const transactions: InvoiceTransaction[] = [];
 
-  // Split by lines
-  const lines = text.split("\n");
+	// Split by lines
+	const lines = text.split("\n");
 
-  for (const line of lines) {
-    // Look for lines containing reference numbers (13 digits)
-    const refMatch = line.match(/(\d{13})/);
-    if (!refMatch) continue;
+	for (const line of lines) {
+		// Look for lines containing reference numbers (13 digits)
+		const refMatch = line.match(/(\d{13})/);
+		if (!refMatch) continue;
 
-    const referenceNumber = refMatch[1];
+		const referenceNumber = refMatch[1];
 
-    // Extract amount
-    const amountMatch = line.match(/₱\s*([0-9,]+\.?\d{0,2})/);
-    const amount = amountMatch
-      ? parseFloat(amountMatch[1].replace(/,/g, ""))
-      : 0;
+		// Extract amount
+		const amountMatch = line.match(/₱\s*([0-9,]+\.?\d{0,2})/);
+		const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, "")) : 0;
 
-    // Extract date (various formats)
-    const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})|(\w{3}\s+\d{1,2},?\s+\d{4})/);
-    const date = dateMatch ? dateMatch[0] : "";
+		// Extract date (various formats)
+		const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})|(\w{3}\s+\d{1,2},?\s+\d{4})/);
+		const date = dateMatch ? dateMatch[0] : "";
 
-    // Extract status
-    const status = line.match(/success/i) ? "Success" : "Unknown";
+		// Extract status
+		const status = line.match(/success/i) ? "Success" : "Unknown";
 
-    transactions.push({
-      date,
-      referenceNumber,
-      amount,
-      status,
-    });
-  }
+		transactions.push({
+			date,
+			referenceNumber,
+			amount,
+			status,
+		});
+	}
 
-  return transactions;
+	return transactions;
 }
 ```
 
@@ -688,48 +692,48 @@ import { prisma } from "@/lib/prisma";
 import { processGCashInvoice } from "@/lib/gcashReaders/readInvoice";
 
 export async function matchInvoiceToOrders(file: File) {
-  // Parse invoice
-  const { success, transactions } = await processGCashInvoice(file);
+	// Parse invoice
+	const { success, transactions } = await processGCashInvoice(file);
 
-  if (!success) {
-    return { success: false, message: "Failed to parse invoice" };
-  }
+	if (!success) {
+		return { success: false, message: "Failed to parse invoice" };
+	}
 
-  const matches = [];
-  const unmatched = [];
+	const matches = [];
+	const unmatched = [];
 
-  for (const transaction of transactions) {
-    // Find order with this reference number
-    const order = await prisma.order.findFirst({
-      where: {
-        gcashReferenceNumber: transaction.referenceNumber,
-      },
-      include: {
-        user: true,
-      },
-    });
+	for (const transaction of transactions) {
+		// Find order with this reference number
+		const order = await prisma.order.findFirst({
+			where: {
+				gcashReferenceNumber: transaction.referenceNumber,
+			},
+			include: {
+				user: true,
+			},
+		});
 
-    if (order) {
-      matches.push({
-        order,
-        transaction,
-        amountMatches: Math.abs(order.totalAmount - transaction.amount) < 0.01,
-      });
-    } else {
-      unmatched.push(transaction);
-    }
-  }
+		if (order) {
+			matches.push({
+				order,
+				transaction,
+				amountMatches: Math.abs(order.totalAmount - transaction.amount) < 0.01,
+			});
+		} else {
+			unmatched.push(transaction);
+		}
+	}
 
-  return {
-    success: true,
-    matches,
-    unmatched,
-    stats: {
-      totalTransactions: transactions.length,
-      matched: matches.length,
-      unmatched: unmatched.length,
-    },
-  };
+	return {
+		success: true,
+		matches,
+		unmatched,
+		stats: {
+			totalTransactions: transactions.length,
+			matched: matches.length,
+			unmatched: unmatched.length,
+		},
+	};
 }
 ```
 
@@ -754,62 +758,62 @@ export async function matchInvoiceToOrders(file: File) {
 import { prisma } from "@/lib/prisma";
 
 export async function validateGCashReference(
-  referenceNumber: string,
-  excludeOrderId?: string  // Exclude current order when updating
+	referenceNumber: string,
+	excludeOrderId?: string, // Exclude current order when updating
 ) {
-  if (!referenceNumber) return { valid: true };
+	if (!referenceNumber) return { valid: true };
 
-  // Check if reference number exists in any other order
-  const existingOrder = await prisma.order.findFirst({
-    where: {
-      gcashReferenceNumber: referenceNumber,
-      id: excludeOrderId ? { not: excludeOrderId } : undefined,
-    },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
+	// Check if reference number exists in any other order
+	const existingOrder = await prisma.order.findFirst({
+		where: {
+			gcashReferenceNumber: referenceNumber,
+			id: excludeOrderId ? { not: excludeOrderId } : undefined,
+		},
+		include: {
+			user: {
+				select: {
+					name: true,
+					email: true,
+				},
+			},
+		},
+	});
 
-  if (existingOrder) {
-    return {
-      valid: false,
-      isDuplicate: true,
-      existingOrder: {
-        id: existingOrder.id,
-        customerName: existingOrder.user.name,
-        orderDate: existingOrder.createdAt,
-        amount: existingOrder.totalAmount,
-      },
-    };
-  }
+	if (existingOrder) {
+		return {
+			valid: false,
+			isDuplicate: true,
+			existingOrder: {
+				id: existingOrder.id,
+				customerName: existingOrder.user.name,
+				orderDate: existingOrder.createdAt,
+				amount: existingOrder.totalAmount,
+			},
+		};
+	}
 
-  return { valid: true, isDuplicate: false };
+	return { valid: true, isDuplicate: false };
 }
 
 export async function createOrder(data: OrderData) {
-  // Validate reference number before creating order
-  const validation = await validateGCashReference(data.gcashReferenceNumber);
+	// Validate reference number before creating order
+	const validation = await validateGCashReference(data.gcashReferenceNumber);
 
-  if (!validation.valid) {
-    return {
-      success: false,
-      message: `This GCash reference number was already used for Order #${validation.existingOrder.id}`,
-    };
-  }
+	if (!validation.valid) {
+		return {
+			success: false,
+			message: `This GCash reference number was already used for Order #${validation.existingOrder.id}`,
+		};
+	}
 
-  // Create order
-  const order = await prisma.order.create({
-    data: {
-      // ... order data including gcashReferenceNumber
-    },
-  });
+	// Create order
+	const order = await prisma.order.create({
+		data: {
+			// ... order data including gcashReferenceNumber
+		},
+	});
 
-  return { success: true, order };
+	return { success: true, order };
 }
 ```
 
@@ -956,37 +960,37 @@ import { prisma } from "@/lib/prisma";
 import { readGCashReceiptServer } from "@/lib/gcashReaders/readReceipt.server";
 
 export async function reprocessOrderReceipt(orderId: string) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { receiptImageUrl: true },
-  });
+	const order = await prisma.order.findUnique({
+		where: { id: orderId },
+		select: { receiptImageUrl: true },
+	});
 
-  if (!order?.receiptImageUrl) {
-    return { success: false, message: "No receipt to process" };
-  }
+	if (!order?.receiptImageUrl) {
+		return { success: false, message: "No receipt to process" };
+	}
 
-  // Reprocess with OCR
-  const result = await readGCashReceiptServer(order.receiptImageUrl);
+	// Reprocess with OCR
+	const result = await readGCashReceiptServer(order.receiptImageUrl);
 
-  if (result.success && result.referenceNumber) {
-    // Update order with extracted reference number
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        gcashReferenceNumber: result.referenceNumber,
-      },
-    });
+	if (result.success && result.referenceNumber) {
+		// Update order with extracted reference number
+		await prisma.order.update({
+			where: { id: orderId },
+			data: {
+				gcashReferenceNumber: result.referenceNumber,
+			},
+		});
 
-    return {
-      success: true,
-      referenceNumber: result.referenceNumber,
-    };
-  }
+		return {
+			success: true,
+			referenceNumber: result.referenceNumber,
+		};
+	}
 
-  return {
-    success: false,
-    message: "Failed to extract reference number",
-  };
+	return {
+		success: false,
+		message: "Failed to extract reference number",
+	};
 }
 ```
 
@@ -1006,66 +1010,66 @@ import { prisma } from "@/lib/prisma";
 import { readGCashReceiptServer } from "@/lib/gcashReaders/readReceipt.server";
 
 export async function batchReprocessReceipts() {
-  // Find orders with receipts but no reference number
-  const orders = await prisma.order.findMany({
-    where: {
-      receiptImageUrl: { not: null },
-      gcashReferenceNumber: null,
-    },
-    select: {
-      id: true,
-      receiptImageUrl: true,
-    },
-  });
+	// Find orders with receipts but no reference number
+	const orders = await prisma.order.findMany({
+		where: {
+			receiptImageUrl: { not: null },
+			gcashReferenceNumber: null,
+		},
+		select: {
+			id: true,
+			receiptImageUrl: true,
+		},
+	});
 
-  const results = {
-    total: orders.length,
-    success: 0,
-    failed: 0,
-    details: [] as any[],
-  };
+	const results = {
+		total: orders.length,
+		success: 0,
+		failed: 0,
+		details: [] as any[],
+	};
 
-  for (const order of orders) {
-    try {
-      const ocrResult = await readGCashReceiptServer(order.receiptImageUrl!);
+	for (const order of orders) {
+		try {
+			const ocrResult = await readGCashReceiptServer(order.receiptImageUrl!);
 
-      if (ocrResult.success && ocrResult.referenceNumber) {
-        // Update order
-        await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            gcashReferenceNumber: ocrResult.referenceNumber,
-          },
-        });
+			if (ocrResult.success && ocrResult.referenceNumber) {
+				// Update order
+				await prisma.order.update({
+					where: { id: order.id },
+					data: {
+						gcashReferenceNumber: ocrResult.referenceNumber,
+					},
+				});
 
-        results.success++;
-        results.details.push({
-          orderId: order.id,
-          status: "success",
-          referenceNumber: ocrResult.referenceNumber,
-        });
-      } else {
-        results.failed++;
-        results.details.push({
-          orderId: order.id,
-          status: "failed",
-          error: ocrResult.error || "No reference number found",
-        });
-      }
-    } catch (error) {
-      results.failed++;
-      results.details.push({
-        orderId: order.id,
-        status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+				results.success++;
+				results.details.push({
+					orderId: order.id,
+					status: "success",
+					referenceNumber: ocrResult.referenceNumber,
+				});
+			} else {
+				results.failed++;
+				results.details.push({
+					orderId: order.id,
+					status: "failed",
+					error: ocrResult.error || "No reference number found",
+				});
+			}
+		} catch (error) {
+			results.failed++;
+			results.details.push({
+				orderId: order.id,
+				status: "error",
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
+		}
 
-    // Add delay to prevent rate limiting / resource exhaustion
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
+		// Add delay to prevent rate limiting / resource exhaustion
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+	}
 
-  return results;
+	return results;
 }
 ```
 
@@ -1142,38 +1146,38 @@ export function BatchOCRProcessor() {
 ```typescript
 // Validate image quality before processing
 async function validateReceiptImage(file: File): Promise<{
-  valid: boolean;
-  error?: string;
+	valid: boolean;
+	error?: string;
 }> {
-  // Check file size
-  const minSize = 50 * 1024;  // 50KB minimum
-  const maxSize = 10 * 1024 * 1024;  // 10MB maximum
+	// Check file size
+	const minSize = 50 * 1024; // 50KB minimum
+	const maxSize = 10 * 1024 * 1024; // 10MB maximum
 
-  if (file.size < minSize) {
-    return {
-      valid: false,
-      error: "Image is too small. Please upload a clearer screenshot.",
-    };
-  }
+	if (file.size < minSize) {
+		return {
+			valid: false,
+			error: "Image is too small. Please upload a clearer screenshot.",
+		};
+	}
 
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: "Image is too large. Maximum size is 10MB.",
-    };
-  }
+	if (file.size > maxSize) {
+		return {
+			valid: false,
+			error: "Image is too large. Maximum size is 10MB.",
+		};
+	}
 
-  // Check image dimensions
-  const img = await createImageBitmap(file);
+	// Check image dimensions
+	const img = await createImageBitmap(file);
 
-  if (img.width < 300 || img.height < 300) {
-    return {
-      valid: false,
-      error: "Image resolution is too low. Please upload a clearer screenshot.",
-    };
-  }
+	if (img.width < 300 || img.height < 300) {
+		return {
+			valid: false,
+			error: "Image resolution is too low. Please upload a clearer screenshot.",
+		};
+	}
 
-  return { valid: true };
+	return { valid: true };
 }
 ```
 
@@ -1212,15 +1216,13 @@ async function validateReceiptImage(file: File): Promise<{
 ```typescript
 // Add timeout to OCR processing
 async function readGCashReceiptWithTimeout(
-  file: File,
-  timeoutMs: number = 30000  // 30 second timeout
+	file: File,
+	timeoutMs: number = 30000, // 30 second timeout
 ) {
-  return Promise.race([
-    readGCashReceiptClient(file),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("OCR timeout")), timeoutMs)
-    ),
-  ]);
+	return Promise.race([
+		readGCashReceiptClient(file),
+		new Promise((_, reject) => setTimeout(() => reject(new Error("OCR timeout")), timeoutMs)),
+	]);
 }
 ```
 
@@ -1228,14 +1230,15 @@ async function readGCashReceiptWithTimeout(
 
 ```typescript
 const ERROR_MESSAGES = {
-  "OCR timeout": "Processing took too long. Please try uploading the image again.",
-  "No reference number found": "Could not find reference number. Please check if the image is clear and try again, or enter manually.",
-  "Invalid file type": "Please upload an image file (JPG, PNG).",
-  "Network error": "Failed to upload image. Please check your connection and try again.",
+	"OCR timeout": "Processing took too long. Please try uploading the image again.",
+	"No reference number found":
+		"Could not find reference number. Please check if the image is clear and try again, or enter manually.",
+	"Invalid file type": "Please upload an image file (JPG, PNG).",
+	"Network error": "Failed to upload image. Please check your connection and try again.",
 };
 
 function getErrorMessage(error: string): string {
-  return ERROR_MESSAGES[error] || "An unexpected error occurred. Please try again.";
+	return ERROR_MESSAGES[error] || "An unexpected error occurred. Please try again.";
 }
 ```
 
@@ -1250,30 +1253,30 @@ function getErrorMessage(error: string): string {
 import { parseGCashReceipt } from "./parseReceipt";
 
 describe("parseGCashReceipt", () => {
-  it("should extract reference number from standard format", () => {
-    const text = `
+	it("should extract reference number from standard format", () => {
+		const text = `
       GCash Receipt
       Reference No.
       1234567890123
       Amount: ₱500.00
     `;
 
-    const result = parseGCashReceipt(text);
-    expect(result.referenceNumber).toBe("1234567890123");
-    expect(result.amount).toBe(500);
-  });
+		const result = parseGCashReceipt(text);
+		expect(result.referenceNumber).toBe("1234567890123");
+		expect(result.amount).toBe(500);
+	});
 
-  it("should extract reference number with spaces", () => {
-    const text = "Reference No. 1234 567 890 123";
-    const result = parseGCashReceipt(text);
-    expect(result.referenceNumber).toBe("1234567890123");
-  });
+	it("should extract reference number with spaces", () => {
+		const text = "Reference No. 1234 567 890 123";
+		const result = parseGCashReceipt(text);
+		expect(result.referenceNumber).toBe("1234567890123");
+	});
 
-  it("should handle OCR errors (Ref instead of Reference)", () => {
-    const text = "Ref No. 1234567890123";
-    const result = parseGCashReceipt(text);
-    expect(result.referenceNumber).toBe("1234567890123");
-  });
+	it("should handle OCR errors (Ref instead of Reference)", () => {
+		const text = "Ref No. 1234567890123";
+		const result = parseGCashReceipt(text);
+		expect(result.referenceNumber).toBe("1234567890123");
+	});
 });
 ```
 
@@ -1288,27 +1291,27 @@ import fs from "fs";
 import path from "path";
 
 describe("OCR Integration Tests", () => {
-  const testReceiptsDir = path.join(__dirname, "test-receipts");
+	const testReceiptsDir = path.join(__dirname, "test-receipts");
 
-  it("should extract from clear receipt", async () => {
-    const imagePath = path.join(testReceiptsDir, "clear-receipt.jpg");
-    const imageUrl = `file://${imagePath}`;
+	it("should extract from clear receipt", async () => {
+		const imagePath = path.join(testReceiptsDir, "clear-receipt.jpg");
+		const imageUrl = `file://${imagePath}`;
 
-    const result = await readGCashReceiptServer(imageUrl);
+		const result = await readGCashReceiptServer(imageUrl);
 
-    expect(result.success).toBe(true);
-    expect(result.referenceNumber).toMatch(/^\d{13}$/);
-  });
+		expect(result.success).toBe(true);
+		expect(result.referenceNumber).toMatch(/^\d{13}$/);
+	});
 
-  it("should handle blurry receipt", async () => {
-    const imagePath = path.join(testReceiptsDir, "blurry-receipt.jpg");
-    const imageUrl = `file://${imagePath}`;
+	it("should handle blurry receipt", async () => {
+		const imagePath = path.join(testReceiptsDir, "blurry-receipt.jpg");
+		const imageUrl = `file://${imagePath}`;
 
-    const result = await readGCashReceiptServer(imageUrl);
+		const result = await readGCashReceiptServer(imageUrl);
 
-    // May succeed or fail, but should not crash
-    expect(result.success).toBeDefined();
-  });
+		// May succeed or fail, but should not crash
+		expect(result.success).toBeDefined();
+	});
 });
 ```
 

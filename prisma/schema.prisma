@@ -223,6 +223,12 @@ model Order {
   notes                String?
   eventId              String? // If order is for a specific event
   eventData            Json? // Stores responses to custom event checkout fields
+
+  // Delivery Scheduling
+  deliveryDate         DateTime? // Scheduled delivery date
+  deliveryTimeSlot     String? // e.g., "Morning (9 AM - 12 PM)", "Afternoon (2 PM - 5 PM)"
+  deliveryNotes        String? // Special delivery instructions
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -282,13 +288,21 @@ model ShopEvent {
   startDate DateTime
   endDate   DateTime
 
+  // Delivery & Cutoff Management
+  dailyCutoffTime String? // Time of day for same-day cutoff (e.g., "14:00" for 2 PM)
+  deliveryLeadDays Int @default(1) // How many days ahead for delivery (1 = next day)
+  isShopClosed Boolean @default(false) // Temporarily close event shop
+  closureMessage String? // Message to show when shop is closed
+  allowScheduledDelivery Boolean @default(false) // Allow customers to select delivery date/time
+
   // Custom component path (for event-specific UI/animations)
   componentPath String? // e.g., "flower-fest-2026" -> loads from events folder
+  hasCustomCheckout Boolean @default(false) // If true, uses custom checkout component instead of generic
 
   // Theme configuration (colors, animations for default wrapper)
   themeConfig Json?
 
-  // Checkout customization
+  // Checkout customization (for generic checkout flow)
   checkoutConfig Json? // Additional fields, messages, etc.
 
   createdAt DateTime @default(now())

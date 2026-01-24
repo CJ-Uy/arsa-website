@@ -24,8 +24,18 @@ import { ClientBatchOcr } from "./ClientBatchOcr";
 import { InvoiceUpload } from "./InvoiceUpload";
 import { ManualVerificationDashboard } from "./ManualVerificationDashboard";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Package, Eye, Trash2, Download, AlertTriangle } from "lucide-react";
-import * as XLSX from "xlsx";
+import {
+	CheckCircle,
+	Clock,
+	Package,
+	Eye,
+	Trash2,
+	Download,
+	AlertTriangle,
+	Image,
+	FileSpreadsheet,
+} from "lucide-react";
+import ExcelJS from "exceljs";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -36,6 +46,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Order = {
 	id: string;
@@ -118,53 +129,163 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 		}
 	};
 
-	const handleExportToExcel = async () => {
+	const handleExportToExcel = async (includeImages: boolean = false) => {
 		try {
-			toast.loading("Preparing export...");
+			const toastId = toast.loading(
+				includeImages
+					? "Preparing export with images (this may take a while)..."
+					: "Preparing export...",
+			);
 
 			const result = await exportOrdersData();
 
 			if (!result.success || !result.data) {
+				toast.dismiss(toastId);
 				toast.error(result.message || "Failed to export data");
 				return;
 			}
 
-			// Create worksheet from data
-			const ws = XLSX.utils.json_to_sheet(result.data);
+			// Create workbook with exceljs
+			const workbook = new ExcelJS.Workbook();
+			workbook.creator = "ARSA Shop";
+			workbook.created = new Date();
 
-			// Set column widths for better readability
-			const colWidths = [
-				{ wch: 10 }, // Order ID
-				{ wch: 20 }, // Order Date
-				{ wch: 20 }, // Customer Name
-				{ wch: 25 }, // Customer Email
-				{ wch: 15 }, // Student ID
-				{ wch: 30 }, // Product Name
-				{ wch: 40 }, // Product Description
-				{ wch: 10 }, // Size
-				{ wch: 10 }, // Quantity
-				{ wch: 12 }, // Unit Price
-				{ wch: 12 }, // Item Total
-				{ wch: 12 }, // Order Total
-				{ wch: 12 }, // Order Status
-				{ wch: 15 }, // GCash Ref No
-				{ wch: 30 }, // Notes
-				{ wch: 30 }, // Receipt URL
+			const worksheet = workbook.addWorksheet("Orders");
+
+			// Define columns
+			const columns = [
+				{ header: "Order ID", key: "orderId", width: 12 },
+				{ header: "Order Date", key: "orderDate", width: 20 },
+				{ header: "Customer Name", key: "customerName", width: 20 },
+				{ header: "Customer Email", key: "customerEmail", width: 25 },
+				{ header: "Student ID", key: "studentId", width: 15 },
+				{ header: "Product Name", key: "productName", width: 30 },
+				{ header: "Product Description", key: "productDescription", width: 40 },
+				{ header: "Size", key: "size", width: 10 },
+				{ header: "Quantity", key: "quantity", width: 10 },
+				{ header: "Unit Price", key: "unitPrice", width: 12 },
+				{ header: "Item Total", key: "itemTotal", width: 12 },
+				{ header: "Order Total", key: "orderTotal", width: 12 },
+				{ header: "Order Status", key: "orderStatus", width: 12 },
+				{ header: "GCash Ref No", key: "gcashRefNo", width: 18 },
+				{ header: "Notes", key: "notes", width: 30 },
 			];
-			ws["!cols"] = colWidths;
 
-			// Create workbook
-			const wb = XLSX.utils.book_new();
-			XLSX.utils.book_append_sheet(wb, ws, "Orders");
+			// Add Receipt column - either image or URL
+			if (includeImages) {
+				columns.push({ header: "Receipt Image", key: "receiptImage", width: 20 });
+			} else {
+				columns.push({ header: "Receipt URL", key: "receiptUrl", width: 40 });
+			}
+
+			worksheet.columns = columns;
+
+			// Style header row
+			worksheet.getRow(1).font = { bold: true };
+			worksheet.getRow(1).fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: "FFE0E0E0" },
+			};
+
+			// Add data rows
+			const imagePromises: Promise<void>[] = [];
+			let currentRow = 2;
+
+			for (const item of result.data) {
+				const row = worksheet.addRow({
+					orderId: item["Order ID"],
+					orderDate: item["Order Date"],
+					customerName: item["Customer Name"],
+					customerEmail: item["Customer Email"],
+					studentId: item["Student ID"],
+					productName: item["Product Name"],
+					productDescription: item["Product Description"],
+					size: item["Size"],
+					quantity: item["Quantity"],
+					unitPrice: item["Unit Price"],
+					itemTotal: item["Item Total"],
+					orderTotal: item["Order Total"],
+					orderStatus: item["Order Status"],
+					gcashRefNo: item["GCash Ref No"],
+					notes: item["Notes"],
+					receiptUrl: includeImages ? "" : item["Receipt URL"],
+				});
+
+				// If including images and there's a receipt URL
+				if (includeImages && item["Receipt URL"]) {
+					const rowIndex = currentRow;
+					const receiptUrl = item["Receipt URL"];
+
+					// Set row height for images
+					row.height = 80;
+
+					// Fetch and embed image
+					imagePromises.push(
+						(async () => {
+							try {
+								const response = await fetch(receiptUrl);
+								if (!response.ok) return;
+
+								const arrayBuffer = await response.arrayBuffer();
+								const imageBuffer = new Uint8Array(arrayBuffer);
+
+								// Determine image type from URL or response
+								let extension: "jpeg" | "png" | "gif" = "jpeg";
+								if (
+									receiptUrl.includes(".png") ||
+									response.headers.get("content-type")?.includes("png")
+								) {
+									extension = "png";
+								} else if (receiptUrl.includes(".gif")) {
+									extension = "gif";
+								}
+
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								const imageId = workbook.addImage({
+									buffer: imageBuffer as any,
+									extension,
+								});
+
+								// Add image to cell (column 16 is the receipt column)
+								worksheet.addImage(imageId, {
+									tl: { col: 15, row: rowIndex - 1 },
+									ext: { width: 100, height: 75 },
+								});
+							} catch (err) {
+								// If image fetch fails, add URL as fallback
+								worksheet.getCell(rowIndex, 16).value = receiptUrl;
+							}
+						})(),
+					);
+				}
+
+				currentRow++;
+			}
+
+			// Wait for all images to be fetched and embedded
+			if (includeImages && imagePromises.length > 0) {
+				toast.loading(`Fetching ${imagePromises.length} receipt images...`, { id: toastId });
+				await Promise.all(imagePromises);
+			}
 
 			// Generate filename with current date
 			const date = new Date().toISOString().split("T")[0];
-			const filename = `ARSA_Orders_${date}.xlsx`;
+			const filename = `ARSA_Orders_${date}${includeImages ? "_with_images" : ""}.xlsx`;
 
-			// Download file
-			XLSX.writeFile(wb, filename);
+			// Write to buffer and download
+			const buffer = await workbook.xlsx.writeBuffer();
+			const blob = new Blob([buffer], {
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			});
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = filename;
+			link.click();
+			window.URL.revokeObjectURL(url);
 
-			toast.dismiss();
+			toast.dismiss(toastId);
 			toast.success(`Exported ${result.data.length} order items to ${filename}`);
 		} catch (error) {
 			console.error("Export error:", error);
@@ -216,9 +337,13 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 			<TabsContent value="orders" className="space-y-6">
 				{/* Action Buttons */}
 				<div className="flex justify-end gap-2">
-					<Button onClick={handleExportToExcel} variant="outline">
-						<Download className="mr-2 h-4 w-4" />
+					<Button onClick={() => handleExportToExcel(false)} variant="outline">
+						<FileSpreadsheet className="mr-2 h-4 w-4" />
 						Export to Excel
+					</Button>
+					<Button onClick={() => handleExportToExcel(true)} variant="outline">
+						<Image className="mr-2 h-4 w-4" />
+						Export with Images
 					</Button>
 				</div>
 

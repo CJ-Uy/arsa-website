@@ -29,7 +29,34 @@ async function verifyEventsAdminAccess() {
 }
 
 // Types for event data
-export type CheckoutFieldType = "text" | "textarea" | "select" | "checkbox" | "date";
+export type CheckoutFieldType =
+	| "text" // Single line text input
+	| "textarea" // Multi-line text area
+	| "select" // Dropdown selection
+	| "checkbox" // Single checkbox (yes/no)
+	| "date" // Date picker
+	| "time" // Time picker
+	| "number" // Numeric input
+	| "email" // Email with validation
+	| "phone" // Phone number
+	| "radio" // Radio button group
+	| "repeater" // Multiple rows table
+	| "message"; // Display-only informational message
+
+export type RepeaterColumn = {
+	id: string;
+	label: string;
+	type: "text" | "date" | "time" | "select";
+	placeholder?: string;
+	options?: string[];
+	width?: "sm" | "md" | "lg";
+};
+
+// Conditional visibility for fields
+export type FieldCondition = {
+	fieldId: string;
+	value: string | string[];
+};
 
 export type CheckoutField = {
 	id: string;
@@ -37,8 +64,21 @@ export type CheckoutField = {
 	type: CheckoutFieldType;
 	required: boolean;
 	placeholder?: string;
-	options?: string[]; // For select type
+	options?: string[]; // For select, radio types
 	maxLength?: number;
+	// Number field constraints
+	min?: number;
+	max?: number;
+	step?: number;
+	// Conditional display
+	showWhen?: FieldCondition;
+	// Message field content
+	messageContent?: string;
+	// Repeater-specific fields
+	columns?: RepeaterColumn[];
+	minRows?: number;
+	maxRows?: number;
+	defaultRows?: number;
 };
 
 export type CheckoutConfig = {

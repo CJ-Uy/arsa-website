@@ -20,6 +20,14 @@ Welcome to the ARSA Website documentation! All project documentation has been or
 ## 🛍️ Shop System
 
 - **[SHOP_SETUP.md](SHOP_SETUP.md)** - E-commerce shop setup and configuration
+- **[ESHOP_SYSTEM.md](ESHOP_SYSTEM.md)** - Complete e-commerce architecture guide
+- **[GCASH_OCR_SYSTEM.md](GCASH_OCR_SYSTEM.md)** - Portable OCR implementation guide
+
+## 🌸 Event-Specific Features
+
+- **[CUSTOM_EVENT_PAGES.md](CUSTOM_EVENT_PAGES.md)** - Creating custom event checkout pages
+- **[DELIVERY_CUTOFF_SETUP.md](DELIVERY_CUTOFF_SETUP.md)** - Delivery scheduling and cutoff times
+- **[GOOGLE_SHEETS_SYNC.md](GOOGLE_SHEETS_SYNC.md)** - Syncing orders to Google Sheets
 
 ## 📸 GCash OCR & Payment Verification
 
@@ -66,6 +74,8 @@ Welcome to the ARSA Website documentation! All project documentation has been or
 1. [SHOP_SETUP.md](SHOP_SETUP.md) - Shop configuration
 2. [ADMIN_ORDERS_REDESIGN.md](ADMIN_ORDERS_REDESIGN.md) - Order management
 3. [FEATURE_GUIDE.md](FEATURE_GUIDE.md) - Using admin features
+4. [DELIVERY_CUTOFF_SETUP.md](DELIVERY_CUTOFF_SETUP.md) - Configuring delivery cutoffs
+5. [GOOGLE_SHEETS_SYNC.md](GOOGLE_SHEETS_SYNC.md) - Setting up order sync
 
 ### For OCR/Payment Features
 
@@ -75,6 +85,9 @@ Welcome to the ARSA Website documentation! All project documentation has been or
 
 ## 📝 Recent Updates
 
+- **2026-01-22**: Added Flower Fest 2026 custom checkout with pickup/delivery options
+- **2026-01-22**: Implemented Google Sheets sync for order management
+- **2026-01-22**: Added delivery cutoff time system with stock decrement
 - **2025-01-09**: Created comprehensive CHANGELOG.md with full version history
 - **2025-01-09**: Updated CLAUDE.md with complete architecture documentation
 - **2025-01-09**: Audited all routes for mobile compatibility

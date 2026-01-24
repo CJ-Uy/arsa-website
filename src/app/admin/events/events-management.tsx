@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TimePicker } from "@/components/ui/time-picker";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
 	createEvent,
 	updateEvent,
@@ -54,6 +56,19 @@ import {
 	UserPlus,
 	Search,
 	Loader2,
+	Rows3,
+	GripVertical,
+	Type,
+	AlignLeft,
+	List,
+	CheckSquare,
+	Hash,
+	Mail,
+	Phone,
+	CircleDot,
+	Info,
+	Eye,
+	EyeOff,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -147,15 +162,155 @@ type FormEventProduct = {
 	eventPrice?: number;
 };
 
+type RepeaterColumn = {
+	id: string;
+	label: string;
+	type: "text" | "date" | "time" | "select";
+	placeholder?: string;
+	options?: string[];
+	width?: "sm" | "md" | "lg";
+};
+
+type FieldCondition = {
+	fieldId: string;
+	value: string | string[];
+};
+
+type CheckoutFieldType =
+	| "text"
+	| "textarea"
+	| "select"
+	| "checkbox"
+	| "date"
+	| "time"
+	| "number"
+	| "email"
+	| "phone"
+	| "radio"
+	| "repeater"
+	| "message";
+
 type FormCheckoutField = {
 	id: string;
 	label: string;
-	type: "text" | "textarea" | "select" | "checkbox" | "date";
+	type: CheckoutFieldType;
 	required: boolean;
 	placeholder: string;
 	options: string[];
 	maxLength?: number;
+	// Number field constraints
+	min?: number;
+	max?: number;
+	step?: number;
+	// Conditional display
+	showWhen?: FieldCondition;
+	// Message content (for type: "message")
+	messageContent?: string;
+	// Repeater-specific fields
+	columns?: RepeaterColumn[];
+	minRows?: number;
+	maxRows?: number;
+	defaultRows?: number;
 };
+
+// Field type definitions with icons and descriptions
+const FIELD_TYPE_OPTIONS: {
+	value: CheckoutFieldType;
+	label: string;
+	description: string;
+	icon: React.ReactNode;
+	category: "input" | "selection" | "advanced" | "display";
+}[] = [
+	// Input types
+	{
+		value: "text",
+		label: "Text",
+		description: "Single line text input",
+		icon: <Type className="h-4 w-4" />,
+		category: "input",
+	},
+	{
+		value: "textarea",
+		label: "Text Area",
+		description: "Multi-line text for longer responses",
+		icon: <AlignLeft className="h-4 w-4" />,
+		category: "input",
+	},
+	{
+		value: "number",
+		label: "Number",
+		description: "Numeric input with optional min/max",
+		icon: <Hash className="h-4 w-4" />,
+		category: "input",
+	},
+	{
+		value: "email",
+		label: "Email",
+		description: "Email address with validation",
+		icon: <Mail className="h-4 w-4" />,
+		category: "input",
+	},
+	{
+		value: "phone",
+		label: "Phone",
+		description: "Phone number input",
+		icon: <Phone className="h-4 w-4" />,
+		category: "input",
+	},
+	// Selection types
+	{
+		value: "select",
+		label: "Dropdown",
+		description: "Select one option from a list",
+		icon: <List className="h-4 w-4" />,
+		category: "selection",
+	},
+	{
+		value: "radio",
+		label: "Radio Buttons",
+		description: "Select one option with visible choices",
+		icon: <CircleDot className="h-4 w-4" />,
+		category: "selection",
+	},
+	{
+		value: "checkbox",
+		label: "Checkbox",
+		description: "Yes/No toggle or agreement",
+		icon: <CheckSquare className="h-4 w-4" />,
+		category: "selection",
+	},
+	// Date/Time types
+	{
+		value: "date",
+		label: "Date",
+		description: "Date picker",
+		icon: <Calendar className="h-4 w-4" />,
+		category: "input",
+	},
+	{
+		value: "time",
+		label: "Time",
+		description: "Time picker",
+		icon: <Clock className="h-4 w-4" />,
+		category: "input",
+	},
+	// Advanced types
+	{
+		value: "repeater",
+		label: "Repeater Table",
+		description: "Multiple rows with custom columns",
+		icon: <Rows3 className="h-4 w-4" />,
+		category: "advanced",
+	},
+	// Display types
+	{
+		value: "message",
+		label: "Info Message",
+		description: "Display-only informational text",
+		icon: <Info className="h-4 w-4" />,
+		category: "display",
+	},
+];
 
 type FormData = {
 	name: string;
@@ -175,6 +330,10 @@ type FormData = {
 	checkoutHeaderMessage: string;
 	checkoutTermsMessage: string;
 	checkoutConfirmationMessage: string;
+	checkoutCutoffTime: string;
+	checkoutCutoffMessage: string;
+	checkoutCutoffDaysOffset: number;
+	checkoutPaymentOptions: { id: string; title: string; instructions: string; imageUrl?: string }[];
 	eventProducts: FormEventProduct[];
 };
 
@@ -237,6 +396,10 @@ export function EventsManagement({
 		checkoutHeaderMessage: "",
 		checkoutTermsMessage: "",
 		checkoutConfirmationMessage: "",
+		checkoutCutoffTime: "",
+		checkoutCutoffMessage: "",
+		checkoutCutoffDaysOffset: 2,
+		checkoutPaymentOptions: [],
 		eventProducts: [],
 	});
 
@@ -259,6 +422,10 @@ export function EventsManagement({
 			checkoutHeaderMessage: "",
 			checkoutTermsMessage: "",
 			checkoutConfirmationMessage: "",
+			checkoutCutoffTime: "",
+			checkoutCutoffMessage: "",
+			checkoutCutoffDaysOffset: 2,
+			checkoutPaymentOptions: [],
 			eventProducts: [],
 		});
 		setEditingEvent(null);
@@ -284,14 +451,31 @@ export function EventsManagement({
 				componentPath: event.componentPath || "",
 				themeConfig: (event.themeConfig as ThemeConfig) || { ...defaultThemeConfig },
 				checkoutFields:
-					checkoutConfig?.additionalFields?.map((f) => ({
+					checkoutConfig?.additionalFields?.map((f: any) => ({
 						...f,
 						placeholder: f.placeholder || "",
 						options: f.options || [],
+						// Number field constraints
+						min: f.min,
+						max: f.max,
+						step: f.step,
+						// Conditional display
+						showWhen: f.showWhen || undefined,
+						// Message content
+						messageContent: f.messageContent || "",
+						// Repeater fields
+						columns: f.columns || [],
+						minRows: f.minRows || 1,
+						maxRows: f.maxRows || 10,
+						defaultRows: f.defaultRows || 1,
 					})) || [],
 				checkoutHeaderMessage: checkoutConfig?.headerMessage || "",
 				checkoutTermsMessage: checkoutConfig?.termsMessage || "",
 				checkoutConfirmationMessage: checkoutConfig?.confirmationMessage || "",
+				checkoutCutoffTime: checkoutConfig?.cutoffTime || "",
+				checkoutCutoffMessage: checkoutConfig?.cutoffMessage || "",
+				checkoutCutoffDaysOffset: checkoutConfig?.cutoffDaysOffset || 2,
+				checkoutPaymentOptions: checkoutConfig?.paymentOptions || [],
 				eventProducts: event.products.map((p) => ({
 					productId: p.productId || undefined,
 					packageId: p.packageId || undefined,
@@ -467,13 +651,33 @@ export function EventsManagement({
 								id: f.id,
 								label: f.label,
 								type: f.type,
-								required: f.required,
+								required: f.type === "message" ? false : f.required, // Messages are never required
 								placeholder: f.placeholder || undefined,
-								options: f.type === "select" ? f.options : undefined,
+								options: f.type === "select" || f.type === "radio" ? f.options : undefined,
 								maxLength: f.maxLength,
+								// Number field constraints
+								min: f.type === "number" ? f.min : undefined,
+								max: f.type === "number" ? f.max : undefined,
+								step: f.type === "number" ? f.step : undefined,
+								// Conditional display
+								showWhen: f.showWhen || undefined,
+								// Message content
+								messageContent: f.type === "message" ? f.messageContent : undefined,
+								// Repeater-specific fields
+								columns: f.type === "repeater" ? f.columns : undefined,
+								minRows: f.type === "repeater" ? f.minRows : undefined,
+								maxRows: f.type === "repeater" ? f.maxRows : undefined,
+								defaultRows: f.type === "repeater" ? f.defaultRows : undefined,
 							})),
 							termsMessage: formData.checkoutTermsMessage || undefined,
 							confirmationMessage: formData.checkoutConfirmationMessage || undefined,
+							cutoffTime: formData.checkoutCutoffTime || undefined,
+							cutoffMessage: formData.checkoutCutoffMessage || undefined,
+							cutoffDaysOffset: formData.checkoutCutoffDaysOffset || undefined,
+							paymentOptions:
+								formData.checkoutPaymentOptions.length > 0
+									? formData.checkoutPaymentOptions
+									: undefined,
 						}
 					: null;
 
@@ -765,7 +969,7 @@ export function EventsManagement({
 
 			{/* Add/Edit Event Dialog */}
 			<Dialog open={showDialog} onOpenChange={handleCloseDialog}>
-				<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+				<DialogContent className="max-h-[90vh] w-[95vw] max-w-[1600px] overflow-y-auto sm:max-w-[1600px]">
 					<DialogHeader>
 						<DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
 						<DialogDescription>
@@ -1231,11 +1435,59 @@ export function EventsManagement({
 										</p>
 									) : (
 										<div className="space-y-4">
-											{formData.checkoutFields.map((field, index) => (
-												<Card key={field.id}>
-													<CardContent className="pt-4">
-														<div className="flex items-start gap-4">
-															<div className="flex-1 space-y-3">
+											{formData.checkoutFields.map((field, index) => {
+												const fieldTypeInfo = FIELD_TYPE_OPTIONS.find(
+													(o) => o.value === field.type,
+												);
+												return (
+													<Card
+														key={field.id}
+														className={`transition-all ${
+															field.showWhen ? "border-purple-200 dark:border-purple-800" : ""
+														}`}
+													>
+														<CardHeader className="bg-muted/30 px-4 py-3">
+															<div className="flex items-center justify-between">
+																<div className="flex items-center gap-3">
+																	<div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-md">
+																		{fieldTypeInfo?.icon}
+																	</div>
+																	<div>
+																		<span className="font-medium">
+																			{field.label || "Untitled Field"}
+																		</span>
+																		<div className="text-muted-foreground flex items-center gap-2 text-xs">
+																			<span>{fieldTypeInfo?.label}</span>
+																			{field.required && (
+																				<Badge variant="secondary" className="px-1 text-[10px]">
+																					Required
+																				</Badge>
+																			)}
+																			{field.showWhen && (
+																				<Badge
+																					variant="outline"
+																					className="border-purple-300 px-1 text-[10px] text-purple-600"
+																				>
+																					<Eye className="mr-1 h-2.5 w-2.5" />
+																					Conditional
+																				</Badge>
+																			)}
+																		</div>
+																	</div>
+																</div>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	size="icon"
+																	className="text-destructive hover:text-destructive h-8 w-8"
+																	onClick={() => removeCheckoutField(index)}
+																>
+																	<Trash2 className="h-4 w-4" />
+																</Button>
+															</div>
+														</CardHeader>
+														<CardContent className="pt-4">
+															<div className="space-y-3">
 																<div className="grid grid-cols-2 gap-3">
 																	<div>
 																		<Label>Field Label *</Label>
@@ -1253,82 +1505,943 @@ export function EventsManagement({
 																		<Label>Field Type</Label>
 																		<Select
 																			value={field.type}
-																			onValueChange={(value: any) =>
+																			onValueChange={(value: CheckoutFieldType) =>
 																				updateCheckoutField(index, {
 																					type: value,
+																					// Initialize repeater defaults
+																					...(value === "repeater" && !field.columns
+																						? {
+																								columns: [
+																									{
+																										id: `col-${Date.now()}`,
+																										label: "Column 1",
+																										type: "text",
+																									},
+																								],
+																								minRows: 1,
+																								maxRows: 10,
+																								defaultRows: 1,
+																							}
+																						: {}),
+																					// Initialize options for selection types
+																					...(["select", "radio"].includes(value) &&
+																					field.options.length === 0
+																						? { options: ["Option 1", "Option 2"] }
+																						: {}),
 																				})
 																			}
 																		>
 																			<SelectTrigger>
-																				<SelectValue />
+																				<SelectValue>
+																					{(() => {
+																						const opt = FIELD_TYPE_OPTIONS.find(
+																							(o) => o.value === field.type,
+																						);
+																						if (opt) {
+																							return (
+																								<div className="flex items-center gap-2">
+																									{opt.icon}
+																									<span>{opt.label}</span>
+																								</div>
+																							);
+																						}
+																						return field.type;
+																					})()}
+																				</SelectValue>
 																			</SelectTrigger>
-																			<SelectContent>
-																				<SelectItem value="text">Text</SelectItem>
-																				<SelectItem value="textarea">Textarea</SelectItem>
-																				<SelectItem value="select">Dropdown</SelectItem>
-																				<SelectItem value="checkbox">Checkbox</SelectItem>
-																				<SelectItem value="date">Date</SelectItem>
+																			<SelectContent className="w-[320px]">
+																				<div className="text-muted-foreground p-1 text-xs font-semibold">
+																					Input Fields
+																				</div>
+																				{FIELD_TYPE_OPTIONS.filter(
+																					(o) => o.category === "input",
+																				).map((opt) => (
+																					<SelectItem key={opt.value} value={opt.value}>
+																						<div className="flex items-center gap-3">
+																							<span className="text-muted-foreground">
+																								{opt.icon}
+																							</span>
+																							<div>
+																								<div className="font-medium">{opt.label}</div>
+																								<div className="text-muted-foreground text-xs">
+																									{opt.description}
+																								</div>
+																							</div>
+																						</div>
+																					</SelectItem>
+																				))}
+																				<div className="text-muted-foreground mt-2 p-1 text-xs font-semibold">
+																					Selection Fields
+																				</div>
+																				{FIELD_TYPE_OPTIONS.filter(
+																					(o) => o.category === "selection",
+																				).map((opt) => (
+																					<SelectItem key={opt.value} value={opt.value}>
+																						<div className="flex items-center gap-3">
+																							<span className="text-muted-foreground">
+																								{opt.icon}
+																							</span>
+																							<div>
+																								<div className="font-medium">{opt.label}</div>
+																								<div className="text-muted-foreground text-xs">
+																									{opt.description}
+																								</div>
+																							</div>
+																						</div>
+																					</SelectItem>
+																				))}
+																				<div className="text-muted-foreground mt-2 p-1 text-xs font-semibold">
+																					Advanced
+																				</div>
+																				{FIELD_TYPE_OPTIONS.filter(
+																					(o) => o.category === "advanced",
+																				).map((opt) => (
+																					<SelectItem key={opt.value} value={opt.value}>
+																						<div className="flex items-center gap-3">
+																							<span className="text-muted-foreground">
+																								{opt.icon}
+																							</span>
+																							<div>
+																								<div className="font-medium">{opt.label}</div>
+																								<div className="text-muted-foreground text-xs">
+																									{opt.description}
+																								</div>
+																							</div>
+																						</div>
+																					</SelectItem>
+																				))}
+																				<div className="text-muted-foreground mt-2 p-1 text-xs font-semibold">
+																					Display Only
+																				</div>
+																				{FIELD_TYPE_OPTIONS.filter(
+																					(o) => o.category === "display",
+																				).map((opt) => (
+																					<SelectItem key={opt.value} value={opt.value}>
+																						<div className="flex items-center gap-3">
+																							<span className="text-muted-foreground">
+																								{opt.icon}
+																							</span>
+																							<div>
+																								<div className="font-medium">{opt.label}</div>
+																								<div className="text-muted-foreground text-xs">
+																									{opt.description}
+																								</div>
+																							</div>
+																						</div>
+																					</SelectItem>
+																				))}
 																			</SelectContent>
 																		</Select>
 																	</div>
 																</div>
-																<div>
-																	<Label>Placeholder</Label>
-																	<Input
-																		value={field.placeholder}
-																		onChange={(e) =>
-																			updateCheckoutField(index, {
-																				placeholder: e.target.value,
-																			})
-																		}
-																		placeholder="Enter placeholder text..."
-																	/>
-																</div>
-																{field.type === "select" && (
+
+																{/* Conditional Display */}
+																{index > 0 && (
+																	<div
+																		className={`rounded-lg border-2 p-4 transition-colors ${
+																			field.showWhen
+																				? "border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-950"
+																				: "border-dashed border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
+																		}`}
+																	>
+																		<div className="flex items-center justify-between">
+																			<div className="flex items-center gap-3">
+																				{field.showWhen ? (
+																					<Eye className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+																				) : (
+																					<EyeOff className="h-5 w-5 text-gray-400" />
+																				)}
+																				<div>
+																					<Label
+																						htmlFor={`conditional-${index}`}
+																						className="cursor-pointer text-sm font-semibold"
+																					>
+																						Conditional Visibility
+																					</Label>
+																					<p className="text-muted-foreground text-xs">
+																						{field.showWhen
+																							? "This field is conditionally shown"
+																							: "Always visible to customers"}
+																					</p>
+																				</div>
+																			</div>
+																			<Switch
+																				id={`conditional-${index}`}
+																				checked={!!field.showWhen}
+																				onCheckedChange={(checked) => {
+																					if (checked) {
+																						// Find a select or radio field to use as condition
+																						const selectField = formData.checkoutFields
+																							.slice(0, index)
+																							.find(
+																								(f) => f.type === "select" || f.type === "radio",
+																							);
+																						updateCheckoutField(index, {
+																							showWhen: selectField
+																								? {
+																										fieldId: selectField.id,
+																										value: selectField.options[0] || "",
+																									}
+																								: {
+																										fieldId: formData.checkoutFields[0]?.id || "",
+																										value: "",
+																									},
+																						});
+																					} else {
+																						updateCheckoutField(index, {
+																							showWhen: undefined,
+																						});
+																					}
+																				}}
+																			/>
+																		</div>
+																		{field.showWhen && (
+																			<div className="mt-4 rounded-md border border-purple-200 bg-white p-3 dark:border-purple-800 dark:bg-gray-900">
+																				<div className="mb-3 flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+																					<span className="font-medium">Show this field when:</span>
+																				</div>
+																				<div className="flex items-center gap-2">
+																					<Select
+																						value={field.showWhen.fieldId}
+																						onValueChange={(value) =>
+																							updateCheckoutField(index, {
+																								showWhen: {
+																									...field.showWhen!,
+																									fieldId: value,
+																								},
+																							})
+																						}
+																					>
+																						<SelectTrigger>
+																							<SelectValue placeholder="Select field" />
+																						</SelectTrigger>
+																						<SelectContent>
+																							{formData.checkoutFields
+																								.slice(0, index)
+																								.filter(
+																									(f) => f.type === "select" || f.type === "radio",
+																								)
+																								.map((f) => (
+																									<SelectItem key={f.id} value={f.id}>
+																										{f.label || "Unnamed field"}
+																									</SelectItem>
+																								))}
+																						</SelectContent>
+																					</Select>
+																					<span className="text-muted-foreground text-sm font-medium">
+																						=
+																					</span>
+																					{(() => {
+																						const targetField = formData.checkoutFields.find(
+																							(f) => f.id === field.showWhen?.fieldId,
+																						);
+																						if (
+																							targetField?.type === "select" ||
+																							targetField?.type === "radio"
+																						) {
+																							return (
+																								<Select
+																									value={
+																										Array.isArray(field.showWhen.value)
+																											? field.showWhen.value[0]
+																											: field.showWhen.value
+																									}
+																									onValueChange={(value) =>
+																										updateCheckoutField(index, {
+																											showWhen: {
+																												...field.showWhen!,
+																												value: value,
+																											},
+																										})
+																									}
+																								>
+																									<SelectTrigger>
+																										<SelectValue placeholder="Select value" />
+																									</SelectTrigger>
+																									<SelectContent>
+																										{targetField.options.map((opt) => (
+																											<SelectItem key={opt} value={opt}>
+																												{opt}
+																											</SelectItem>
+																										))}
+																									</SelectContent>
+																								</Select>
+																							);
+																						}
+																						return (
+																							<Input
+																								value={
+																									Array.isArray(field.showWhen?.value)
+																										? field.showWhen.value[0]
+																										: field.showWhen?.value || ""
+																								}
+																								onChange={(e) =>
+																									updateCheckoutField(index, {
+																										showWhen: {
+																											...field.showWhen!,
+																											value: e.target.value,
+																										},
+																									})
+																								}
+																								placeholder="Value to match"
+																							/>
+																						);
+																					})()}
+																				</div>
+																				{formData.checkoutFields
+																					.slice(0, index)
+																					.filter((f) => f.type === "select" || f.type === "radio")
+																					.length === 0 && (
+																					<p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+																						Tip: Add a Dropdown or Radio field before this one to
+																						enable conditional logic
+																					</p>
+																				)}
+																			</div>
+																		)}
+																	</div>
+																)}
+
+																{field.type !== "message" && field.type !== "checkbox" && (
 																	<div>
-																		<Label>Options (one per line)</Label>
-																		<Textarea
-																			value={field.options.join("\n")}
+																		<Label>Placeholder</Label>
+																		<Input
+																			value={field.placeholder}
 																			onChange={(e) =>
 																				updateCheckoutField(index, {
-																					options: e.target.value.split("\n").filter(Boolean),
+																					placeholder: e.target.value,
+																				})
+																			}
+																			placeholder="Enter placeholder text..."
+																		/>
+																	</div>
+																)}
+
+																{field.type === "message" && (
+																	<div>
+																		<Label>Message Content</Label>
+																		<Textarea
+																			value={field.messageContent || ""}
+																			onChange={(e) =>
+																				updateCheckoutField(index, {
+																					messageContent: e.target.value,
 																				})
 																			}
 																			rows={3}
-																			placeholder="Option 1&#10;Option 2&#10;Option 3"
+																			placeholder="Enter the message to display to customers..."
 																		/>
+																		<p className="text-muted-foreground mt-1 text-xs">
+																			This message will be displayed to customers (no input
+																			required)
+																		</p>
+																	</div>
+																)}
+																{(field.type === "select" || field.type === "radio") && (
+																	<div>
+																		<div className="mb-2 flex items-center justify-between">
+																			<Label className="text-sm">
+																				Options{" "}
+																				<span className="text-muted-foreground font-normal">
+																					{field.type === "radio"
+																						? "- shown as radio buttons"
+																						: "- shown as dropdown"}
+																				</span>
+																			</Label>
+																			<Button
+																				type="button"
+																				variant="outline"
+																				size="sm"
+																				onClick={() => {
+																					updateCheckoutField(index, {
+																						options: [
+																							...field.options,
+																							`Option ${field.options.length + 1}`,
+																						],
+																					});
+																				}}
+																			>
+																				<Plus className="mr-1 h-3 w-3" />
+																				Add Option
+																			</Button>
+																		</div>
+																		<div className="space-y-2">
+																			{field.options.map((option, optIndex) => (
+																				<div key={optIndex} className="flex items-center gap-2">
+																					<Input
+																						value={option}
+																						onChange={(e) => {
+																							const newOptions = [...field.options];
+																							newOptions[optIndex] = e.target.value;
+																							updateCheckoutField(index, {
+																								options: newOptions,
+																							});
+																						}}
+																						placeholder={`Option ${optIndex + 1}`}
+																					/>
+																					<Button
+																						type="button"
+																						variant="ghost"
+																						size="icon"
+																						onClick={() => {
+																							updateCheckoutField(index, {
+																								options: field.options.filter(
+																									(_, i) => i !== optIndex,
+																								),
+																							});
+																						}}
+																						disabled={field.options.length <= 1}
+																					>
+																						<X className="h-4 w-4" />
+																					</Button>
+																				</div>
+																			))}
+																			{field.options.length === 0 && (
+																				<p className="text-muted-foreground text-sm">
+																					No options yet. Click "Add Option" to add choices.
+																				</p>
+																			)}
+																		</div>
+																	</div>
+																)}
+																{field.type === "number" && (
+																	<div className="grid grid-cols-3 gap-3">
+																		<div>
+																			<Label className="text-xs">Min Value</Label>
+																			<Input
+																				type="number"
+																				value={field.min ?? ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						min: e.target.value
+																							? parseFloat(e.target.value)
+																							: undefined,
+																					})
+																				}
+																				placeholder="No min"
+																			/>
+																		</div>
+																		<div>
+																			<Label className="text-xs">Max Value</Label>
+																			<Input
+																				type="number"
+																				value={field.max ?? ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						max: e.target.value
+																							? parseFloat(e.target.value)
+																							: undefined,
+																					})
+																				}
+																				placeholder="No max"
+																			/>
+																		</div>
+																		<div>
+																			<Label className="text-xs">Step</Label>
+																			<Input
+																				type="number"
+																				value={field.step ?? ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						step: e.target.value
+																							? parseFloat(e.target.value)
+																							: undefined,
+																					})
+																				}
+																				placeholder="1"
+																			/>
+																		</div>
+																	</div>
+																)}
+																{field.type === "repeater" && (
+																	<div className="space-y-4 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
+																		<div className="flex items-center gap-2">
+																			<Rows3 className="h-5 w-5" />
+																			<Label className="text-base font-semibold">
+																				Repeater Configuration
+																			</Label>
+																		</div>
+
+																		{/* Row Limits */}
+																		<div className="grid grid-cols-3 gap-3">
+																			<div>
+																				<Label className="text-xs">Min Rows *</Label>
+																				<Input
+																					type="number"
+																					min="1"
+																					max="20"
+																					value={field.minRows || 1}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							minRows: parseInt(e.target.value) || 1,
+																						})
+																					}
+																				/>
+																			</div>
+																			<div>
+																				<Label className="text-xs">Max Rows</Label>
+																				<Input
+																					type="number"
+																					min="1"
+																					max="50"
+																					value={field.maxRows || 10}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							maxRows: parseInt(e.target.value) || 10,
+																						})
+																					}
+																				/>
+																			</div>
+																			<div>
+																				<Label className="text-xs">Default Rows</Label>
+																				<Input
+																					type="number"
+																					min="0"
+																					value={field.defaultRows || 1}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							defaultRows: parseInt(e.target.value) || 1,
+																						})
+																					}
+																				/>
+																			</div>
+																		</div>
+
+																		{/* Columns */}
+																		<div className="space-y-3">
+																			<div className="flex items-center justify-between">
+																				<Label className="text-sm">Columns</Label>
+																				<Button
+																					type="button"
+																					variant="outline"
+																					size="sm"
+																					onClick={() => {
+																						const newCol: RepeaterColumn = {
+																							id: `col-${Date.now()}`,
+																							label: `Column ${(field.columns?.length || 0) + 1}`,
+																							type: "text",
+																						};
+																						updateCheckoutField(index, {
+																							columns: [...(field.columns || []), newCol],
+																						});
+																					}}
+																				>
+																					<Plus className="mr-1 h-3 w-3" />
+																					Add Column
+																				</Button>
+																			</div>
+
+																			{field.columns?.map((col, colIndex) => (
+																				<div
+																					key={col.id}
+																					className="flex items-start gap-2 rounded border bg-white p-3 dark:bg-slate-800"
+																				>
+																					<GripVertical className="text-muted-foreground mt-2 h-4 w-4" />
+																					<div className="flex-1 space-y-2">
+																						<div className="grid grid-cols-2 gap-2">
+																							<div>
+																								<Label className="text-xs">Column Label</Label>
+																								<Input
+																									value={col.label}
+																									onChange={(e) => {
+																										const newCols = [...(field.columns || [])];
+																										newCols[colIndex] = {
+																											...newCols[colIndex],
+																											label: e.target.value,
+																										};
+																										updateCheckoutField(index, {
+																											columns: newCols,
+																										});
+																									}}
+																									placeholder="e.g., Date"
+																								/>
+																							</div>
+																							<div>
+																								<Label className="text-xs">Column Type</Label>
+																								<Select
+																									value={col.type}
+																									onValueChange={(value: any) => {
+																										const newCols = [...(field.columns || [])];
+																										newCols[colIndex] = {
+																											...newCols[colIndex],
+																											type: value,
+																										};
+																										updateCheckoutField(index, {
+																											columns: newCols,
+																										});
+																									}}
+																								>
+																									<SelectTrigger>
+																										<SelectValue />
+																									</SelectTrigger>
+																									<SelectContent>
+																										<SelectItem value="text">Text</SelectItem>
+																										<SelectItem value="date">Date</SelectItem>
+																										<SelectItem value="time">Time</SelectItem>
+																										<SelectItem value="select">Dropdown</SelectItem>
+																									</SelectContent>
+																								</Select>
+																							</div>
+																						</div>
+																						<div>
+																							<Label className="text-xs">Placeholder</Label>
+																							<Input
+																								value={col.placeholder || ""}
+																								onChange={(e) => {
+																									const newCols = [...(field.columns || [])];
+																									newCols[colIndex] = {
+																										...newCols[colIndex],
+																										placeholder: e.target.value,
+																									};
+																									updateCheckoutField(index, {
+																										columns: newCols,
+																									});
+																								}}
+																								placeholder="Optional placeholder"
+																							/>
+																							<p className="text-muted-foreground mt-1 text-xs">
+																								Columns auto-fit to available width
+																							</p>
+																						</div>
+																						{col.type === "select" && (
+																							<div>
+																								<Label className="text-xs">
+																									Options (one per line)
+																								</Label>
+																								<Textarea
+																									value={col.options?.join("\n") || ""}
+																									onChange={(e) => {
+																										const newCols = [...(field.columns || [])];
+																										newCols[colIndex] = {
+																											...newCols[colIndex],
+																											options: e.target.value
+																												.split("\n")
+																												.filter(Boolean),
+																										};
+																										updateCheckoutField(index, {
+																											columns: newCols,
+																										});
+																									}}
+																									rows={2}
+																									placeholder="Option 1&#10;Option 2"
+																								/>
+																							</div>
+																						)}
+																					</div>
+																					<Button
+																						type="button"
+																						variant="ghost"
+																						size="icon"
+																						className="h-8 w-8"
+																						onClick={() => {
+																							const newCols = (field.columns || []).filter(
+																								(_, i) => i !== colIndex,
+																							);
+																							updateCheckoutField(index, {
+																								columns: newCols,
+																							});
+																						}}
+																						disabled={(field.columns?.length || 0) <= 1}
+																					>
+																						<X className="h-4 w-4" />
+																					</Button>
+																				</div>
+																			))}
+																		</div>
 																	</div>
 																)}
 																<div className="flex items-center space-x-2">
 																	<Checkbox
 																		id={`required-${index}`}
 																		checked={field.required}
+																		disabled={field.type === "message"}
 																		onCheckedChange={(checked) =>
 																			updateCheckoutField(index, {
 																				required: !!checked,
 																			})
 																		}
 																	/>
-																	<Label htmlFor={`required-${index}`}>Required field</Label>
+																	<Label htmlFor={`required-${index}`}>
+																		Required field
+																		{field.type === "message" && (
+																			<span className="text-muted-foreground ml-1">
+																				(messages cannot be required)
+																			</span>
+																		)}
+																	</Label>
 																</div>
 															</div>
-															<Button
-																type="button"
-																variant="ghost"
-																size="icon"
-																onClick={() => removeCheckoutField(index)}
-															>
-																<Trash2 className="h-4 w-4" />
-															</Button>
-														</div>
-													</CardContent>
-												</Card>
-											))}
+														</CardContent>
+													</Card>
+												);
+											})}
+											{/* Add Field Button at Bottom */}
+											<Button
+												type="button"
+												variant="outline"
+												className="hover:border-primary hover:bg-primary/5 h-12 w-full border-2 border-dashed"
+												onClick={addCheckoutField}
+											>
+												<Plus className="mr-2 h-4 w-4" />
+												Add Another Field
+											</Button>
 										</div>
 									)}
 								</div>
 
 								<div className="space-y-4 border-t pt-4">
+									{/* Delivery Cutoff Configuration */}
+									<div className="space-y-4 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
+										<div>
+											<h3 className="font-semibold">Delivery Cutoff Time (Optional)</h3>
+											<p className="text-muted-foreground text-sm">
+												Display a warning when orders are placed after a specific time
+											</p>
+										</div>
+										<div className="grid grid-cols-2 gap-4">
+											<div>
+												<Label htmlFor="cutoffTime">Cutoff Time</Label>
+												<TimePicker
+													value={formData.checkoutCutoffTime}
+													onChange={(time) =>
+														setFormData({
+															...formData,
+															checkoutCutoffTime: time,
+														})
+													}
+													placeholder="e.g., 16:00 for 4PM"
+													minuteStep={5}
+												/>
+												<p className="text-muted-foreground mt-1 text-xs">
+													Orders after this time show a warning (e.g., 16:00 for 4PM)
+												</p>
+											</div>
+											<div>
+												<Label htmlFor="cutoffDaysOffset">Delivery Days Offset</Label>
+												<Input
+													id="cutoffDaysOffset"
+													type="number"
+													min="1"
+													max="10"
+													value={formData.checkoutCutoffDaysOffset}
+													onChange={(e) =>
+														setFormData({
+															...formData,
+															checkoutCutoffDaysOffset: parseInt(e.target.value) || 2,
+														})
+													}
+												/>
+												<p className="text-muted-foreground mt-1 text-xs">
+													Days to add for late orders (default: 2)
+												</p>
+											</div>
+										</div>
+										<div>
+											<Label htmlFor="cutoffMessage">Cutoff Warning Message</Label>
+											<Textarea
+												id="cutoffMessage"
+												value={formData.checkoutCutoffMessage}
+												onChange={(e) =>
+													setFormData({
+														...formData,
+														checkoutCutoffMessage: e.target.value,
+													})
+												}
+												rows={2}
+												placeholder="e.g., Orders placed after 4PM will be processed tomorrow and delivered on {deliveryDate}"
+											/>
+											<p className="text-muted-foreground mt-1 text-xs">
+												Use {`{deliveryDate}`} to show the calculated delivery date
+											</p>
+										</div>
+									</div>
+
+									{/* Custom Payment Options */}
+									<div className="space-y-4">
+										<div className="flex items-center justify-between">
+											<div>
+												<Label>Custom Payment Options (Optional)</Label>
+												<p className="text-muted-foreground text-sm">
+													Add multiple payment methods for customers to choose from
+												</p>
+											</div>
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={() => {
+													setFormData({
+														...formData,
+														checkoutPaymentOptions: [
+															...formData.checkoutPaymentOptions,
+															{
+																id: `payment-${Date.now()}`,
+																title: `Payment Option ${formData.checkoutPaymentOptions.length + 1}`,
+																instructions: "",
+															},
+														],
+													});
+												}}
+											>
+												<Plus className="mr-1 h-3 w-3" />
+												Add Payment Option
+											</Button>
+										</div>
+										{formData.checkoutPaymentOptions.length === 0 ? (
+											<p className="text-muted-foreground text-sm">
+												No payment options yet. Add options like different GCash numbers or bank
+												accounts.
+											</p>
+										) : (
+											<div className="space-y-3">
+												{formData.checkoutPaymentOptions.map((option, index) => (
+													<Card key={option.id}>
+														<CardHeader className="pb-3">
+															<div className="flex items-center justify-between">
+																<Input
+																	value={option.title}
+																	onChange={(e) => {
+																		const newOptions = [...formData.checkoutPaymentOptions];
+																		newOptions[index] = {
+																			...newOptions[index],
+																			title: e.target.value,
+																		};
+																		setFormData({
+																			...formData,
+																			checkoutPaymentOptions: newOptions,
+																		});
+																	}}
+																	placeholder="e.g., GCash - Juan Dela Cruz"
+																	className="font-medium"
+																/>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	size="icon"
+																	onClick={() => {
+																		setFormData({
+																			...formData,
+																			checkoutPaymentOptions:
+																				formData.checkoutPaymentOptions.filter(
+																					(_, i) => i !== index,
+																				),
+																		});
+																	}}
+																	className="ml-2"
+																>
+																	<X className="h-4 w-4" />
+																</Button>
+															</div>
+														</CardHeader>
+														<CardContent className="space-y-3">
+															<div>
+																<Label className="text-xs">Payment Instructions</Label>
+																<Textarea
+																	value={option.instructions}
+																	onChange={(e) => {
+																		const newOptions = [...formData.checkoutPaymentOptions];
+																		newOptions[index] = {
+																			...newOptions[index],
+																			instructions: e.target.value,
+																		};
+																		setFormData({
+																			...formData,
+																			checkoutPaymentOptions: newOptions,
+																		});
+																	}}
+																	rows={2}
+																	placeholder="e.g., Send payment to 09XX-XXX-XXXX"
+																/>
+															</div>
+															<div>
+																<Label className="text-xs">
+																	QR Code / Payment Image (Optional)
+																</Label>
+																<div className="mt-2 flex items-start gap-3">
+																	{option.imageUrl && (
+																		<div className="relative">
+																			{/* eslint-disable-next-line @next/next/no-img-element */}
+																			<img
+																				src={option.imageUrl}
+																				alt="Payment QR"
+																				className="h-32 w-32 rounded border object-contain"
+																			/>
+																			<button
+																				type="button"
+																				onClick={() => {
+																					const newOptions = [...formData.checkoutPaymentOptions];
+																					newOptions[index] = {
+																						...newOptions[index],
+																						imageUrl: undefined,
+																					};
+																					setFormData({
+																						...formData,
+																						checkoutPaymentOptions: newOptions,
+																					});
+																				}}
+																				className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 rounded-full p-1"
+																			>
+																				<X className="h-3 w-3" />
+																			</button>
+																		</div>
+																	)}
+																	<div>
+																		<Input
+																			type="file"
+																			accept="image/*"
+																			onChange={async (e) => {
+																				const file = e.target.files?.[0];
+																				if (!file) return;
+
+																				setUploading(true);
+																				try {
+																					const formDataUpload = new FormData();
+																					formDataUpload.append("file", file);
+																					formDataUpload.append("type", "payment");
+
+																					const response = await fetch("/api/upload", {
+																						method: "POST",
+																						body: formDataUpload,
+																					});
+
+																					if (!response.ok) {
+																						throw new Error("Upload failed");
+																					}
+
+																					const { url } = await response.json();
+
+																					const newOptions = [...formData.checkoutPaymentOptions];
+																					newOptions[index] = {
+																						...newOptions[index],
+																						imageUrl: url,
+																					};
+																					setFormData({
+																						...formData,
+																						checkoutPaymentOptions: newOptions,
+																					});
+
+																					toast.success("Image uploaded");
+																				} catch {
+																					toast.error("Failed to upload image");
+																				} finally {
+																					setUploading(false);
+																					e.target.value = "";
+																				}
+																			}}
+																			disabled={uploading}
+																		/>
+																		<p className="text-muted-foreground mt-1 text-xs">
+																			Upload a QR code or payment instruction image
+																		</p>
+																	</div>
+																</div>
+															</div>
+														</CardContent>
+													</Card>
+												))}
+											</div>
+										)}
+									</div>
+
 									<div>
 										<Label htmlFor="termsMessage">Terms/Warning Message</Label>
 										<Textarea
