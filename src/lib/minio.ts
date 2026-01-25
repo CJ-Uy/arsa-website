@@ -25,6 +25,7 @@ export const minioClient = new Minio.Client({
 export const BUCKETS = {
 	PRODUCTS: process.env.MINIO_BUCKET_PRODUCTS || "products",
 	RECEIPTS: process.env.MINIO_BUCKET_RECEIPTS || "receipts",
+	EVENTS: process.env.MINIO_BUCKET_EVENTS || "events",
 };
 
 // Initialize buckets
@@ -35,9 +36,13 @@ export async function initializeBuckets() {
 			if (!exists) {
 				await minioClient.makeBucket(bucketName, "us-east-1");
 
-				// Set bucket policy to allow read access for product images and receipts
-				// Both need to be publicly readable for OCR processing
-				if (bucketName === BUCKETS.PRODUCTS || bucketName === BUCKETS.RECEIPTS) {
+				// Set bucket policy to allow read access for product images, receipts, and event images
+				// These need to be publicly readable for OCR processing and display
+				if (
+					bucketName === BUCKETS.PRODUCTS ||
+					bucketName === BUCKETS.RECEIPTS ||
+					bucketName === BUCKETS.EVENTS
+				) {
 					const policy = {
 						Version: "2012-10-17",
 						Statement: [

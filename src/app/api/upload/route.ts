@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
-		const type = formData.get("type") as string; // "product" or "receipt"
+		const type = formData.get("type") as string; // "product", "receipt", "event", or "payment"
 
 		if (!file) {
 			return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
 		const arrayBuffer = await file.arrayBuffer();
 		let buffer: Buffer = Buffer.from(arrayBuffer);
 
-		// Optimize images for product uploads (one-time optimization at upload)
-		if (type === "product") {
+		// Optimize images for product, event, and payment uploads (one-time optimization at upload)
+		if (type === "product" || type === "event" || type === "payment") {
 			try {
 				// Resize and optimize product images
 				// Max width: 1200px, maintain aspect ratio
@@ -59,15 +59,26 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Determine bucket and generate unique filename
-		const bucket = type === "product" ? BUCKETS.PRODUCTS : BUCKETS.RECEIPTS;
+		let bucket: string;
+		let fileName: string;
+		let contentType: string;
 
-		// Use original extension for receipts, .webp for products
 		const originalExtension = file.name.split(".").pop() || "jpg";
-		const fileName =
-			type === "product" ? `${randomUUID()}.webp` : `${randomUUID()}.${originalExtension}`;
 
-		// Upload to MinIO with correct content type
-		const contentType = type === "product" ? "image/webp" : file.type;
+		if (type === "product") {
+			bucket = BUCKETS.PRODUCTS;
+			fileName = `${randomUUID()}.webp`;
+			contentType = "image/webp";
+		} else if (type === "event" || type === "payment") {
+			bucket = BUCKETS.EVENTS;
+			fileName = `${randomUUID()}.webp`;
+			contentType = "image/webp";
+		} else {
+			// receipt or other types
+			bucket = BUCKETS.RECEIPTS;
+			fileName = `${randomUUID()}.${originalExtension}`;
+			contentType = file.type;
+		}
 		const url = await uploadFile(bucket, fileName, buffer, contentType);
 
 		return NextResponse.json({ url, fileName });

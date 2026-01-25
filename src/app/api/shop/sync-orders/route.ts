@@ -27,16 +27,21 @@ import { headers } from "next/headers";
 export async function POST(request: NextRequest) {
 	try {
 		// Check if Google Sheets is configured
-		if (!isGoogleSheetsConfigured()) {
+		const isConfigured = await isGoogleSheetsConfigured();
+		if (!isConfigured) {
 			return NextResponse.json(
 				{
 					success: false,
 					message:
-						"Google Sheets is not configured. Please set GOOGLE_SHEETS_CREDENTIALS and FLOWER_FEST_SPREADSHEET_ID environment variables.",
+						"Google Sheets is not configured. Please configure it in the admin settings or set GOOGLE_SHEETS_CREDENTIALS and SHOP_SPREADSHEET_ID environment variables.",
 				},
 				{ status: 503 },
 			);
 		}
+
+		// Get query parameters
+		const searchParams = request.nextUrl.searchParams;
+		const eventId = searchParams.get("eventId") || undefined;
 
 		// Check authorization
 		const headersList = await headers();
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
 
 		// If cron secret is provided and matches, allow sync
 		if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
-			const result = await syncOrdersToGoogleSheets();
+			const result = await syncOrdersToGoogleSheets(eventId);
 			return NextResponse.json(result, { status: result.success ? 200 : 500 });
 		}
 
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Perform sync
-		const result = await syncOrdersToGoogleSheets();
+		const result = await syncOrdersToGoogleSheets(eventId);
 		return NextResponse.json(result, { status: result.success ? 200 : 500 });
 	} catch (error) {
 		console.error("Sync endpoint error:", error);
@@ -86,7 +91,8 @@ export async function POST(request: NextRequest) {
 export async function GET() {
 	try {
 		// Check if Google Sheets is configured
-		if (!isGoogleSheetsConfigured()) {
+		const isConfigured = await isGoogleSheetsConfigured();
+		if (!isConfigured) {
 			return NextResponse.json({
 				configured: false,
 				message: "Google Sheets is not configured",
