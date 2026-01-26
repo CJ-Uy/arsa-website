@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/main/theme-toggle";
-import { Menu, X, ShoppingCart, User, LogOut, Settings, Link2 } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut, Settings, Link2, CalendarHeart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "@/lib/auth-client";
@@ -32,8 +32,13 @@ const navigation = [
 
 export function Header() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const [userRoles, setUserRoles] = useState<{ isShopAdmin: boolean; isRedirectsAdmin: boolean }>({
+	const [userRoles, setUserRoles] = useState<{
+		isShopAdmin: boolean;
+		isEventsAdmin: boolean;
+		isRedirectsAdmin: boolean;
+	}>({
 		isShopAdmin: false,
+		isEventsAdmin: false,
 		isRedirectsAdmin: false,
 	});
 	const pathname = usePathname();
@@ -155,7 +160,9 @@ export function Header() {
 											Cart
 										</Link>
 									</DropdownMenuItem>
-									{(userRoles.isShopAdmin || userRoles.isRedirectsAdmin) && (
+									{(userRoles.isShopAdmin ||
+										userRoles.isEventsAdmin ||
+										userRoles.isRedirectsAdmin) && (
 										<>
 											<DropdownMenuSeparator />
 											{userRoles.isShopAdmin && (
@@ -163,6 +170,14 @@ export function Header() {
 													<Link href="/admin" className="cursor-pointer">
 														<Settings className="mr-2 h-4 w-4" />
 														Shop Admin
+													</Link>
+												</DropdownMenuItem>
+											)}
+											{(userRoles.isEventsAdmin || userRoles.isShopAdmin) && (
+												<DropdownMenuItem asChild>
+													<Link href="/admin/events" className="cursor-pointer">
+														<CalendarHeart className="mr-2 h-4 w-4" />
+														Events Admin
 													</Link>
 												</DropdownMenuItem>
 											)}

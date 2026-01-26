@@ -17,7 +17,13 @@ export async function GET() {
 			where: { id: session.user.id },
 			select: {
 				isShopAdmin: true,
+				isEventsAdmin: true,
 				isRedirectsAdmin: true,
+				eventAdmins: {
+					select: {
+						eventId: true,
+					},
+				},
 			},
 		});
 
@@ -25,11 +31,17 @@ export async function GET() {
 			return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
 		}
 
+		// User is an events admin if they have the global flag OR are assigned to specific events
+		const hasEventAdminAccess = user.isEventsAdmin || user.eventAdmins.length > 0;
+
 		return NextResponse.json({
 			success: true,
 			roles: {
 				isShopAdmin: user.isShopAdmin,
+				isEventsAdmin: hasEventAdminAccess,
 				isRedirectsAdmin: user.isRedirectsAdmin,
+				// Include specific event IDs for fine-grained access control
+				eventAdminIds: user.eventAdmins.map((ea) => ea.eventId),
 			},
 		});
 	} catch (error) {

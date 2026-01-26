@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 import { toast } from "sonner";
 import { Package, Plus, Edit2, Trash2, Upload, X, RotateCw, GripVertical } from "lucide-react";
+import { ProductImageCarousel } from "@/components/features/product-image-carousel";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -49,10 +50,14 @@ type Product = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string | null;
+	isEventExclusive: boolean;
+	sizePricing: Record<string, number> | null;
+	eventProducts: Array<{ eventId: string; eventPrice: number | null }>;
 };
 
 type ProductsManagementProps = {
 	initialProducts: Product[];
+	availableEvents: Array<{ id: string; name: string }>;
 };
 
 type ProductFormData = {
@@ -67,9 +72,12 @@ type ProductFormData = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string;
+	isEventExclusive: boolean;
+	sizePricing: Record<string, number>;
+	assignedEvents: Array<{ eventId: string; eventPrice: number | null }>;
 };
 
-export function ProductsManagement({ initialProducts }: ProductsManagementProps) {
+export function ProductsManagement({ initialProducts, availableEvents }: ProductsManagementProps) {
 	const [products, setProducts] = useState<Product[]>(initialProducts);
 	const [showDialog, setShowDialog] = useState(false);
 	const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -105,6 +113,9 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 			isPreOrder: false,
 			availableSizes: [],
 			specialNote: "",
+			isEventExclusive: false,
+			sizePricing: {},
+			assignedEvents: [],
 		});
 		setEditingProduct(null);
 	};
@@ -124,6 +135,9 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 				isPreOrder: product.isPreOrder,
 				availableSizes: product.availableSizes,
 				specialNote: product.specialNote || "",
+				isEventExclusive: product.isEventExclusive,
+				sizePricing: product.sizePricing || {},
+				assignedEvents: product.eventProducts || [],
 			});
 		} else {
 			resetForm();
@@ -354,28 +368,25 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 					products.map((product) => (
 						<Card key={product.id}>
 							<CardHeader>
-								<div className="bg-muted relative mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg">
+								<div className="mb-4">
 									{product.imageUrls && product.imageUrls.length > 0 ? (
-										<>
-											<img
-												src={product.imageUrls[0]}
-												alt={product.name}
-												className="h-full w-full object-cover"
-											/>
-											{product.imageUrls.length > 1 && (
-												<div className="bg-background/80 absolute right-2 bottom-2 rounded-full px-2 py-1 text-xs backdrop-blur-sm">
-													+{product.imageUrls.length - 1}
-												</div>
-											)}
-										</>
+										<ProductImageCarousel
+											images={product.imageUrls}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={false}
+										/>
 									) : product.image ? (
-										<img
-											src={product.image}
-											alt={product.name}
-											className="h-full w-full object-cover"
+										<ProductImageCarousel
+											images={[product.image]}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={false}
 										/>
 									) : (
-										<Package className="text-muted-foreground h-16 w-16" />
+										<div className="bg-muted flex aspect-square items-center justify-center rounded-lg">
+											<Package className="text-muted-foreground h-16 w-16" />
+										</div>
 									)}
 								</div>
 								<div className="flex items-start justify-between">
@@ -449,6 +460,114 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								required
 							/>
 						</div>
+
+						{/* Event Assignment - Moved up for prominence */}
+						<Card className="border-primary/50 bg-primary/5">
+							<CardContent className="pt-6">
+								<div className="space-y-3">
+									<div className="flex items-center justify-between">
+										<div>
+											<Label className="text-base font-semibold">Event Assignment</Label>
+											<p className="text-muted-foreground mt-1 text-sm">
+												Assign this product to event tabs in the shop
+											</p>
+										</div>
+										<div className="flex items-center space-x-2">
+											<Switch
+												id="isEventExclusive"
+												checked={formData.isEventExclusive}
+												onCheckedChange={(checked) =>
+													setFormData({ ...formData, isEventExclusive: checked })
+												}
+											/>
+											<Label htmlFor="isEventExclusive" className="text-sm font-normal">
+												Event Exclusive
+											</Label>
+										</div>
+									</div>
+									<p className="text-muted-foreground text-xs">
+										{formData.isEventExclusive
+											? "⚠️ This product will ONLY appear under assigned event tabs"
+											: "ℹ️ This product will appear in All/categories AND assigned event tabs"}
+									</p>
+
+									{availableEvents.length > 0 ? (
+										<div className="space-y-2">
+											{availableEvents.map((event) => {
+												const isAssigned =
+													formData.assignedEvents?.some((e) => e.eventId === event.id) ?? false;
+												const eventData = formData.assignedEvents?.find(
+													(e) => e.eventId === event.id,
+												);
+
+												return (
+													<Card key={event.id} className="p-3">
+														<div className="flex items-start justify-between gap-3">
+															<div className="flex flex-1 items-center space-x-2">
+																<input
+																	type="checkbox"
+																	checked={isAssigned}
+																	onChange={(e) => {
+																		if (e.target.checked) {
+																			setFormData({
+																				...formData,
+																				assignedEvents: [
+																					...formData.assignedEvents,
+																					{ eventId: event.id, eventPrice: null },
+																				],
+																			});
+																		} else {
+																			setFormData({
+																				...formData,
+																				assignedEvents: formData.assignedEvents.filter(
+																					(ev) => ev.eventId !== event.id,
+																				),
+																			});
+																		}
+																	}}
+																/>
+																<Label className="cursor-pointer font-medium">{event.name}</Label>
+															</div>
+
+															{isAssigned && (
+																<div className="flex items-center gap-2">
+																	<Label className="text-xs whitespace-nowrap">Event Price:</Label>
+																	<Input
+																		type="number"
+																		step="0.01"
+																		placeholder={`₱${formData.price}`}
+																		className="w-24"
+																		value={eventData?.eventPrice || ""}
+																		onChange={(e) => {
+																			const value = e.target.value;
+																			setFormData({
+																				...formData,
+																				assignedEvents: formData.assignedEvents.map((ev) =>
+																					ev.eventId === event.id
+																						? {
+																								...ev,
+																								eventPrice: value ? parseFloat(value) : null,
+																							}
+																						: ev,
+																				),
+																			});
+																		}}
+																	/>
+																</div>
+															)}
+														</div>
+													</Card>
+												);
+											})}
+										</div>
+									) : (
+										<p className="text-muted-foreground text-sm italic">
+											No active events available. Create an event first in the Events page.
+										</p>
+									)}
+								</div>
+							</CardContent>
+						</Card>
 
 						<div>
 							<Label htmlFor="specialNote">Checkout Warning (Optional)</Label>
@@ -635,6 +754,47 @@ export function ProductsManagement({ initialProducts }: ProductsManagementProps)
 								))}
 							</div>
 						</div>
+
+						{/* Size-Specific Pricing */}
+						{formData.availableSizes.length > 0 && (
+							<div className="space-y-3">
+								<div className="flex items-center justify-between">
+									<Label>Size-Specific Pricing (Optional)</Label>
+									<p className="text-muted-foreground text-xs">
+										Leave empty to use base price for all sizes
+									</p>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									{formData.availableSizes.map((size) => (
+										<div key={size} className="flex items-center gap-2">
+											<Label className="w-12 text-sm">{size}:</Label>
+											<Input
+												type="number"
+												step="0.01"
+												placeholder={`₱${formData.price}`}
+												value={formData.sizePricing[size] || ""}
+												onChange={(e) => {
+													const value = e.target.value;
+													const newPricing = { ...formData.sizePricing };
+													if (value) {
+														newPricing[size] = parseFloat(value);
+													} else {
+														delete newPricing[size];
+													}
+													setFormData({
+														...formData,
+														sizePricing: newPricing,
+													});
+												}}
+											/>
+										</div>
+									))}
+								</div>
+								<p className="text-muted-foreground text-xs">
+									Shop will show price range (e.g., "₱100 - ₱200") if sizes have different prices
+								</p>
+							</div>
+						)}
 
 						{/* Pre-Order Mode */}
 						<div className="flex items-center space-x-2">

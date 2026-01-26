@@ -8,19 +8,53 @@ type Product = {
 	price: number;
 	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
-	stock: number;
+	imageUrls: string[];
+	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
+	isEventExclusive: boolean;
 	availableSizes: string[];
+	sizePricing: any;
+	specialNote: string | null;
+};
+
+type ShopEvent = {
+	id: string;
+	name: string;
+	slug: string;
 };
 
 export default async function AdminProductsPage() {
 	const productsRaw = await prisma.product.findMany({
+		include: {
+			eventProducts: {
+				include: {
+					event: {
+						select: {
+							id: true,
+							name: true,
+							slug: true,
+						},
+					},
+				},
+			},
+		},
 		orderBy: { createdAt: "desc" },
 	});
 
-	// Type cast to ensure category is properly typed
-	const products = productsRaw as Product[];
+	// Fetch all available events for the assignment dropdown
+	const events = await prisma.shopEvent.findMany({
+		where: { isActive: true },
+		select: {
+			id: true,
+			name: true,
+			slug: true,
+		},
+		orderBy: { name: "asc" },
+	});
 
-	return <ProductsManagement initialProducts={products} />;
+	// Type cast to ensure category is properly typed
+	const products = productsRaw as any[];
+
+	return <ProductsManagement initialProducts={products} availableEvents={events} />;
 }

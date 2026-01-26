@@ -3,6 +3,16 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
+// Helper to convert datetime-local input (assumed PHT) to UTC Date
+function parseManilaDatetime(datetimeStr: string): Date | null {
+	if (!datetimeStr) return null;
+	// datetime-local gives us format: "2024-01-15T14:30"
+	// We need to interpret this as Manila time (UTC+8)
+	// Append +08:00 timezone offset to parse as Manila time
+	const manilaDateStr = `${datetimeStr}:00+08:00`;
+	return new Date(manilaDateStr);
+}
+
 export async function getActiveBanner() {
 	try {
 		const banner = await prisma.banner.findFirst({
@@ -46,10 +56,13 @@ export async function createBanner(formData: FormData) {
 			});
 		}
 
+		// Parse deadline as Manila time (UTC+8)
+		const deadline = parseManilaDatetime(deadlineStr);
+
 		const banner = await prisma.banner.create({
 			data: {
 				message,
-				deadline: deadlineStr ? new Date(deadlineStr) : null,
+				deadline,
 				isActive,
 			},
 		});
@@ -83,11 +96,14 @@ export async function updateBanner(formData: FormData) {
 			});
 		}
 
+		// Parse deadline as Manila time (UTC+8)
+		const deadline = parseManilaDatetime(deadlineStr);
+
 		const banner = await prisma.banner.update({
 			where: { id },
 			data: {
 				message,
-				deadline: deadlineStr ? new Date(deadlineStr) : null,
+				deadline,
 				isActive,
 			},
 		});

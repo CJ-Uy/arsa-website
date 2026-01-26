@@ -1,0 +1,136 @@
+/* Flower Fest 2026 Custom Styles */
+
+.flower-fest-container {
+	position: relative;
+}
+
+/* Petal shapes */
+.petal {
+	border-radius: 50% 0 50% 0;
+	transform: rotate(45deg);
+}
+
+/* Falling animation for petals */
+@keyframes fall {
+	0% {
+		transform: translateY(-100px) rotate(0deg);
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(100vh) rotate(720deg);
+		opacity: 0;
+	}
+}
+
+.animate-fall {
+	animation: fall linear infinite;
+}
+
+/* Floating up animation for hearts */
+@keyframes float-up {
+	0% {
+		transform: translateY(0) translateX(0) scale(1);
+		opacity: 0;
+	}
+	10% {
+		opacity: 1;
+	}
+	90% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-100vh) translateX(var(--drift, 50px)) scale(0.5);
+		opacity: 0;
+	}
+}
+
+.animate-float-up {
+	animation: float-up ease-out infinite;
+	--drift: calc(-25px + 50px * var(--random, 0.5));
+}
+
+/* Sparkle animation */
+@keyframes sparkle {
+	0%,
+	100% {
+		opacity: 0;
+		transform: scale(0);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.animate-sparkle {
+	animation: sparkle ease-in-out infinite;
+}
+
+/* Card hover effects */
+.flower-fest-card {
+	transition: all 0.3s ease;
+}
+
+.flower-fest-card:hover {
+	transform: translateY(-4px);
+	box-shadow:
+		0 10px 40px -10px rgba(236, 72, 153, 0.3),
+		0 4px 20px -5px rgba(236, 72, 153, 0.2);
+}
+
+/* Section titles */
+.flower-fest-section-title {
+	position: relative;
+	padding-left: 0;
+}
+
+/* Header gradient animation */
+.flower-fest-header {
+	background-size: 200% 200%;
+	animation: gradient-shift 5s ease infinite;
+}
+
+@keyframes gradient-shift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+/* Button hover effects */
+.flower-fest-card button:hover:not(:disabled) {
+	transform: scale(1.02);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+	.animate-fall,
+	.animate-float-up,
+	.animate-sparkle,
+	.flower-fest-header {
+		animation: none;
+	}
+
+	.flower-fest-card:hover {
+		transform: none;
+	}
+
+	.petal,
+	.animate-float-up > svg {
+		display: none;
+	}
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+	/* Reduce number of animation elements on mobile */
+	.petal:nth-child(n + 10),
+	.animate-float-up:nth-child(n + 8) {
+		display: none;
+	}
+}

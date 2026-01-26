@@ -106,7 +106,28 @@ export function BannerManagement({ initialBanners }: BannerManagementProps) {
 
 	const formatDeadline = (deadline: Date | null) => {
 		if (!deadline) return "No deadline";
-		return new Date(deadline).toLocaleString();
+		// Format in Philippines timezone (UTC+8)
+		return (
+			new Date(deadline).toLocaleString("en-PH", {
+				timeZone: "Asia/Manila",
+				year: "numeric",
+				month: "short",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			}) + " (PHT)"
+		);
+	};
+
+	// Convert UTC date to datetime-local input value (in Manila timezone)
+	const formatDateTimeForInput = (date: Date | null) => {
+		if (!date) return "";
+		// Create a date string in Manila timezone using sv-SE locale (gives ISO-like format)
+		const manilaDate = new Date(date).toLocaleString("sv-SE", {
+			timeZone: "Asia/Manila",
+		});
+		// datetime-local expects format: YYYY-MM-DDTHH:MM
+		return manilaDate.replace(" ", "T").slice(0, 16);
 	};
 
 	return (
@@ -150,10 +171,11 @@ export function BannerManagement({ initialBanners }: BannerManagementProps) {
 								</p>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="deadline">Deadline (Optional)</Label>
+								<Label htmlFor="deadline">Deadline (Optional) - Philippines Time</Label>
 								<Input id="deadline" name="deadline" type="datetime-local" />
 								<p className="text-muted-foreground text-xs">
-									Set a deadline to show a countdown timer
+									Set a deadline to show a countdown timer. Time is in Philippine Standard Time
+									(UTC+8)
 								</p>
 							</div>
 							<div className="flex items-center space-x-2">
@@ -280,17 +302,16 @@ export function BannerManagement({ initialBanners }: BannerManagementProps) {
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="edit-deadline">Deadline (Optional)</Label>
+								<Label htmlFor="edit-deadline">Deadline (Optional) - Philippines Time</Label>
 								<Input
 									id="edit-deadline"
 									name="deadline"
 									type="datetime-local"
-									defaultValue={
-										selectedBanner.deadline
-											? new Date(selectedBanner.deadline).toISOString().slice(0, 16)
-											: ""
-									}
+									defaultValue={formatDateTimeForInput(selectedBanner.deadline)}
 								/>
+								<p className="text-muted-foreground text-xs">
+									Time is in Philippine Standard Time (UTC+8)
+								</p>
 							</div>
 							<div className="flex items-center space-x-2">
 								<Switch

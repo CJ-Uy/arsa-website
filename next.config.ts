@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
 	output: "standalone",
+	// External packages for server-side bundling (fixes pdfreader dependencies warning)
+	serverExternalPackages: ["rimraf", "fstream"],
 	eslint: {
 		// Allows production builds to successfully complete with ESLint errors.
 		ignoreDuringBuilds: true,

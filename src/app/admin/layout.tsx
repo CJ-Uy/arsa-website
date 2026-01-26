@@ -3,8 +3,11 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, ArrowLeft, Megaphone } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Unauthorized } from "./unauthorized";
+import { Suspense } from "react";
+import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({
@@ -15,18 +18,35 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 		return <Unauthorized isLoggedIn={false} />;
 	}
 
-	// Check if user is shop admin
+	// Check user permissions - shop admin OR events admin (global or event-specific)
 	const user = await prisma.user.findUnique({
 		where: { id: session.user.id },
-		select: { isShopAdmin: true },
+		select: {
+			isShopAdmin: true,
+			isEventsAdmin: true,
+			eventAdmins: {
+				select: { eventId: true },
+			},
+		},
 	});
 
-	if (!user?.isShopAdmin) {
+	const isShopAdmin = user?.isShopAdmin ?? false;
+	const isEventsAdmin = user?.isEventsAdmin ?? false;
+	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
+	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
+
+	// Must have at least one admin permission to access
+	if (!isShopAdmin && !canAccessEvents) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
 	return (
 		<div className="min-h-screen">
+			{/* Navigation Progress Bar */}
+			<Suspense fallback={null}>
+				<NavigationProgress />
+			</Suspense>
+
 			{/* Shop Header */}
 			<header className="border-b">
 				<div className="container mx-auto flex items-center justify-between px-4 py-4">
@@ -49,30 +69,31 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			{/* Admin Dashboard Content */}
 			<div className="container mx-auto px-4 py-10">
 				<div className="mb-8">
-					<h1 className="mb-2 text-4xl font-bold">Admin Dashboard</h1>
-					<p className="text-muted-foreground">Manage orders and products</p>
+					<h1 className="mb-2 text-4xl font-bold">
+						{isShopAdmin ? "Admin Dashboard" : "Events Dashboard"}
+					</h1>
+					<p className="text-muted-foreground">
+						{isShopAdmin ? "Manage orders, products, and events" : "Manage your assigned events"}
+					</p>
 				</div>
 
-				<div className="mb-8 flex gap-4">
-					<Link href="/admin/orders">
-						<Button variant="outline">
-							<ShoppingCart className="mr-2 h-4 w-4" />
-							Orders
-						</Button>
-					</Link>
-					<Link href="/admin/products">
-						<Button variant="outline">
-							<Package className="mr-2 h-4 w-4" />
-							Products
-						</Button>
-					</Link>
-					<Link href="/admin/banner">
-						<Button variant="outline">
-							<Megaphone className="mr-2 h-4 w-4" />
-							Banner
-						</Button>
-					</Link>
-				</div>
+				<AdminNav
+					items={[
+						...(isShopAdmin
+							? [
+									{ href: "/admin/orders", label: "Orders", iconKey: "orders" as const },
+									{ href: "/admin/products", label: "Products", iconKey: "products" as const },
+									{ href: "/admin/packages", label: "Packages", iconKey: "packages" as const },
+								]
+							: []),
+						...(canAccessEvents
+							? [{ href: "/admin/events", label: "Events", iconKey: "events" as const }]
+							: []),
+						...(isShopAdmin
+							? [{ href: "/admin/banner", label: "Banner", iconKey: "banner" as const }]
+							: []),
+					]}
+				/>
 
 				{children}
 			</div>
