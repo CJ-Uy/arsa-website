@@ -251,6 +251,7 @@ model OrderItem {
   price             Float // Store price at time of order
   size              String? // Selected size (for single products)
   packageSelections Json? // For packages: snapshot of size selections
+  purchaseCode      String? // Generated purchase code like "LLY_01-28-26-15:33_3" (comma-separated for qty > 1)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id])
@@ -308,9 +309,10 @@ model ShopEvent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products EventProduct[]
-  orders   Order[]
-  admins   EventAdmin[] // Users assigned as admins for this event
+  products   EventProduct[]
+  categories EventCategory[] // Categories for organizing products within the event
+  orders     Order[]
+  admins     EventAdmin[] // Users assigned as admins for this event
 
   @@index([isActive])
   @@index([startDate, endDate])
@@ -330,21 +332,43 @@ model EventAdmin {
   @@index([userId])
 }
 
+// Event-specific Categories for organizing products
+model EventCategory {
+  id           String   @id @default(uuid())
+  eventId      String
+  name         String // e.g., "Solo Flowers", "Mini Bouquets", "Cookies"
+  displayOrder Int      @default(0)
+  color        String? // Optional accent color for the category tab
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  event    ShopEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  products EventProduct[]
+
+  @@unique([eventId, name])
+  @@index([eventId])
+  @@index([eventId, displayOrder])
+}
+
 // Products/Packages assigned to events
 model EventProduct {
-  id         String  @id @default(uuid())
-  eventId    String
-  productId  String? // Regular product
-  packageId  String? // Or package
-  sortOrder  Int     @default(0)
-  eventPrice Float? // Override price for this event (optional)
+  id          String  @id @default(uuid())
+  eventId     String
+  productId   String? // Regular product
+  packageId   String? // Or package
+  sortOrder   Int     @default(0)
+  eventPrice  Float? // Override price for this event (optional)
+  productCode String? // Custom code like "LLY" for purchase code generation
+  categoryId  String? // Optional category assignment
 
-  event   ShopEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  product Product?  @relation(fields: [productId], references: [id])
-  package Package?  @relation(fields: [packageId], references: [id])
+  event    ShopEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  product  Product?        @relation(fields: [productId], references: [id])
+  package  Package?        @relation(fields: [packageId], references: [id])
+  category EventCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
   @@index([eventId, sortOrder])
+  @@index([categoryId])
 }
 
 // Shop Analytics - Click Tracking

@@ -501,6 +501,9 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 			);
 
 			if (result.success) {
+				// Notify cart counter that cart is now empty
+				window.dispatchEvent(new Event("cartUpdated"));
+
 				const successMessage = checkoutConfig?.confirmationMessage || "Order placed successfully!";
 				toast.success(successMessage);
 				router.push(`/shop/orders/${result.orderId}`);

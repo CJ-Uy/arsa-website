@@ -126,11 +126,29 @@ export async function exportOrdersData(eventId?: string) {
 						id: true,
 						name: true,
 						checkoutConfig: true,
+						products: {
+							select: {
+								productId: true,
+								packageId: true,
+								categoryId: true,
+								category: {
+									select: {
+										name: true,
+									},
+								},
+							},
+						},
 					},
 				},
 				orderItems: {
 					include: {
 						product: {
+							select: {
+								name: true,
+								description: true,
+							},
+						},
+						package: {
 							select: {
 								name: true,
 								description: true,
@@ -145,6 +163,14 @@ export async function exportOrdersData(eventId?: string) {
 		// Transform data for export - include ALL event data with proper column expansion
 		const exportData = orders.flatMap((order) =>
 			order.orderItems.map((item, index) => {
+				// Look up category from event products
+				const eventProduct = order.event?.products?.find(
+					(ep) =>
+						(item.productId && ep.productId === item.productId) ||
+						(item.packageId && ep.packageId === item.packageId),
+				);
+				const categoryName = eventProduct?.category?.name || "N/A";
+
 				const baseData: Record<string, any> = {
 					"Order ID": order.id,
 					"Order Date": new Date(order.createdAt).toLocaleString(),
@@ -153,10 +179,12 @@ export async function exportOrdersData(eventId?: string) {
 					"Last Name": order.user.lastName || "N/A",
 					"Customer Email": order.user.email,
 					"Student ID": order.user.studentId || "N/A",
-					"Product Name": item.product.name,
-					"Product Description": item.product.description,
+					"Product Name": item.product?.name || item.package?.name || "Unknown",
+					"Product Description": item.product?.description || item.package?.description || "",
+					Category: categoryName,
 					Size: item.size || "N/A",
 					Quantity: item.quantity,
+					"Purchase Code": item.purchaseCode || "N/A",
 					"Unit Price": item.price,
 					"Item Total": item.price * item.quantity,
 					// Only show order total on first item

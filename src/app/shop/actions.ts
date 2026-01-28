@@ -280,6 +280,47 @@ export async function addPackageToCart(
 	}
 }
 
+// Purchase Code Generation Helpers
+
+// Format timestamp as MM-DD-YY-HH:mm for purchase codes
+function formatPurchaseTimestamp(): string {
+	const now = new Date();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const day = String(now.getDate()).padStart(2, "0");
+	const year = String(now.getFullYear()).slice(-2);
+	const hours = String(now.getHours()).padStart(2, "0");
+	const minutes = String(now.getMinutes()).padStart(2, "0");
+	return `${month}-${day}-${year}-${hours}:${minutes}`;
+}
+
+// Generate purchase codes for an order item
+async function generatePurchaseCodes(
+	eventId: string,
+	productId: string | null,
+	packageId: string | null,
+	quantity: number,
+	productCode: string,
+): Promise<string> {
+	// Count existing items with purchase codes for this product/package in this event
+	const existingCount = await prisma.orderItem.count({
+		where: {
+			order: { eventId },
+			...(productId ? { productId } : { packageId }),
+			purchaseCode: { not: null },
+		},
+	});
+
+	const timestamp = formatPurchaseTimestamp();
+	const codes: string[] = [];
+
+	for (let i = 0; i < quantity; i++) {
+		const sequenceNum = existingCount + i + 1;
+		codes.push(`${productCode}_${timestamp}_${sequenceNum}`);
+	}
+
+	return codes.join(",");
+}
+
 // Order Actions
 export async function createOrder(
 	receiptImageUrl: string,
@@ -407,6 +448,70 @@ export async function createOrder(
 			}
 		}
 
+		// Get EventProduct records to check for productCodes (for purchase code generation)
+		const eventProductMap = new Map<string, string>(); // productId/packageId -> productCode
+
+		if (eventId) {
+			const eventProducts = await prisma.eventProduct.findMany({
+				where: {
+					eventId,
+					productCode: { not: null },
+				},
+				select: {
+					productId: true,
+					packageId: true,
+					productCode: true,
+				},
+			});
+
+			eventProducts.forEach((ep) => {
+				const key = ep.productId || ep.packageId;
+				if (key && ep.productCode) {
+					eventProductMap.set(key, ep.productCode);
+				}
+			});
+		}
+
+		// Build order items data with purchase codes
+		const orderItemsData = await Promise.all(
+			cartItems.map(async (item) => {
+				const itemId = item.productId || item.packageId;
+				const productCode = itemId ? eventProductMap.get(itemId) : null;
+
+				let purchaseCode: string | null = null;
+				if (productCode && eventId) {
+					purchaseCode = await generatePurchaseCodes(
+						eventId,
+						item.productId,
+						item.packageId,
+						item.quantity,
+						productCode,
+					);
+				}
+
+				if (item.product) {
+					return {
+						productId: item.productId,
+						quantity: item.quantity,
+						price: getProductPrice(item),
+						size: item.size,
+						purchaseCode,
+					};
+				} else {
+					// Package item
+					return {
+						packageId: item.packageId,
+						quantity: item.quantity,
+						price: item.package!.price,
+						packageSelections: item.packageSelections
+							? (item.packageSelections as Prisma.InputJsonValue)
+							: Prisma.JsonNull,
+						purchaseCode,
+					};
+				}
+			}),
+		);
+
 		// Create order with order items
 		const order = await prisma.order.create({
 			data: {
@@ -419,26 +524,7 @@ export async function createOrder(
 				eventId: eventId || null,
 				eventData: eventData ? (eventData as Prisma.InputJsonValue) : Prisma.JsonNull,
 				orderItems: {
-					create: cartItems.map((item) => {
-						if (item.product) {
-							return {
-								productId: item.productId,
-								quantity: item.quantity,
-								price: getProductPrice(item),
-								size: item.size,
-							};
-						} else {
-							// Package item
-							return {
-								packageId: item.packageId,
-								quantity: item.quantity,
-								price: item.package!.price,
-								packageSelections: item.packageSelections
-									? (item.packageSelections as Prisma.InputJsonValue)
-									: Prisma.JsonNull,
-							};
-						}
-					}),
+					create: orderItemsData,
 				},
 			},
 		});
@@ -597,6 +683,9 @@ export async function getActiveEvents() {
 								},
 							},
 							orderBy: { sortOrder: "asc" },
+						},
+						categories: {
+							orderBy: { displayOrder: "asc" },
 						},
 					},
 					orderBy: [{ isPriority: "desc" }, { tabOrder: "asc" }],

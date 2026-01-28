@@ -141,6 +141,18 @@ async function getOrdersForSync(eventId?: string) {
 					id: true,
 					name: true,
 					checkoutConfig: true,
+					products: {
+						select: {
+							productId: true,
+							packageId: true,
+							categoryId: true,
+							category: {
+								select: {
+									name: true,
+								},
+							},
+						},
+					},
 				},
 			},
 			orderItems: {
@@ -206,8 +218,10 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 		"Student ID",
 		"Product Name",
 		"Product Description",
+		"Category",
 		"Size",
 		"Quantity",
+		"Purchase Code",
 		"Unit Price",
 		"Item Total",
 		"Order Total",
@@ -287,6 +301,21 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 	// Convert orders to rows
 	const dataRows = orders.flatMap((order) =>
 		order.orderItems.map((item, index) => {
+			// Look up category from event products
+			const eventProducts = order.event?.products as
+				| {
+						productId: string | null;
+						packageId: string | null;
+						category: { name: string } | null;
+				  }[]
+				| undefined;
+			const eventProduct = eventProducts?.find(
+				(ep) =>
+					(item.productId && ep.productId === item.productId) ||
+					(item.packageId && ep.packageId === item.packageId),
+			);
+			const categoryName = eventProduct?.category?.name || "N/A";
+
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const baseData: Record<string, any> = {
 				"Order ID": order.id,
@@ -298,8 +327,10 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 				"Student ID": order.user.studentId || "N/A",
 				"Product Name": item.product?.name || item.package?.name || "Unknown",
 				"Product Description": item.product?.description || item.package?.description || "",
+				Category: categoryName,
 				Size: item.size || "N/A",
 				Quantity: item.quantity,
+				"Purchase Code": item.purchaseCode || "N/A",
 				"Unit Price": item.price,
 				"Item Total": item.price * item.quantity,
 				"Order Total": index === 0 ? order.totalAmount : "",

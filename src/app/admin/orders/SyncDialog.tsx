@@ -58,9 +58,11 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
 	const [spreadsheetId, setSpreadsheetId] = useState("");
 	const [sheetName, setSheetName] = useState("Orders");
 	const [savingSettings, setSavingSettings] = useState(false);
+	const [loadingSettings, setLoadingSettings] = useState(true);
 
 	useEffect(() => {
 		if (open) {
+			setLoadingSettings(true);
 			loadEvents();
 			checkSyncStatus();
 			loadSettings();
@@ -68,10 +70,15 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
 	}, [open]);
 
 	const loadSettings = async () => {
-		const result = await getGoogleSheetsSettings();
-		if (result.success && result.data) {
-			setSpreadsheetId(result.data.spreadsheetId);
-			setSheetName(result.data.sheetName);
+		setLoadingSettings(true);
+		try {
+			const result = await getGoogleSheetsSettings();
+			if (result.success && result.data) {
+				setSpreadsheetId(result.data.spreadsheetId);
+				setSheetName(result.data.sheetName);
+			}
+		} finally {
+			setLoadingSettings(false);
 		}
 	};
 
@@ -152,6 +159,24 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
 			setLoading(false);
 		}
 	};
+
+	// Show loading state while fetching settings
+	if (loadingSettings) {
+		return (
+			<Dialog open={open} onOpenChange={onOpenChange}>
+				<DialogContent className="sm:max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>Google Sheets Sync</DialogTitle>
+						<DialogDescription>Loading settings...</DialogDescription>
+					</DialogHeader>
+					<div className="flex flex-col items-center justify-center py-12">
+						<Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+						<p className="text-muted-foreground mt-4 text-sm">Loading saved settings...</p>
+					</div>
+				</DialogContent>
+			</Dialog>
+		);
+	}
 
 	if (!syncStatus?.configured) {
 		return (

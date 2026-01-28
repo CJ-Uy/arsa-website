@@ -32,15 +32,16 @@ import {
 	searchUsers,
 	addEventAdmin,
 	removeEventAdmin,
+	getEventAnalytics,
 	type EventFormData,
 	type CheckoutField,
 	type CheckoutConfig,
 	type ThemeConfig,
+	type AnalyticsTimeRange,
 } from "./actions";
 import { toast } from "sonner";
 import {
 	CalendarHeart,
-	Plus,
 	Edit2,
 	Trash2,
 	X,
@@ -69,6 +70,13 @@ import {
 	Info,
 	Eye,
 	EyeOff,
+	Plus,
+	TrendingUp,
+	BarChart3,
+	MousePointerClick,
+	ShoppingCart,
+	DollarSign,
+	Percent,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -82,6 +90,13 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	ChartConfig,
+	ChartContainer,
+	ChartTooltip,
+	ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 type Product = {
 	id: string;
@@ -101,12 +116,21 @@ type PackageType = {
 	imageUrls: string[];
 };
 
+type EventCategory = {
+	id: string;
+	name: string;
+	displayOrder: number;
+	color: string | null;
+};
+
 type EventProduct = {
 	id: string;
 	productId: string | null;
 	packageId: string | null;
 	sortOrder: number;
 	eventPrice: number | null;
+	productCode: string | null;
+	categoryId: string | null;
 	product: Product | null;
 	package: PackageType | null;
 };
@@ -142,6 +166,7 @@ type ShopEvent = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	checkoutConfig: CheckoutConfig | any;
 	products: EventProduct[];
+	categories: EventCategory[];
 	admins: EventAdmin[];
 	_count: {
 		orders: number;
@@ -160,6 +185,15 @@ type FormEventProduct = {
 	packageId?: string;
 	sortOrder: number;
 	eventPrice?: number;
+	productCode?: string;
+	categoryId?: string;
+};
+
+type FormEventCategory = {
+	id?: string;
+	name: string;
+	displayOrder: number;
+	color?: string;
 };
 
 type RepeaterColumn = {
@@ -335,6 +369,7 @@ type FormData = {
 	checkoutCutoffDaysOffset: number;
 	checkoutPaymentOptions: { id: string; title: string; instructions: string; imageUrl?: string }[];
 	eventProducts: FormEventProduct[];
+	eventCategories: FormEventCategory[];
 };
 
 const defaultThemeConfig: ThemeConfig = {
@@ -378,6 +413,27 @@ export function EventsManagement({
 	const [searchingUsers, setSearchingUsers] = useState(false);
 	const [addingAdmin, setAddingAdmin] = useState(false);
 
+	// Analytics state
+	const [analyticsTimeRange, setAnalyticsTimeRange] = useState<AnalyticsTimeRange>("7d");
+	const [analyticsData, setAnalyticsData] = useState<{
+		clicksData: { period: string; label: string; clicks: number }[];
+		purchasesData: {
+			period: string;
+			label: string;
+			orders: number;
+			revenue: number;
+			items: number;
+		}[];
+		totals: {
+			clicks: number;
+			orders: number;
+			revenue: number;
+			items: number;
+			conversionRate: number;
+		};
+	} | null>(null);
+	const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
 	const [formData, setFormData] = useState<FormData>({
 		name: "",
 		slug: "",
@@ -401,6 +457,7 @@ export function EventsManagement({
 		checkoutCutoffDaysOffset: 2,
 		checkoutPaymentOptions: [],
 		eventProducts: [],
+		eventCategories: [],
 	});
 
 	const resetForm = () => {
@@ -427,9 +484,32 @@ export function EventsManagement({
 			checkoutCutoffDaysOffset: 2,
 			checkoutPaymentOptions: [],
 			eventProducts: [],
+			eventCategories: [],
 		});
 		setEditingEvent(null);
 		setActiveTab("basic");
+		setAnalyticsData(null);
+	};
+
+	// Load analytics data for the current event
+	const loadAnalytics = async (eventId: string, range: AnalyticsTimeRange, eventStart?: Date) => {
+		setLoadingAnalytics(true);
+		try {
+			const result = await getEventAnalytics(eventId, range, eventStart);
+			if (result.success && result.analytics) {
+				setAnalyticsData({
+					clicksData: result.analytics.clicksData,
+					purchasesData: result.analytics.purchasesData,
+					totals: result.analytics.totals,
+				});
+			} else {
+				toast.error(result.message || "Failed to load analytics");
+			}
+		} catch (error) {
+			toast.error("Failed to load analytics");
+		} finally {
+			setLoadingAnalytics(false);
+		}
 	};
 
 	const handleOpenDialog = (event?: ShopEvent) => {
@@ -476,11 +556,19 @@ export function EventsManagement({
 				checkoutCutoffMessage: checkoutConfig?.cutoffMessage || "",
 				checkoutCutoffDaysOffset: checkoutConfig?.cutoffDaysOffset || 2,
 				checkoutPaymentOptions: checkoutConfig?.paymentOptions || [],
-				eventProducts: event.products.map((p) => ({
+				eventProducts: (event.products || []).map((p) => ({
 					productId: p.productId || undefined,
 					packageId: p.packageId || undefined,
 					sortOrder: p.sortOrder,
 					eventPrice: p.eventPrice || undefined,
+					productCode: p.productCode || undefined,
+					categoryId: p.categoryId || undefined,
+				})),
+				eventCategories: (event.categories || []).map((c) => ({
+					id: c.id,
+					name: c.name,
+					displayOrder: c.displayOrder,
+					color: c.color || undefined,
 				})),
 			});
 		} else {
@@ -628,6 +716,64 @@ export function EventsManagement({
 		}));
 	};
 
+	// Event Categories Management
+	const addEventCategory = () => {
+		setFormData((prev) => ({
+			...prev,
+			eventCategories: [
+				...prev.eventCategories,
+				{
+					name: "",
+					displayOrder: prev.eventCategories.length,
+				},
+			],
+		}));
+	};
+
+	const updateEventCategory = (
+		index: number,
+		field: keyof FormEventCategory,
+		value: string | number | undefined,
+	) => {
+		setFormData((prev) => ({
+			...prev,
+			eventCategories: prev.eventCategories.map((c, i) =>
+				i === index ? { ...c, [field]: value } : c,
+			),
+		}));
+	};
+
+	const removeEventCategory = (index: number) => {
+		const categoryToRemove = formData.eventCategories[index];
+		setFormData((prev) => ({
+			...prev,
+			eventCategories: prev.eventCategories.filter((_, i) => i !== index),
+			// Clear categoryId from products using this category
+			eventProducts: prev.eventProducts.map((p) =>
+				p.categoryId === categoryToRemove?.id ? { ...p, categoryId: undefined } : p,
+			),
+		}));
+	};
+
+	const moveEventCategory = (index: number, direction: "up" | "down") => {
+		const newIndex = direction === "up" ? index - 1 : index + 1;
+		if (newIndex < 0 || newIndex >= formData.eventCategories.length) return;
+
+		setFormData((prev) => {
+			const newCategories = [...prev.eventCategories];
+			// Swap the items
+			[newCategories[index], newCategories[newIndex]] = [
+				newCategories[newIndex],
+				newCategories[index],
+			];
+			// Update displayOrder to match new positions
+			return {
+				...prev,
+				eventCategories: newCategories.map((c, i) => ({ ...c, displayOrder: i })),
+			};
+		});
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
@@ -697,6 +843,7 @@ export function EventsManagement({
 				themeConfig: formData.themeConfig,
 				checkoutConfig,
 				products: formData.eventProducts.filter((p) => p.productId || p.packageId),
+				categories: formData.eventCategories.filter((c) => c.name.trim()),
 			};
 
 			const result = editingEvent
@@ -980,12 +1127,26 @@ export function EventsManagement({
 					</DialogHeader>
 
 					<form onSubmit={handleSubmit}>
-						<Tabs value={activeTab} onValueChange={setActiveTab}>
-							<TabsList className="grid w-full grid-cols-4">
+						<Tabs
+							value={activeTab}
+							onValueChange={(value) => {
+								setActiveTab(value);
+								// Load analytics when switching to analytics tab
+								if (value === "analytics" && editingEvent && !analyticsData) {
+									loadAnalytics(
+										editingEvent.id,
+										analyticsTimeRange,
+										new Date(editingEvent.startDate),
+									);
+								}
+							}}
+						>
+							<TabsList className={`grid w-full ${editingEvent ? "grid-cols-5" : "grid-cols-4"}`}>
 								<TabsTrigger value="basic">Basic Info</TabsTrigger>
 								<TabsTrigger value="products">Products</TabsTrigger>
 								<TabsTrigger value="theme">Theme</TabsTrigger>
 								<TabsTrigger value="checkout">Checkout</TabsTrigger>
+								{editingEvent && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
 							</TabsList>
 
 							{/* Basic Info Tab */}
@@ -1150,7 +1311,88 @@ export function EventsManagement({
 							</TabsContent>
 
 							{/* Products Tab */}
-							<TabsContent value="products" className="space-y-4 pt-4">
+							<TabsContent value="products" className="space-y-6 pt-4">
+								{/* Categories Section */}
+								<div className="rounded-lg border p-4">
+									<div className="mb-4 flex items-center justify-between">
+										<div>
+											<h3 className="font-semibold">Product Categories</h3>
+											<p className="text-muted-foreground text-sm">
+												Create categories to organize products. Use arrows to reorder - this order
+												will be shown in the shop.
+											</p>
+										</div>
+										<Button type="button" variant="outline" size="sm" onClick={addEventCategory}>
+											<Plus className="mr-2 h-4 w-4" />
+											Add Category
+										</Button>
+									</div>
+
+									{formData.eventCategories.length === 0 ? (
+										<p className="text-muted-foreground py-4 text-center text-sm">
+											No categories yet. Categories help organize products into tabs in the shop.
+										</p>
+									) : (
+										<div className="space-y-2">
+											{formData.eventCategories.map((category, index) => (
+												<div key={index} className="flex items-center gap-2 rounded border p-2">
+													{/* Reorder buttons */}
+													<div className="flex flex-col">
+														<Button
+															type="button"
+															variant="ghost"
+															size="icon"
+															className="h-5 w-5"
+															disabled={index === 0}
+															onClick={() => moveEventCategory(index, "up")}
+														>
+															<ChevronUp className="h-3 w-3" />
+														</Button>
+														<Button
+															type="button"
+															variant="ghost"
+															size="icon"
+															className="h-5 w-5"
+															disabled={index === formData.eventCategories.length - 1}
+															onClick={() => moveEventCategory(index, "down")}
+														>
+															<ChevronDown className="h-3 w-3" />
+														</Button>
+													</div>
+													<span className="text-muted-foreground w-6 text-center text-sm">
+														{index + 1}.
+													</span>
+													<Input
+														type="text"
+														placeholder="Category name"
+														value={category.name}
+														onChange={(e) => updateEventCategory(index, "name", e.target.value)}
+														className="flex-1"
+													/>
+													<div className="flex items-center gap-2">
+														<Label className="text-sm whitespace-nowrap">Color:</Label>
+														<Input
+															type="color"
+															value={category.color || "#6b7280"}
+															onChange={(e) => updateEventCategory(index, "color", e.target.value)}
+															className="h-8 w-12 cursor-pointer p-1"
+														/>
+													</div>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														onClick={() => removeEventCategory(index)}
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+
+								{/* Products Section */}
 								<div className="flex items-center justify-between">
 									<div>
 										<h3 className="font-semibold">Event Products & Packages</h3>
@@ -1232,6 +1474,64 @@ export function EventsManagement({
 															</SelectContent>
 														</Select>
 													)}
+												</div>
+												{formData.eventCategories.length > 0 && (
+													<div className="w-36">
+														<Select
+															value={item.categoryId || "none"}
+															onValueChange={(value) =>
+																updateEventProduct(
+																	index,
+																	"categoryId",
+																	value === "none" ? undefined : value,
+																)
+															}
+														>
+															<SelectTrigger className="h-9">
+																<SelectValue placeholder="Category" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="none">
+																	<span className="text-muted-foreground">No category</span>
+																</SelectItem>
+																{formData.eventCategories
+																	.filter((c) => c.name.trim())
+																	.map((category, catIndex) => (
+																		<SelectItem
+																			key={category.id || `new-${catIndex}`}
+																			value={category.id || category.name}
+																		>
+																			<div className="flex items-center gap-2">
+																				{category.color && (
+																					<span
+																						className="h-3 w-3 rounded-full"
+																						style={{ backgroundColor: category.color }}
+																					/>
+																				)}
+																				{category.name}
+																			</div>
+																		</SelectItem>
+																	))}
+															</SelectContent>
+														</Select>
+													</div>
+												)}
+												<div className="flex items-center gap-2">
+													<Label className="text-sm whitespace-nowrap">Code:</Label>
+													<Input
+														type="text"
+														placeholder="e.g., LLY"
+														value={item.productCode || ""}
+														onChange={(e) =>
+															updateEventProduct(
+																index,
+																"productCode",
+																e.target.value.toUpperCase() || undefined,
+															)
+														}
+														className="w-20 uppercase"
+														maxLength={10}
+													/>
 												</div>
 												<div className="flex items-center gap-2">
 													<Label className="text-sm whitespace-nowrap">Event Price:</Label>
@@ -2477,6 +2777,210 @@ export function EventsManagement({
 									</div>
 								</div>
 							</TabsContent>
+
+							{/* Analytics Tab (only shown when editing) */}
+							{editingEvent && (
+								<TabsContent value="analytics" className="space-y-4 pt-4">
+									{/* Time Range Selector */}
+									<div className="flex items-center justify-between">
+										<h3 className="text-lg font-semibold">Event Analytics</h3>
+										<div className="flex gap-2">
+											{(["24h", "7d", "30d", "all"] as const).map((range) => (
+												<Button
+													key={range}
+													type="button"
+													variant={analyticsTimeRange === range ? "default" : "outline"}
+													size="sm"
+													onClick={() => {
+														setAnalyticsTimeRange(range);
+														loadAnalytics(editingEvent.id, range, new Date(editingEvent.startDate));
+													}}
+												>
+													{range === "24h"
+														? "24 Hours"
+														: range === "7d"
+															? "7 Days"
+															: range === "30d"
+																? "30 Days"
+																: "All Time"}
+												</Button>
+											))}
+										</div>
+									</div>
+
+									{loadingAnalytics ? (
+										<div className="flex h-64 items-center justify-center">
+											<Loader2 className="h-8 w-8 animate-spin" />
+										</div>
+									) : analyticsData ? (
+										<>
+											{/* Stats Cards */}
+											<div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+												<Card>
+													<CardContent className="pt-6">
+														<div className="flex items-center gap-2">
+															<MousePointerClick className="text-muted-foreground h-4 w-4" />
+															<span className="text-muted-foreground text-sm">Total Clicks</span>
+														</div>
+														<p className="mt-2 text-2xl font-bold">
+															{analyticsData.totals.clicks.toLocaleString()}
+														</p>
+													</CardContent>
+												</Card>
+												<Card>
+													<CardContent className="pt-6">
+														<div className="flex items-center gap-2">
+															<ShoppingCart className="text-muted-foreground h-4 w-4" />
+															<span className="text-muted-foreground text-sm">Total Orders</span>
+														</div>
+														<p className="mt-2 text-2xl font-bold">
+															{analyticsData.totals.orders.toLocaleString()}
+														</p>
+													</CardContent>
+												</Card>
+												<Card>
+													<CardContent className="pt-6">
+														<div className="flex items-center gap-2">
+															<DollarSign className="text-muted-foreground h-4 w-4" />
+															<span className="text-muted-foreground text-sm">Revenue</span>
+														</div>
+														<p className="mt-2 text-2xl font-bold">
+															₱{analyticsData.totals.revenue.toLocaleString()}
+														</p>
+													</CardContent>
+												</Card>
+												<Card>
+													<CardContent className="pt-6">
+														<div className="flex items-center gap-2">
+															<Percent className="text-muted-foreground h-4 w-4" />
+															<span className="text-muted-foreground text-sm">Conversion Rate</span>
+														</div>
+														<p className="mt-2 text-2xl font-bold">
+															{analyticsData.totals.conversionRate}%
+														</p>
+													</CardContent>
+												</Card>
+											</div>
+
+											{/* Clicks Chart */}
+											<Card>
+												<CardHeader>
+													<CardTitle className="flex items-center gap-2 text-base">
+														<BarChart3 className="h-4 w-4" />
+														Page Views
+													</CardTitle>
+												</CardHeader>
+												<CardContent>
+													<ChartContainer
+														config={
+															{
+																clicks: {
+																	label: "Clicks",
+																	color: "hsl(var(--chart-1))",
+																},
+															} satisfies ChartConfig
+														}
+														className="h-[200px] w-full"
+													>
+														<LineChart
+															data={analyticsData.clicksData}
+															margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+														>
+															<CartesianGrid strokeDasharray="3 3" vertical={false} />
+															<XAxis
+																dataKey="label"
+																tickLine={false}
+																axisLine={false}
+																tickMargin={8}
+																fontSize={12}
+															/>
+															<YAxis
+																tickLine={false}
+																axisLine={false}
+																tickMargin={8}
+																fontSize={12}
+																allowDecimals={false}
+															/>
+															<ChartTooltip
+																cursor={false}
+																content={<ChartTooltipContent indicator="line" />}
+															/>
+															<Line
+																type="monotone"
+																dataKey="clicks"
+																stroke="var(--color-clicks)"
+																strokeWidth={2}
+																dot={{ r: 3, fill: "var(--color-clicks)" }}
+																activeDot={{ r: 5 }}
+															/>
+														</LineChart>
+													</ChartContainer>
+												</CardContent>
+											</Card>
+
+											{/* Orders & Revenue Chart */}
+											<Card>
+												<CardHeader>
+													<CardTitle className="flex items-center gap-2 text-base">
+														<TrendingUp className="h-4 w-4" />
+														Orders
+													</CardTitle>
+												</CardHeader>
+												<CardContent>
+													<ChartContainer
+														config={
+															{
+																orders: {
+																	label: "Orders",
+																	color: "hsl(var(--chart-2))",
+																},
+															} satisfies ChartConfig
+														}
+														className="h-[200px] w-full"
+													>
+														<LineChart
+															data={analyticsData.purchasesData}
+															margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+														>
+															<CartesianGrid strokeDasharray="3 3" vertical={false} />
+															<XAxis
+																dataKey="label"
+																tickLine={false}
+																axisLine={false}
+																tickMargin={8}
+																fontSize={12}
+															/>
+															<YAxis
+																tickLine={false}
+																axisLine={false}
+																tickMargin={8}
+																fontSize={12}
+																allowDecimals={false}
+															/>
+															<ChartTooltip
+																cursor={false}
+																content={<ChartTooltipContent indicator="line" />}
+															/>
+															<Line
+																type="monotone"
+																dataKey="orders"
+																stroke="var(--color-orders)"
+																strokeWidth={2}
+																dot={{ r: 3, fill: "var(--color-orders)" }}
+																activeDot={{ r: 5 }}
+															/>
+														</LineChart>
+													</ChartContainer>
+												</CardContent>
+											</Card>
+										</>
+									) : (
+										<div className="text-muted-foreground flex h-64 items-center justify-center">
+											<p>Click a time range to load analytics</p>
+										</div>
+									)}
+								</TabsContent>
+							)}
 						</Tabs>
 
 						<div className="mt-4 flex gap-2 border-t pt-4">

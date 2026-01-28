@@ -86,6 +86,10 @@ export type CheckoutConfig = {
 	additionalFields: CheckoutField[];
 	termsMessage?: string;
 	confirmationMessage?: string;
+	cutoffTime?: string;
+	cutoffMessage?: string;
+	cutoffDaysOffset?: number;
+	paymentOptions?: { id: string; title: string; instructions: string; imageUrl?: string }[];
 };
 
 export type ThemeConfig = {
@@ -102,6 +106,15 @@ export type EventProductInput = {
 	packageId?: string;
 	sortOrder: number;
 	eventPrice?: number;
+	productCode?: string;
+	categoryId?: string;
+};
+
+export type EventCategoryInput = {
+	id?: string;
+	name: string;
+	displayOrder: number;
+	color?: string;
 };
 
 export type EventFormData = {
@@ -120,9 +133,10 @@ export type EventFormData = {
 	themeConfig: ThemeConfig | null;
 	checkoutConfig: CheckoutConfig | null;
 	products: EventProductInput[];
+	categories: EventCategoryInput[];
 };
 
-// Get all events with their products
+// Get all events with their products and categories
 export async function getEvents() {
 	try {
 		const events = await prisma.shopEvent.findMany({
@@ -133,6 +147,9 @@ export async function getEvents() {
 						package: true,
 					},
 					orderBy: { sortOrder: "asc" },
+				},
+				categories: {
+					orderBy: { displayOrder: "asc" },
 				},
 				_count: {
 					select: { orders: true },
@@ -217,35 +234,71 @@ export async function createEvent(data: EventFormData) {
 			return { success: false, message: "An event with this slug already exists" };
 		}
 
-		const event = await prisma.shopEvent.create({
-			data: {
-				name: data.name,
-				slug: data.slug,
-				description: data.description,
-				heroImage: data.heroImage || null,
-				heroImageUrls: data.heroImageUrls,
-				isActive: data.isActive,
-				isPriority: data.isPriority,
-				tabOrder: data.tabOrder,
-				tabLabel: data.tabLabel || null,
-				startDate: new Date(data.startDate),
-				endDate: new Date(data.endDate),
-				componentPath: data.componentPath || null,
-				themeConfig: data.themeConfig
-					? (data.themeConfig as Prisma.InputJsonValue)
-					: Prisma.JsonNull,
-				checkoutConfig: data.checkoutConfig
-					? (data.checkoutConfig as Prisma.InputJsonValue)
-					: Prisma.JsonNull,
-				products: {
-					create: data.products.map((p) => ({
-						productId: p.productId || null,
-						packageId: p.packageId || null,
-						sortOrder: p.sortOrder,
-						eventPrice: p.eventPrice || null,
-					})),
+		// Use transaction to create event with categories, then products
+		const event = await prisma.$transaction(async (tx) => {
+			// Create event with categories first
+			const newEvent = await tx.shopEvent.create({
+				data: {
+					name: data.name,
+					slug: data.slug,
+					description: data.description,
+					heroImage: data.heroImage || null,
+					heroImageUrls: data.heroImageUrls,
+					isActive: data.isActive,
+					isPriority: data.isPriority,
+					tabOrder: data.tabOrder,
+					tabLabel: data.tabLabel || null,
+					startDate: new Date(data.startDate),
+					endDate: new Date(data.endDate),
+					componentPath: data.componentPath || null,
+					themeConfig: data.themeConfig
+						? (data.themeConfig as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
+					checkoutConfig: data.checkoutConfig
+						? (data.checkoutConfig as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
+					categories: {
+						create: data.categories.map((c) => ({
+							name: c.name,
+							displayOrder: c.displayOrder,
+							color: c.color || null,
+						})),
+					},
 				},
-			},
+				include: {
+					categories: true,
+				},
+			});
+
+			// Build category name to ID mapping for products
+			const categoryNameToId = new Map<string, string>();
+			newEvent.categories.forEach((cat) => {
+				categoryNameToId.set(cat.name, cat.id);
+			});
+
+			// Create products with category references
+			if (data.products.length > 0) {
+				await tx.eventProduct.createMany({
+					data: data.products.map((p) => {
+						// Resolve categoryId - could be a name (for new categories)
+						let resolvedCategoryId: string | null = null;
+						if (p.categoryId) {
+							resolvedCategoryId = categoryNameToId.get(p.categoryId) || null;
+						}
+						return {
+							eventId: newEvent.id,
+							productId: p.productId || null,
+							packageId: p.packageId || null,
+							sortOrder: p.sortOrder,
+							eventPrice: p.eventPrice || null,
+							productCode: p.productCode || null,
+							categoryId: resolvedCategoryId,
+						};
+					}),
+				});
+			}
+
+			return newEvent;
 		});
 
 		// Invalidate cache
@@ -275,39 +328,85 @@ export async function updateEvent(id: string, data: EventFormData) {
 			return { success: false, message: "An event with this slug already exists" };
 		}
 
-		// Delete existing event products (will be recreated)
-		await prisma.eventProduct.deleteMany({ where: { eventId: id } });
+		// Use transaction to update event, categories, and products
+		const event = await prisma.$transaction(async (tx) => {
+			// Delete existing products and categories (will be recreated)
+			await tx.eventProduct.deleteMany({ where: { eventId: id } });
+			await tx.eventCategory.deleteMany({ where: { eventId: id } });
 
-		const event = await prisma.shopEvent.update({
-			where: { id },
-			data: {
-				name: data.name,
-				slug: data.slug,
-				description: data.description,
-				heroImage: data.heroImage || null,
-				heroImageUrls: data.heroImageUrls,
-				isActive: data.isActive,
-				isPriority: data.isPriority,
-				tabOrder: data.tabOrder,
-				tabLabel: data.tabLabel || null,
-				startDate: new Date(data.startDate),
-				endDate: new Date(data.endDate),
-				componentPath: data.componentPath || null,
-				themeConfig: data.themeConfig
-					? (data.themeConfig as Prisma.InputJsonValue)
-					: Prisma.JsonNull,
-				checkoutConfig: data.checkoutConfig
-					? (data.checkoutConfig as Prisma.InputJsonValue)
-					: Prisma.JsonNull,
-				products: {
-					create: data.products.map((p) => ({
-						productId: p.productId || null,
-						packageId: p.packageId || null,
-						sortOrder: p.sortOrder,
-						eventPrice: p.eventPrice || null,
-					})),
+			// Update event and create categories
+			const updatedEvent = await tx.shopEvent.update({
+				where: { id },
+				data: {
+					name: data.name,
+					slug: data.slug,
+					description: data.description,
+					heroImage: data.heroImage || null,
+					heroImageUrls: data.heroImageUrls,
+					isActive: data.isActive,
+					isPriority: data.isPriority,
+					tabOrder: data.tabOrder,
+					tabLabel: data.tabLabel || null,
+					startDate: new Date(data.startDate),
+					endDate: new Date(data.endDate),
+					componentPath: data.componentPath || null,
+					themeConfig: data.themeConfig
+						? (data.themeConfig as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
+					checkoutConfig: data.checkoutConfig
+						? (data.checkoutConfig as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
+					categories: {
+						create: data.categories.map((c) => ({
+							name: c.name,
+							displayOrder: c.displayOrder,
+							color: c.color || null,
+						})),
+					},
 				},
-			},
+				include: {
+					categories: true,
+				},
+			});
+
+			// Build category name to ID mapping for products
+			// Map both by name and by old ID (in case category already existed)
+			const categoryNameToId = new Map<string, string>();
+			updatedEvent.categories.forEach((cat) => {
+				categoryNameToId.set(cat.name, cat.id);
+			});
+
+			// Also map old category IDs if they were provided in the input
+			data.categories.forEach((inputCat, index) => {
+				if (inputCat.id && updatedEvent.categories[index]) {
+					categoryNameToId.set(inputCat.id, updatedEvent.categories[index].id);
+				}
+			});
+
+			// Create products with category references
+			if (data.products.length > 0) {
+				await tx.eventProduct.createMany({
+					data: data.products.map((p) => {
+						// Resolve categoryId - could be a name, an old ID, or a new ID
+						let resolvedCategoryId: string | null = null;
+						if (p.categoryId) {
+							// Try to find in our mapping (handles both name and old ID)
+							resolvedCategoryId = categoryNameToId.get(p.categoryId) || null;
+						}
+						return {
+							eventId: id,
+							productId: p.productId || null,
+							packageId: p.packageId || null,
+							sortOrder: p.sortOrder,
+							eventPrice: p.eventPrice || null,
+							productCode: p.productCode || null,
+							categoryId: resolvedCategoryId,
+						};
+					}),
+				});
+			}
+
+			return updatedEvent;
 		});
 
 		// Invalidate cache
@@ -340,71 +439,173 @@ export async function deleteEvent(id: string) {
 	}
 }
 
-// Get analytics data for events
-export async function getEventAnalytics(eventId?: string, days: number = 30) {
+// Get analytics data for events with different time ranges
+export type AnalyticsTimeRange = "24h" | "7d" | "30d" | "all";
+
+export async function getEventAnalytics(
+	eventId: string,
+	timeRange: AnalyticsTimeRange = "7d",
+	eventStartDate?: Date,
+	eventEndDate?: Date,
+) {
 	try {
 		const authResult = await verifyEventsAdminAccess();
 		if (!authResult.authorized) {
 			return { success: false, message: authResult.message };
 		}
 
-		const startDate = new Date();
-		startDate.setDate(startDate.getDate() - days);
+		// Calculate date range
+		let startDate: Date;
+		const endDate = new Date();
 
-		// Get click data
-		const clicks = await prisma.shopClick.groupBy({
-			by: ["clickedAt"],
+		switch (timeRange) {
+			case "24h":
+				startDate = new Date();
+				startDate.setHours(startDate.getHours() - 24);
+				break;
+			case "7d":
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 7);
+				break;
+			case "30d":
+				startDate = new Date();
+				startDate.setDate(startDate.getDate() - 30);
+				break;
+			case "all":
+				// Use event start date if provided, otherwise 1 year ago
+				startDate = eventStartDate || new Date();
+				if (!eventStartDate) {
+					startDate.setFullYear(startDate.getFullYear() - 1);
+				}
+				break;
+		}
+
+		// Get raw click data within the range
+		const rawClicks = await prisma.shopClick.findMany({
 			where: {
-				clickedAt: { gte: startDate },
-				...(eventId && { eventId }),
+				clickedAt: { gte: startDate, lte: endDate },
+				eventId,
 			},
-			_count: true,
+			select: {
+				clickedAt: true,
+			},
+			orderBy: { clickedAt: "asc" },
 		});
 
-		// Get purchase data
-		const purchases = await prisma.shopPurchase.groupBy({
-			by: ["purchasedAt"],
+		// Get raw purchase data within the range
+		const rawPurchases = await prisma.shopPurchase.findMany({
 			where: {
-				purchasedAt: { gte: startDate },
-				...(eventId && { eventId }),
+				purchasedAt: { gte: startDate, lte: endDate },
+				eventId,
 			},
-			_count: true,
-			_sum: {
+			select: {
+				purchasedAt: true,
 				totalAmount: true,
 				itemCount: true,
 			},
+			orderBy: { purchasedAt: "asc" },
 		});
 
-		// Get totals
-		const totalClicks = await prisma.shopClick.count({
-			where: {
-				clickedAt: { gte: startDate },
-				...(eventId && { eventId }),
-			},
-		});
+		// Group data by appropriate interval (hourly for 24h, daily for others)
+		const isHourly = timeRange === "24h";
+		const clicksByPeriod: Record<string, number> = {};
+		const purchasesByPeriod: Record<string, { count: number; revenue: number; items: number }> = {};
 
-		const purchaseStats = await prisma.shopPurchase.aggregate({
-			where: {
-				purchasedAt: { gte: startDate },
-				...(eventId && { eventId }),
-			},
-			_count: true,
-			_sum: {
-				totalAmount: true,
-				itemCount: true,
-			},
-		});
+		// Initialize periods
+		const periods: string[] = [];
+		const current = new Date(startDate);
+		while (current <= endDate) {
+			const key = isHourly
+				? current.toISOString().slice(0, 13) // YYYY-MM-DDTHH
+				: current.toISOString().slice(0, 10); // YYYY-MM-DD
+			periods.push(key);
+			clicksByPeriod[key] = 0;
+			purchasesByPeriod[key] = { count: 0, revenue: 0, items: 0 };
+
+			if (isHourly) {
+				current.setHours(current.getHours() + 1);
+			} else {
+				current.setDate(current.getDate() + 1);
+			}
+		}
+
+		// Aggregate click data
+		for (const click of rawClicks) {
+			const key = isHourly
+				? click.clickedAt.toISOString().slice(0, 13)
+				: click.clickedAt.toISOString().slice(0, 10);
+			if (clicksByPeriod[key] !== undefined) {
+				clicksByPeriod[key]++;
+			}
+		}
+
+		// Aggregate purchase data
+		for (const purchase of rawPurchases) {
+			const key = isHourly
+				? purchase.purchasedAt.toISOString().slice(0, 13)
+				: purchase.purchasedAt.toISOString().slice(0, 10);
+			if (purchasesByPeriod[key] !== undefined) {
+				purchasesByPeriod[key].count++;
+				purchasesByPeriod[key].revenue += purchase.totalAmount;
+				purchasesByPeriod[key].items += purchase.itemCount;
+			}
+		}
+
+		// Convert to arrays for charting
+		const clicksData = periods.map((period) => ({
+			period,
+			label: isHourly
+				? new Date(period + ":00:00Z").toLocaleTimeString("en-US", {
+						hour: "numeric",
+						hour12: true,
+					})
+				: new Date(period + "T00:00:00Z").toLocaleDateString("en-US", {
+						month: "short",
+						day: "numeric",
+					}),
+			clicks: clicksByPeriod[period] || 0,
+		}));
+
+		const purchasesData = periods.map((period) => ({
+			period,
+			label: isHourly
+				? new Date(period + ":00:00Z").toLocaleTimeString("en-US", {
+						hour: "numeric",
+						hour12: true,
+					})
+				: new Date(period + "T00:00:00Z").toLocaleDateString("en-US", {
+						month: "short",
+						day: "numeric",
+					}),
+			orders: purchasesByPeriod[period]?.count || 0,
+			revenue: purchasesByPeriod[period]?.revenue || 0,
+			items: purchasesByPeriod[period]?.items || 0,
+		}));
+
+		// Calculate totals
+		const totalClicks = rawClicks.length;
+		const totalOrders = rawPurchases.length;
+		const totalRevenue = rawPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
+		const totalItems = rawPurchases.reduce((sum, p) => sum + p.itemCount, 0);
+
+		// Calculate conversion rate (purchases / clicks * 100)
+		const conversionRate =
+			totalClicks > 0 ? ((totalOrders / totalClicks) * 100).toFixed(2) : "0.00";
 
 		return {
 			success: true,
 			analytics: {
-				clicks,
-				purchases,
+				timeRange,
+				startDate: startDate.toISOString(),
+				endDate: endDate.toISOString(),
+				clicksData,
+				purchasesData,
 				totals: {
 					clicks: totalClicks,
-					orders: purchaseStats._count,
-					revenue: purchaseStats._sum.totalAmount || 0,
-					items: purchaseStats._sum.itemCount || 0,
+					orders: totalOrders,
+					revenue: totalRevenue,
+					items: totalItems,
+					conversionRate: parseFloat(conversionRate),
 				},
 			},
 		};

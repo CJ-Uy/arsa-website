@@ -157,12 +157,20 @@ type PackageType = {
 	pools: PackagePool[];
 };
 
+type EventCategory = {
+	id: string;
+	name: string;
+	displayOrder: number;
+	color: string | null;
+};
+
 type EventProduct = {
 	id: string;
 	productId: string | null;
 	packageId: string | null;
 	sortOrder: number;
 	eventPrice: number | null;
+	categoryId: string | null;
 	product: Product | null;
 	package: PackageType | null;
 };
@@ -192,6 +200,7 @@ type ShopEvent = {
 	componentPath: string | null;
 	themeConfig: ThemeConfig | null;
 	products: EventProduct[];
+	categories: EventCategory[];
 };
 
 type CartItem = {
@@ -224,10 +233,11 @@ export function ShopClient({
 	const defaultTab = priorityEvent ? `event-${priorityEvent.slug}` : "all";
 
 	const [selectedCategory, setSelectedCategory] = useState<string>(defaultTab);
+	const [selectedEventCategory, setSelectedEventCategory] = useState<string>("all");
 	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "price-asc" | "price-desc">(
-		"name-asc",
-	);
+	const [sortBy, setSortBy] = useState<
+		"default" | "name-asc" | "name-desc" | "price-asc" | "price-desc"
+	>("default");
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [loadingProducts, setLoadingProducts] = useState<Record<string, boolean>>({});
 	const [loadingCartItems, setLoadingCartItems] = useState<Record<string, boolean>>({});
@@ -293,13 +303,62 @@ export function ShopClient({
 
 		// If viewing an event, show event products
 		if (activeEvent) {
-			// Show products assigned to this event
-			filtered = products.filter((product) => {
-				const hasEventAssignment = product.eventProducts?.some(
-					(ep) => ep.eventId === activeEvent.id,
+			// Get event products with their category info
+			const eventProductsWithCategory = activeEvent.products
+				.filter((ep) => ep.product)
+				.map((ep) => ({
+					product: ep.product!,
+					categoryId: ep.categoryId,
+					sortOrder: ep.sortOrder,
+					// Get event price for sorting
+					eventPrice: ep.eventPrice,
+				}));
+
+			// Filter by selected event category
+			let filteredEventProducts = eventProductsWithCategory;
+			if (selectedEventCategory !== "all") {
+				filteredEventProducts = eventProductsWithCategory.filter(
+					(ep) => ep.categoryId === selectedEventCategory,
 				);
-				return hasEventAssignment;
-			});
+			}
+
+			// Apply sorting based on user selection
+			if (sortBy === "default") {
+				// Default: categorized products first (by category displayOrder), then uncategorized
+				filteredEventProducts = filteredEventProducts.sort((a, b) => {
+					const aCatOrder = a.categoryId
+						? (activeEvent.categories.find((c) => c.id === a.categoryId)?.displayOrder ?? 999)
+						: 1000;
+					const bCatOrder = b.categoryId
+						? (activeEvent.categories.find((c) => c.id === b.categoryId)?.displayOrder ?? 999)
+						: 1000;
+
+					if (aCatOrder !== bCatOrder) return aCatOrder - bCatOrder;
+					return a.sortOrder - b.sortOrder;
+				});
+			} else {
+				// User-selected sorting (price or name)
+				filteredEventProducts = [...filteredEventProducts].sort((a, b) => {
+					// Use event price if available, otherwise base price
+					const aPrice = a.eventPrice ?? a.product.price;
+					const bPrice = b.eventPrice ?? b.product.price;
+
+					switch (sortBy) {
+						case "name-asc":
+							return a.product.name.localeCompare(b.product.name);
+						case "name-desc":
+							return b.product.name.localeCompare(a.product.name);
+						case "price-asc":
+							return aPrice - bPrice;
+						case "price-desc":
+							return bPrice - aPrice;
+						default:
+							return 0;
+					}
+				});
+			}
+
+			filtered = filteredEventProducts.map((ep) => ep.product);
 		} else {
 			// Regular category tabs (All, Arsari-Sari, Other)
 			// Filter out event-exclusive products
@@ -319,37 +378,79 @@ export function ShopClient({
 			);
 		}
 
-		// Apply sorting
-		filtered = [...filtered].sort((a, b) => {
-			switch (sortBy) {
-				case "name-asc":
-					return a.name.localeCompare(b.name);
-				case "name-desc":
-					return b.name.localeCompare(a.name);
-				case "price-asc":
-					return a.price - b.price;
-				case "price-desc":
-					return b.price - a.price;
-				default:
-					return 0;
-			}
-		});
+		// Apply sorting for non-event tabs (or when user has selected a sort for events, handled above)
+		if (!activeEvent) {
+			filtered = [...filtered].sort((a, b) => {
+				switch (sortBy) {
+					case "name-asc":
+						return a.name.localeCompare(b.name);
+					case "name-desc":
+						return b.name.localeCompare(a.name);
+					case "price-asc":
+						return a.price - b.price;
+					case "price-desc":
+						return b.price - a.price;
+					case "default":
+					default:
+						return 0; // Keep original order
+				}
+			});
+		}
 
 		return filtered;
-	}, [selectedCategory, products, searchQuery, sortBy, activeEvent]);
+	}, [selectedCategory, selectedEventCategory, products, searchQuery, sortBy, activeEvent]);
 
 	// Filtered packages - show in events or in "all" tab
 	const filteredPackages = useMemo(() => {
 		if (activeEvent) {
-			return activeEvent.products
-				.filter((ep) => ep.package)
-				.map((ep) => ep.package!)
-				.filter(Boolean);
+			let eventPackages = activeEvent.products.filter((ep) => ep.package);
+
+			// Filter by selected event category
+			if (selectedEventCategory !== "all") {
+				eventPackages = eventPackages.filter((ep) => ep.categoryId === selectedEventCategory);
+			}
+
+			// Apply sorting based on user selection
+			if (sortBy === "default") {
+				// Default: Sort by category displayOrder, then sortOrder
+				eventPackages = eventPackages.sort((a, b) => {
+					const aCatOrder = a.categoryId
+						? (activeEvent.categories.find((c) => c.id === a.categoryId)?.displayOrder ?? 999)
+						: 1000;
+					const bCatOrder = b.categoryId
+						? (activeEvent.categories.find((c) => c.id === b.categoryId)?.displayOrder ?? 999)
+						: 1000;
+
+					if (aCatOrder !== bCatOrder) return aCatOrder - bCatOrder;
+					return a.sortOrder - b.sortOrder;
+				});
+			} else {
+				// User-selected sorting
+				eventPackages = [...eventPackages].sort((a, b) => {
+					const aPrice = a.eventPrice ?? a.package!.price;
+					const bPrice = b.eventPrice ?? b.package!.price;
+
+					switch (sortBy) {
+						case "name-asc":
+							return a.package!.name.localeCompare(b.package!.name);
+						case "name-desc":
+							return b.package!.name.localeCompare(a.package!.name);
+						case "price-asc":
+							return aPrice - bPrice;
+						case "price-desc":
+							return bPrice - aPrice;
+						default:
+							return 0;
+					}
+				});
+			}
+
+			return eventPackages.map((ep) => ep.package!).filter(Boolean);
 		}
 
 		// Show all packages in the "all" category tab
 		if (selectedCategory === "all") {
-			let filtered = packages;
+			let filtered = [...packages];
 
 			if (searchQuery.trim()) {
 				const query = searchQuery.toLowerCase();
@@ -359,11 +460,28 @@ export function ShopClient({
 				);
 			}
 
+			// Apply sorting for non-event packages
+			filtered.sort((a, b) => {
+				switch (sortBy) {
+					case "name-asc":
+						return a.name.localeCompare(b.name);
+					case "name-desc":
+						return b.name.localeCompare(a.name);
+					case "price-asc":
+						return a.price - b.price;
+					case "price-desc":
+						return b.price - a.price;
+					case "default":
+					default:
+						return 0;
+				}
+			});
+
 			return filtered;
 		}
 
 		return [];
-	}, [selectedCategory, packages, searchQuery, activeEvent]);
+	}, [selectedCategory, selectedEventCategory, packages, searchQuery, activeEvent, sortBy]);
 
 	// Show packages section when we have packages to show
 	const showPackagesSection = filteredPackages.length > 0;
@@ -568,7 +686,10 @@ export function ShopClient({
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<Tabs
 						value={selectedCategory}
-						onValueChange={setSelectedCategory}
+						onValueChange={(value) => {
+							setSelectedCategory(value);
+							setSelectedEventCategory("all"); // Reset event category when switching tabs
+						}}
 						className="w-full sm:w-auto"
 					>
 						<TabsList className="flex h-auto flex-wrap">
@@ -636,6 +757,7 @@ export function ShopClient({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
+						<SelectItem value="default">Default</SelectItem>
 						<SelectItem value="name-asc">Name (A-Z)</SelectItem>
 						<SelectItem value="name-desc">Name (Z-A)</SelectItem>
 						<SelectItem value="price-asc">Price (Low-High)</SelectItem>
@@ -668,6 +790,47 @@ export function ShopClient({
 						</div>
 					</CardContent>
 				</Card>
+			)}
+
+			{/* Event Category Tabs */}
+			{activeEvent && activeEvent.categories && activeEvent.categories.length > 0 && (
+				<div className="mb-6">
+					<div className="flex flex-wrap gap-2">
+						<Button
+							variant={selectedEventCategory === "all" ? "default" : "outline"}
+							size="sm"
+							onClick={() => setSelectedEventCategory("all")}
+						>
+							All
+						</Button>
+						{activeEvent.categories.map((category) => (
+							<Button
+								key={category.id}
+								variant={selectedEventCategory === category.id ? "default" : "outline"}
+								size="sm"
+								onClick={() => setSelectedEventCategory(category.id)}
+								style={
+									category.color && selectedEventCategory === category.id
+										? { backgroundColor: category.color, borderColor: category.color }
+										: category.color
+											? { borderColor: category.color, color: category.color }
+											: undefined
+								}
+								className={cn(
+									selectedEventCategory === category.id && category.color && "text-white",
+								)}
+							>
+								{category.color && selectedEventCategory !== category.id && (
+									<span
+										className="mr-2 h-2 w-2 rounded-full"
+										style={{ backgroundColor: category.color }}
+									/>
+								)}
+								{category.name}
+							</Button>
+						))}
+					</div>
+				</div>
 			)}
 
 			{/* Packages Section */}

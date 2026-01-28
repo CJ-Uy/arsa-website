@@ -38,15 +38,19 @@ export default async function AdminEventsPage() {
 	const isGlobalEventsAdmin = user?.isEventsAdmin ?? false;
 	const assignedEventIds = user?.eventAdmins?.map((ea) => ea.eventId) ?? [];
 
-	// Fetch events with their products and admins
+	// Fetch events with their products, categories, and admins
 	const allEvents = await prisma.shopEvent.findMany({
 		include: {
 			products: {
 				include: {
 					product: true,
 					package: true,
+					category: true,
 				},
 				orderBy: { sortOrder: "asc" },
+			},
+			categories: {
+				orderBy: { displayOrder: "asc" },
 			},
 			admins: {
 				include: {

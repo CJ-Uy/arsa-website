@@ -227,6 +227,9 @@ export function FlowerFestCheckout({ event, cartItems, user }: FlowerFestCheckou
 			});
 
 			if (result.success) {
+				// Notify cart counter that cart is now empty
+				window.dispatchEvent(new Event("cartUpdated"));
+
 				toast.success("Order placed successfully! 🌸");
 				router.push(`/shop/orders/${result.orderId}`);
 			} else {
