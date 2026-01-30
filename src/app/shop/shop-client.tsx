@@ -813,16 +813,20 @@ export function ShopClient({
 
 			{!session?.user && (
 				<Card className="border-primary mb-6">
-					<CardContent className="pt-6">
-						<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-							<div>
-								<h3 className="mb-1 font-semibold">Sign in to shop</h3>
-								<p className="text-muted-foreground text-sm">
-									Sign in with your <span className="text-foreground font-semibold">email</span> to
-									start shopping
+					<CardContent className="px-6 py-8">
+						<div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
+							<div className="flex-1 space-y-2">
+								<h3 className="text-lg font-semibold">Sign in to shop</h3>
+								<p className="text-muted-foreground text-sm leading-relaxed">
+									Sign in with your Google account to start shopping
 								</p>
 							</div>
-							<Button onClick={handleSignIn} className="w-full sm:w-auto" disabled={signingIn}>
+							<Button
+								onClick={handleSignIn}
+								className="w-full shrink-0 sm:w-auto"
+								disabled={signingIn}
+								size="lg"
+							>
 								{signingIn ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1037,24 +1041,25 @@ export function ShopClient({
 							<Card
 								key={product.id}
 								className={cn(
-									"flex flex-col overflow-hidden",
+									"flex min-w-0 flex-col overflow-hidden",
 									eventBackgroundClass && "flower-fest-card",
 								)}
 							>
-								<CardHeader className="pb-3">
-									<ProductImageCarousel
-										images={
-											product.imageUrls.length > 0
-												? product.imageUrls
-												: product.image
-													? [product.image]
-													: []
-										}
-										productName={product.name}
-										aspectRatio="square"
-										showThumbnails={true}
-										className="mb-4"
-									/>
+								<CardHeader className="min-w-0 overflow-hidden pb-3">
+									<div className="mb-4 w-full max-w-full min-w-0 overflow-hidden">
+										<ProductImageCarousel
+											images={
+												product.imageUrls.length > 0
+													? product.imageUrls
+													: product.image
+														? [product.image]
+														: []
+											}
+											productName={product.name}
+											aspectRatio="square"
+											showThumbnails={true}
+										/>
+									</div>
 									<div className="flex items-start justify-between">
 										<CardTitle className="text-lg">{product.name}</CardTitle>
 										<div className="ml-2 flex gap-1">
