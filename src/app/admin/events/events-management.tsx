@@ -813,6 +813,21 @@ export function EventsManagement({
 		});
 	};
 
+	const moveCheckoutField = (index: number, direction: "up" | "down") => {
+		const newIndex = direction === "up" ? index - 1 : index + 1;
+		if (newIndex < 0 || newIndex >= formData.checkoutFields.length) return;
+
+		setFormData((prev) => {
+			const newFields = [...prev.checkoutFields];
+			// Swap the items
+			[newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
+			return {
+				...prev,
+				checkoutFields: newFields,
+			};
+		});
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
@@ -1854,15 +1869,39 @@ export function EventsManagement({
 																		</div>
 																	</div>
 																</div>
-																<Button
-																	type="button"
-																	variant="ghost"
-																	size="icon"
-																	className="text-destructive hover:text-destructive h-8 w-8"
-																	onClick={() => removeCheckoutField(index)}
-																>
-																	<Trash2 className="h-4 w-4" />
-																</Button>
+																<div className="flex items-center gap-1">
+																	<div className="mr-2 flex flex-col gap-0.5">
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="icon"
+																			className="h-5 w-5"
+																			disabled={index === 0}
+																			onClick={() => moveCheckoutField(index, "up")}
+																		>
+																			<ChevronUp className="h-3 w-3" />
+																		</Button>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="icon"
+																			className="h-5 w-5"
+																			disabled={index === formData.checkoutFields.length - 1}
+																			onClick={() => moveCheckoutField(index, "down")}
+																		>
+																			<ChevronDown className="h-3 w-3" />
+																		</Button>
+																	</div>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		className="text-destructive hover:text-destructive h-8 w-8"
+																		onClick={() => removeCheckoutField(index)}
+																	>
+																		<Trash2 className="h-4 w-4" />
+																	</Button>
+																</div>
 															</div>
 														</CardHeader>
 														<CardContent className="pt-4">
@@ -2193,6 +2232,28 @@ export function EventsManagement({
 																			}
 																			placeholder="Enter placeholder text..."
 																		/>
+																	</div>
+																)}
+
+																{(field.type === "text" || field.type === "textarea") && (
+																	<div>
+																		<Label>Character Limit (optional)</Label>
+																		<Input
+																			type="number"
+																			min="1"
+																			value={field.maxLength || ""}
+																			onChange={(e) =>
+																				updateCheckoutField(index, {
+																					maxLength: e.target.value
+																						? parseInt(e.target.value)
+																						: undefined,
+																				})
+																			}
+																			placeholder="No limit"
+																		/>
+																		<p className="text-muted-foreground mt-1 text-xs">
+																			Set a maximum number of characters allowed
+																		</p>
 																	</div>
 																)}
 

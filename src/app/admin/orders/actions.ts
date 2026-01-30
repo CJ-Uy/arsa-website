@@ -195,7 +195,7 @@ export async function exportOrdersData(eventId?: string) {
 					Notes: order.notes || "",
 					// Delivery scheduling (only on first item)
 					"Delivery Date": index === 0 ? order.deliveryDate || "N/A" : "",
-					"Delivery Time": index === 0 ? order.deliveryTime || "N/A" : "",
+					"Delivery Time": index === 0 ? order.deliveryTimeSlot || "N/A" : "",
 					// Event info (only on first item)
 					Event: index === 0 ? order.event?.name || "N/A" : "",
 					// Only show receipt URL on first item

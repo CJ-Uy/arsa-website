@@ -784,8 +784,8 @@ export function ShopClient({
 			</div>
 
 			{/* Search and Sort Controls */}
-			<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-				<div className="relative flex-1">
+			<div className="mb-6 flex flex-row items-center gap-3">
+				<div className="relative w-2/3 sm:flex-1">
 					<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 					<Input
 						type="search"
@@ -797,7 +797,7 @@ export function ShopClient({
 				</div>
 
 				<Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-					<SelectTrigger className="w-full sm:w-[200px]">
+					<SelectTrigger className="w-1/3 sm:w-[200px]">
 						<ArrowUpDown className="mr-2 h-4 w-4" />
 						<SelectValue />
 					</SelectTrigger>

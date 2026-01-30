@@ -42,6 +42,24 @@ export function DatePicker({
 }: DatePickerProps) {
 	const [open, setOpen] = React.useState(false);
 
+	// Helper to normalize date to start of day for comparison
+	const normalizeDate = React.useCallback((date: Date) => {
+		const normalized = new Date(date);
+		normalized.setHours(0, 0, 0, 0);
+		return normalized;
+	}, []);
+
+	// Normalize min and max dates once
+	const normalizedMinDate = React.useMemo(
+		() => (minDate ? normalizeDate(minDate) : undefined),
+		[minDate, normalizeDate],
+	);
+
+	const normalizedMaxDate = React.useMemo(
+		() => (maxDate ? normalizeDate(maxDate) : undefined),
+		[maxDate, normalizeDate],
+	);
+
 	// Helper to check if a date is in the disabled dates array
 	const isDateDisabled = React.useCallback(
 		(date: Date) => {
@@ -81,8 +99,12 @@ export function DatePicker({
 						setOpen(false);
 					}}
 					disabled={(date) => {
-						if (minDate && date < minDate) return true;
-						if (maxDate && date > maxDate) return true;
+						// Normalize the date being checked
+						const normalizedDate = normalizeDate(date);
+
+						// Compare normalized dates (date-only comparison)
+						if (normalizedMinDate && normalizedDate < normalizedMinDate) return true;
+						if (normalizedMaxDate && normalizedDate > normalizedMaxDate) return true;
 						if (isDateDisabled(date)) return true;
 						return false;
 					}}
