@@ -15,6 +15,7 @@ interface DatePickerProps {
 	disabled?: boolean;
 	minDate?: Date;
 	maxDate?: Date;
+	disabledDates?: Date[]; // Array of specific dates to disable
 	className?: string;
 }
 
@@ -36,9 +37,24 @@ export function DatePicker({
 	disabled = false,
 	minDate,
 	maxDate,
+	disabledDates,
 	className,
 }: DatePickerProps) {
 	const [open, setOpen] = React.useState(false);
+
+	// Helper to check if a date is in the disabled dates array
+	const isDateDisabled = React.useCallback(
+		(date: Date) => {
+			if (!disabledDates || disabledDates.length === 0) return false;
+
+			// Compare dates without time component
+			const dateStr = date.toISOString().split("T")[0];
+			return disabledDates.some(
+				(disabledDate) => disabledDate.toISOString().split("T")[0] === dateStr,
+			);
+		},
+		[disabledDates],
+	);
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -67,6 +83,7 @@ export function DatePicker({
 					disabled={(date) => {
 						if (minDate && date < minDate) return true;
 						if (maxDate && date > maxDate) return true;
+						if (isDateDisabled(date)) return true;
 						return false;
 					}}
 					initialFocus

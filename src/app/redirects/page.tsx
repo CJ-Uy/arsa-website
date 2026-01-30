@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { DashboardClient } from "./dashboardClient";
 import { Unauthorized } from "./unauthorized";
+import { AdminThemeForcer } from "@/components/admin/admin-theme-forcer";
 
 // This is a Server Component. It fetches data and passes it down.
 export default async function DashboardPage() {
@@ -31,6 +32,9 @@ export default async function DashboardPage() {
 
 	return (
 		<div className="container mx-auto py-10">
+			{/* Force light mode on redirects admin page */}
+			<AdminThemeForcer />
+
 			{/* We pass the initial server-fetched data to the client component */}
 			<DashboardClient initialRedirects={redirects} />
 		</div>

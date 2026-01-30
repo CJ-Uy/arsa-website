@@ -112,6 +112,11 @@ type CheckoutField = {
 	min?: number;
 	max?: number;
 	step?: number;
+	// Date/Time field constraints
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	disabledTimeSlots?: { date: string; times: string[] }[];
 	// Conditional display
 	showWhen?: FieldCondition;
 	// Message content (for type: "message")
@@ -691,6 +696,13 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 															)
 														}
 														placeholder={field.placeholder || "Select date"}
+														minDate={field.minDate ? new Date(field.minDate) : undefined}
+														maxDate={field.maxDate ? new Date(field.maxDate) : undefined}
+														disabledDates={
+															field.disabledDates
+																? field.disabledDates.map((d) => new Date(d))
+																: undefined
+														}
 													/>
 												</div>
 											)}

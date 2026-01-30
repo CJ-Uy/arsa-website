@@ -23,7 +23,7 @@ export default async function ARSAShopPage() {
 			<div className="mb-8">
 				<h1 className="mb-2 text-4xl font-bold">ARSA Shop</h1>
 				<p className="text-muted-foreground">
-					Get official ARSA merch, items from the Arsari-Sari store, and pay for services!
+					The official Ateneo Residents Hall Student Association E-Shop!
 				</p>
 			</div>
 

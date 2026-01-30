@@ -52,9 +52,10 @@ export default function FlowerFestEvent({
 		}
 	};
 
+	// Default to official FlowerFest color palette
 	const themeConfig = event.themeConfig || {
-		primaryColor: "#ec4899",
-		secondaryColor: "#f472b6",
+		primaryColor: "#AA1A1A", // Red accent
+		secondaryColor: "#D3B3AD", // Pastel Gray Red
 	};
 
 	return (
@@ -66,15 +67,19 @@ export default function FlowerFestEvent({
 
 			{/* Hero Section */}
 			{event.heroImageUrls?.[0] && (
-				<div className="relative mb-8 overflow-hidden rounded-xl">
-					<img src={event.heroImageUrls[0]} alt={event.name} className="h-64 w-full object-cover" />
-					<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-					<div className="absolute right-0 bottom-0 left-0 p-6 text-white">
-						<h2 className="flex items-center gap-2 text-3xl font-bold">
-							<Heart className="h-8 w-8 text-pink-400" />
+				<div className="flower-fest-hero relative mb-8 overflow-hidden rounded-xl">
+					<img
+						src={event.heroImageUrls[0]}
+						alt={event.name}
+						className="h-64 w-full object-cover sm:h-72 md:h-80"
+					/>
+					<div className="absolute inset-0 bg-gradient-to-t from-[#400C12]/90 via-[#400C12]/40 to-transparent" />
+					<div className="absolute right-0 bottom-0 left-0 p-4 text-white sm:p-6">
+						<h2 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+							<Heart className="h-6 w-6 text-[#D3B3AD] sm:h-8 sm:w-8" />
 							{event.name}
 						</h2>
-						<p className="mt-2 text-lg opacity-90">{event.description}</p>
+						<p className="mt-2 text-base opacity-90 sm:text-lg">{event.description}</p>
 					</div>
 				</div>
 			)}
@@ -82,27 +87,28 @@ export default function FlowerFestEvent({
 			{/* Custom Header if no hero image */}
 			{!event.heroImageUrls?.[0] && (
 				<div
-					className="flower-fest-header mb-8 rounded-xl p-8 text-center text-white"
+					className="flower-fest-header mb-8 rounded-xl p-6 text-center text-white sm:p-8"
 					style={{
-						background: `linear-gradient(135deg, ${themeConfig.primaryColor}, ${themeConfig.secondaryColor})`,
+						background: `linear-gradient(135deg, #AA1A1A 0%, #6a1010 50%, #400C12 100%)`,
+						boxShadow: "0 8px 30px rgba(0, 0, 0, 0.4), 0 4px 15px rgba(64, 12, 18, 0.25)",
 					}}
 				>
-					<Heart className="mx-auto mb-4 h-12 w-12" />
-					<h2 className="text-3xl font-bold">{event.name}</h2>
-					<p className="mt-2 text-lg opacity-90">{event.description}</p>
+					<Heart className="mx-auto mb-4 h-10 w-10 text-[#D3B3AD] sm:h-12 sm:w-12" />
+					<h2 className="text-2xl font-bold sm:text-3xl">{event.name}</h2>
+					<p className="mt-2 text-base opacity-90 sm:text-lg">{event.description}</p>
 				</div>
 			)}
 
 			{/* Packages Section */}
 			{packages.length > 0 && (
 				<div className="mb-8">
-					<h3 className="flower-fest-section-title mb-4 flex items-center gap-2 text-xl font-bold">
-						<Gift className="h-5 w-5 text-pink-500" />
+					<h3 className="flower-fest-section-title mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
+						<Gift className="h-5 w-5" />
 						Flower Bundles
 					</h3>
-					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
 						{packages.map((pkg) => (
-							<Card key={pkg.id} className="flower-fest-card border-pink-200 dark:border-pink-800">
+							<Card key={pkg.id} className="flower-fest-card">
 								<CardHeader className="pb-3">
 									<div className="relative">
 										<ProductImageCarousel
@@ -114,7 +120,10 @@ export default function FlowerFestEvent({
 											showThumbnails={false}
 											className="mb-4"
 										/>
-										<Badge className="absolute top-2 left-2 bg-pink-500">
+										<Badge
+											className="absolute top-2 left-2"
+											style={{ background: "linear-gradient(135deg, #AA1A1A, #8a1515)" }}
+										>
 											<Gift className="mr-1 h-3 w-3" />
 											Bundle
 										</Badge>
@@ -123,13 +132,14 @@ export default function FlowerFestEvent({
 									<p className="text-muted-foreground line-clamp-2 text-sm">{pkg.description}</p>
 								</CardHeader>
 								<CardContent>
-									<div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+									<div className="text-2xl font-bold text-[#AA1A1A] dark:text-[#D3B3AD]">
 										₱{pkg.price.toFixed(2)}
 									</div>
 								</CardContent>
 								<CardFooter>
 									<Button
-										className="w-full bg-pink-500 hover:bg-pink-600"
+										className="w-full text-white"
+										style={{ background: "linear-gradient(135deg, #AA1A1A 0%, #8a1515 100%)" }}
 										onClick={() => onOpenPackageModal(pkg)}
 										disabled={!pkg.isAvailable}
 									>
@@ -146,21 +156,18 @@ export default function FlowerFestEvent({
 			{/* Products Section */}
 			{products.length > 0 && (
 				<div>
-					<h3 className="flower-fest-section-title mb-4 flex items-center gap-2 text-xl font-bold">
-						<Heart className="h-5 w-5 text-pink-500" />
+					<h3 className="flower-fest-section-title mb-4 flex items-center gap-2 text-lg font-bold sm:text-xl">
+						<Heart className="h-5 w-5" />
 						Individual Flowers
 					</h3>
-					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
 						{products.map((product) => {
 							const selectedSize = selectedSizes[product.id];
 							const requiresSize = product.availableSizes.length > 0;
 							const isLoading = loadingProducts[product.id] ?? false;
 
 							return (
-								<Card
-									key={product.id}
-									className="flower-fest-card border-pink-200 dark:border-pink-800"
-								>
+								<Card key={product.id} className="flower-fest-card">
 									<CardHeader className="pb-3">
 										<ProductImageCarousel
 											images={
@@ -181,7 +188,7 @@ export default function FlowerFestEvent({
 										</p>
 									</CardHeader>
 									<CardContent className="space-y-3">
-										<div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+										<div className="text-2xl font-bold text-[#AA1A1A] dark:text-[#D3B3AD]">
 											₱{product.price.toFixed(2)}
 										</div>
 
@@ -213,7 +220,8 @@ export default function FlowerFestEvent({
 									</CardContent>
 									<CardFooter>
 										<Button
-											className="w-full bg-pink-500 hover:bg-pink-600"
+											className="w-full text-white hover:opacity-90"
+											style={{ background: "linear-gradient(135deg, #AA1A1A 0%, #8a1515 100%)" }}
 											onClick={() => handleAddToCart(product.id)}
 											disabled={
 												!product.isAvailable || isLoading || (requiresSize && !selectedSize)

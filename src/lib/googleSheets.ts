@@ -335,7 +335,7 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 				"Item Total": item.price * item.quantity,
 				"Order Total": index === 0 ? order.totalAmount : "",
 				"Order Status": order.status,
-				"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "N/A" : "",
+				"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "Needs Manual Checking" : "",
 				Notes: order.notes || "",
 				"Delivery Date": index === 0 ? order.deliveryDate || "N/A" : "",
 				"Delivery Time": index === 0 ? order.deliveryTimeSlot || "N/A" : "",

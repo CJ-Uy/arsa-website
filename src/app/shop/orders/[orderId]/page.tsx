@@ -159,8 +159,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								<div>
 									<p className="font-semibold">What happens next?</p>
 									<p className="text-muted-foreground text-sm">
-										Our team will verify your payment and process your order. Be sure to stay
-										updated on the Facebook page for when the merch claiming will begin!
+										Our team will verify your payment and process your order.
 									</p>
 								</div>
 							</div>
@@ -169,7 +168,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 								<div>
 									<p className="font-semibold">Order Processing</p>
 									<p className="text-muted-foreground text-sm">
-										You'll receive updates via email in case of any issues with your order.
+										You&apos;ll receive updates via email in case of any issues with your order.
 									</p>
 								</div>
 							</div>

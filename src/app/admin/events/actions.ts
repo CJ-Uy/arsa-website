@@ -46,10 +46,22 @@ export type CheckoutFieldType =
 export type RepeaterColumn = {
 	id: string;
 	label: string;
-	type: "text" | "date" | "time" | "select";
+	type: "text" | "textarea" | "number" | "date" | "time" | "select" | "checkbox";
 	placeholder?: string;
 	options?: string[];
 	width?: "sm" | "md" | "lg";
+	// Number constraints (for type: "number")
+	min?: number;
+	max?: number;
+	step?: number;
+	// Date constraints (for type: "date")
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	// Time constraints (for type: "time")
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
 };
 
 // Conditional visibility for fields
@@ -70,6 +82,14 @@ export type CheckoutField = {
 	min?: number;
 	max?: number;
 	step?: number;
+	// Date field constraints
+	minDate?: string; // ISO date string for minimum selectable date
+	maxDate?: string; // ISO date string for maximum selectable date
+	disabledDates?: string[]; // Array of ISO date strings to disable
+	// Time field constraints
+	minTime?: string; // Time string for earliest selectable time (HH:MM format)
+	maxTime?: string; // Time string for latest selectable time (HH:MM format)
+	blockedTimes?: string[]; // Array of time strings to disable (HH:MM format)
 	// Conditional display
 	showWhen?: FieldCondition;
 	// Message field content
@@ -117,6 +137,12 @@ export type EventCategoryInput = {
 	color?: string;
 };
 
+export type BlockedDeliverySlot = {
+	date: string; // ISO date string (YYYY-MM-DD)
+	timeSlot?: string; // Optional time slot (e.g., "Morning", "Afternoon", "9:00 AM")
+	reason?: string; // Optional reason (e.g., "Fully booked", "Holiday")
+};
+
 export type EventFormData = {
 	name: string;
 	slug: string;
@@ -134,6 +160,10 @@ export type EventFormData = {
 	checkoutConfig: CheckoutConfig | null;
 	products: EventProductInput[];
 	categories: EventCategoryInput[];
+	// Delivery control
+	minDeliveryDate?: string; // ISO date string
+	maxDeliveryDate?: string; // ISO date string
+	blockedDeliverySlots?: BlockedDeliverySlot[]; // Array of blocked slots
 };
 
 // Get all events with their products and categories
@@ -257,6 +287,11 @@ export async function createEvent(data: EventFormData) {
 					checkoutConfig: data.checkoutConfig
 						? (data.checkoutConfig as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
+					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
+					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,
+					blockedDeliverySlots: data.blockedDeliverySlots
+						? (data.blockedDeliverySlots as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
 					categories: {
 						create: data.categories.map((c) => ({
 							name: c.name,
@@ -355,6 +390,11 @@ export async function updateEvent(id: string, data: EventFormData) {
 						: Prisma.JsonNull,
 					checkoutConfig: data.checkoutConfig
 						? (data.checkoutConfig as Prisma.InputJsonValue)
+						: Prisma.JsonNull,
+					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
+					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,
+					blockedDeliverySlots: data.blockedDeliverySlots
+						? (data.blockedDeliverySlots as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
 					categories: {
 						create: data.categories.map((c) => ({

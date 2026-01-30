@@ -296,6 +296,11 @@ model ShopEvent {
   closureMessage String? // Message to show when shop is closed
   allowScheduledDelivery Boolean @default(false) // Allow customers to select delivery date/time
 
+  // Delivery Date/Time Control
+  minDeliveryDate DateTime? // Earliest allowed delivery date
+  maxDeliveryDate DateTime? // Latest allowed delivery date
+  blockedDeliverySlots Json? // Array of blocked date/time slots: [{date: "2026-02-14", timeSlot?: "Morning", reason?: "Fully booked"}]
+
   // Custom component path (for event-specific UI/animations)
   componentPath String? // e.g., "flower-fest-2026" -> loads from events folder
   hasCustomCheckout Boolean @default(false) // If true, uses custom checkout component instead of generic

@@ -8,6 +8,7 @@ import { Unauthorized } from "./unauthorized";
 import { Suspense } from "react";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminThemeForcer } from "@/components/admin/admin-theme-forcer";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({
@@ -42,6 +43,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
 	return (
 		<div className="min-h-screen">
+			{/* Force light mode on admin pages */}
+			<AdminThemeForcer />
+
 			{/* Navigation Progress Bar */}
 			<Suspense fallback={null}>
 				<NavigationProgress />

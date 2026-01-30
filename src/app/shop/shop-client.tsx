@@ -44,6 +44,10 @@ import { ProductImageCarousel } from "@/components/features/product-image-carous
 import { PackageSelectionModal } from "@/components/features/package-selection-modal";
 import { cn } from "@/lib/utils";
 
+// Import event-specific styles and animations
+import "./events/2026/flower-fest-2026/styles.css";
+import { InitialPetalsBurst } from "./events/2026/flower-fest-2026/animations";
+
 // Helper component to format product descriptions with lists
 function ProductDescription({ description }: { description: string }) {
 	const lines = description.split("\n");
@@ -245,6 +249,8 @@ export function ShopClient({
 	const [signingIn, setSigningIn] = useState(false);
 	const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
 	const [showPackageModal, setShowPackageModal] = useState(false);
+	// Key for petal animation - changes when switching to flower fest tab to trigger animation
+	const [petalAnimationKey, setPetalAnimationKey] = useState(() => Date.now());
 
 	// Track page view for analytics
 	useEffect(() => {
@@ -632,6 +638,19 @@ export function ShopClient({
 		} as React.CSSProperties;
 	};
 
+	// Get background class based on event theme
+	const getEventBackgroundClass = (event: ShopEvent | null) => {
+		if (!event?.themeConfig?.backgroundPattern) return "";
+		// Support for different background patterns
+		switch (event.themeConfig.backgroundPattern) {
+			case "burgundy-grain":
+			case "flower-fest":
+				return "flower-fest-container";
+			default:
+				return "";
+		}
+	};
+
 	// Build unified tabs list - Events first (emphasized), then category tabs
 	const tabs = useMemo(() => {
 		// Event tabs - sorted by priority first, then by tabOrder
@@ -666,8 +685,34 @@ export function ShopClient({
 		return [...eventTabs, ...categoryTabs];
 	}, [events]);
 
+	const eventBackgroundClass = getEventBackgroundClass(activeEvent);
+
+	// Reset petal animation key when switching to flower fest tab (or on reload)
+	useEffect(() => {
+		if (eventBackgroundClass) {
+			setPetalAnimationKey(Date.now());
+		}
+	}, [eventBackgroundClass]);
+
+	// Trigger animation on initial mount if priority event has animation
+	useEffect(() => {
+		// Only run once on mount
+		if (priorityEvent && priorityEvent.themeConfig?.animation) {
+			setPetalAnimationKey(Date.now());
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Empty deps - only run on mount
+
+	// Check if we should show petal animation (either from active event or priority event on mount)
+	const shouldShowPetals =
+		activeEvent?.themeConfig?.animation === "petals" ||
+		(!activeEvent && priorityEvent?.themeConfig?.animation === "petals");
+
 	return (
-		<div style={getEventStyles(activeEvent)}>
+		<div className={cn(eventBackgroundClass)} style={getEventStyles(activeEvent)}>
+			{/* Initial Petals Animation - plays on load/tab switch for Flower Fest */}
+			{shouldShowPetals && <InitialPetalsBurst key={petalAnimationKey} isActive={true} />}
+
 			{/* Event Header */}
 			{activeEvent && activeEvent.themeConfig?.headerText && (
 				<div
@@ -837,13 +882,23 @@ export function ShopClient({
 			{showPackagesSection && (
 				<>
 					{selectedCategory === "all" && (
-						<h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+						<h2
+							className={cn(
+								"mb-4 flex items-center gap-2 text-xl font-bold",
+								eventBackgroundClass && "flower-fest-section-title",
+							)}
+						>
 							<Gift className="h-5 w-5" />
 							Packages
 						</h2>
 					)}
 					{activeEvent && filteredPackages.length > 0 && (
-						<h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
+						<h2
+							className={cn(
+								"mb-4 flex items-center gap-2 text-xl font-bold",
+								eventBackgroundClass && "flower-fest-section-title",
+							)}
+						>
 							<Gift className="h-5 w-5" />
 							{activeEvent.name} Packages
 						</h2>
@@ -856,7 +911,10 @@ export function ShopClient({
 							return (
 								<Card
 									key={pkg.id}
-									className="border-primary/30 flex flex-col overflow-hidden border-2"
+									className={cn(
+										"flex flex-col overflow-hidden",
+										eventBackgroundClass ? "flower-fest-card" : "border-primary/30 border-2",
+									)}
 								>
 									<CardHeader className="pb-3">
 										<div className="relative">
@@ -927,13 +985,34 @@ export function ShopClient({
 					</div>
 
 					{selectedCategory === "all" && filteredProducts.length > 0 && (
-						<h2 className="mb-4 text-xl font-bold">Products</h2>
+						<h2
+							className={cn(
+								"mb-4 text-xl font-bold",
+								eventBackgroundClass && "flower-fest-section-title",
+							)}
+						>
+							Products
+						</h2>
 					)}
 					{activeEvent && filteredProducts.length > 0 && !showPackagesSection && (
-						<h2 className="mb-4 text-xl font-bold">{activeEvent.name} Products</h2>
+						<h2
+							className={cn(
+								"mb-4 text-xl font-bold",
+								eventBackgroundClass && "flower-fest-section-title",
+							)}
+						>
+							{activeEvent.name} Products
+						</h2>
 					)}
 					{activeEvent && filteredProducts.length > 0 && showPackagesSection && (
-						<h2 className="mb-4 text-xl font-bold">Products</h2>
+						<h2
+							className={cn(
+								"mb-4 text-xl font-bold",
+								eventBackgroundClass && "flower-fest-section-title",
+							)}
+						>
+							Products
+						</h2>
 					)}
 				</>
 			)}
@@ -955,7 +1034,13 @@ export function ShopClient({
 						const requiresSize = product.availableSizes.length > 0;
 
 						return (
-							<Card key={product.id} className="flex flex-col overflow-hidden">
+							<Card
+								key={product.id}
+								className={cn(
+									"flex flex-col overflow-hidden",
+									eventBackgroundClass && "flower-fest-card",
+								)}
+							>
 								<CardHeader className="pb-3">
 									<ProductImageCarousel
 										images={

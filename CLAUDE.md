@@ -80,12 +80,13 @@ npx prisma studio        # Open Prisma Studio for database management
 - `PackagePoolOption` - Available products in a selection pool
 - `CartItem` - Shopping cart with size-aware items for products and packages
 - `Order` - Orders with status workflow, receipt storage, GCash reference numbers, event association, custom checkout data
-- `OrderItem` - Order line items with size and price snapshots for products and packages
+- `OrderItem` - Order line items with size and price snapshots for products and packages, purchase codes for tracking
 
 **Shop Events System**
 
 - `ShopEvent` - Event tabs with custom themes, hero images, timing, priority, checkout customization, custom component paths
-- `EventProduct` - Many-to-many relation linking products/packages to events with optional event-specific pricing
+- `EventProduct` - Many-to-many relation linking products/packages to events with optional event-specific pricing, product codes, and category assignment
+- `EventCategory` - Categories within events for organizing products (e.g., "Solo Flowers", "Bouquets") with display order and color
 - `EventAdmin` - Event-specific admin assignments (in addition to global shop admins)
 
 **Shop Analytics**
@@ -170,7 +171,7 @@ The core feature that enables custom short URLs (e.g., `domain.com/shortcode` �
 - `gacha-banner.tsx` - Interactive gacha system for merchandise with rarity tiers (5★/4★/3★)
 - `event-card.tsx` - Event display with attendance tracking
 - `product-image-carousel.tsx` - Multi-image carousel with zoom, swipe gestures, thumbnails
-- `cart-counter.tsx` - Shopping cart item counter badge
+- `cart-counter.tsx` - Shopping cart item counter badge (listens to `cartUpdated` event)
 
 **Layout Components**:
 
@@ -202,7 +203,7 @@ All pages use the App Router structure in [src/app/](src/app/):
 
 **Shop Routes** (Authentication Required):
 
-- `/shop` - Shop homepage with product browsing, filtering, sorting
+- `/shop` - Shop homepage with product browsing, filtering, sorting (Default/Name/Price)
 - `/shop/cart` - Shopping cart with quantity management
 - `/shop/checkout` - Checkout with GCash payment and receipt upload (OCR)
 - `/shop/orders` - Order history
@@ -300,6 +301,17 @@ The shop features a powerful event-based organization system that allows product
 - Event-specific pricing overrides base price
 - Event-exclusive items (only appear under event tabs, not in All/categories)
 - Sort order control for display within events
+- **Product codes** for generating purchase codes (e.g., "LLY" generates "LLY_01-28-26-15:33_1")
+- **Category assignment** - Organize products into categories within an event
+
+**Event Categories:**
+
+- Create categories to organize products within events (e.g., "Solo Flowers", "Mini Bouquets", "Cookies")
+- Categories appear as filter tabs in the shop UI
+- Reorder categories with up/down arrows - order determines shop display order
+- Optional color coding for visual distinction
+- Products without categories appear at the end of the list
+- Category included in Excel and Google Sheets exports
 
 **Custom Checkout:**
 
@@ -318,9 +330,13 @@ The shop features a powerful event-based organization system that allows product
 
 **Analytics:**
 
-- Click tracking per event tab (`ShopClick` model)
-- Purchase analytics per event (`ShopPurchase` model)
-- Event performance metrics and graphs
+- Click tracking per event tab (`ShopClick` model) via `/api/shop/track`
+- Purchase analytics per event (`ShopPurchase` model) - recorded on order creation
+- **Analytics Tab** in event editor with:
+  - Time range selection: 24 Hours, 7 Days, 30 Days, All Time (event duration)
+  - Stats cards: Total Clicks, Total Orders, Revenue, Conversion Rate
+  - Line charts with data points for clicks and orders over time
+  - Conversion rate calculation (orders ÷ clicks × 100%)
 
 ### Event Management
 
@@ -336,11 +352,14 @@ The shop features a powerful event-based organization system that allows product
 
 1. Basic Info: Name, slug, description, dates, status, priority
 2. Hero Images: Upload multiple images for carousel
-3. Products Tab: Assign products/packages with optional event pricing
+3. Products Tab:
+   - Create categories first (reorderable with up/down arrows)
+   - Assign products/packages with optional event pricing
+   - Set product codes for purchase code generation
+   - Assign products to categories
 4. Theme Tab: Colors, animations, background patterns, header text
-5. Checkout Tab: Custom fields, messages, terms
-6. Admins Tab: Assign event-specific admins
-7. Analytics Tab: View click and purchase statistics
+5. Checkout Tab: Custom fields, messages, terms, payment options
+6. Analytics Tab: View click/purchase statistics with time ranges and conversion rate (only when editing)
 
 ## Package System
 
@@ -443,10 +462,12 @@ Cart → Checkout → GCash Payment → Receipt Upload → Auto-extraction → O
 **Excel Export Format**:
 
 - Order ID, Order Date, Customer Name, Email, Student ID
-- Product Name, Description, Size, Quantity
+- Product Name, Description, Category, Size, Quantity, Purchase Code
 - Unit Price, Item Total, Order Total
 - Order Status, GCash Ref No, Notes, Receipt URL
+- Delivery Date, Delivery Time, Event
 - Properly formatted with transaction info only on first row per order
+- Custom checkout field data expanded into columns
 
 ## Docker Deployment
 
@@ -590,7 +611,19 @@ The shop system is designed with an **event-first workflow** to streamline produ
 
 ## Recent Features
 
-### GCash Invoice OCR (Latest)
+### Event Categories & Product Codes (Latest)
+
+- **Event Categories**: Organize products within events into categories (e.g., "Solo Flowers", "Bouquets")
+  - Categories appear as filter tabs in the shop
+  - Reorderable with up/down arrows
+  - Category included in exports
+- **Product Codes**: Assign codes to products (e.g., "LLY" for Lily)
+  - Generates purchase codes on order: `LLY_01-28-26-15:33_1` (code_timestamp_sequential)
+  - Purchase codes included in exports
+- **Enhanced Analytics**: Event analytics tab with line charts, time ranges, conversion rate
+- **Shop Sorting**: "Default" sort option preserves category order; price/name sorting works for events
+
+### GCash Invoice OCR
 
 - Upload GCash transaction history PDFs
 - OCR extraction of transaction tables
@@ -661,6 +694,8 @@ The shop system is designed with an **event-first workflow** to streamline produ
 9. **Event timing**: Events only appear as tabs when current date is between `startDate` and `endDate`
 10. **Package testing**: Test packages with both fixed items and selection pools for complete coverage
 11. **Event theming**: Test custom theme configs in different color schemes and animations
+12. **Cart updates**: Dispatch `window.dispatchEvent(new Event("cartUpdated"))` after cart changes to update the header counter
+13. **Event categories**: Categories must be created before products can be assigned to them
 
 ## Useful Links
 

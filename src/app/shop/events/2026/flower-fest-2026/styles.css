@@ -1,8 +1,735 @@
 /* Flower Fest 2026 Custom Styles */
+/* Using Official ARSA FlowerFest Color Palette */
+
+/* ============================================
+   COLOR VARIABLES (from Color Scheme.png)
+   ============================================
+
+   Base/Warm Neutrals:
+   - Light Orange (cream):    #F2ECE0
+   - Pastel Gray Orange:      #D9C3A9
+   - Pastel Gray Red:         #D3B3AD
+   - Dark Red (main bg):      #400C12
+
+   Pops of Color/Vibrant:
+   - Azure:                   #165B95
+   - Dark Gray Green:         #425129
+   - Red (accents):           #AA1A1A
+   - Gray Orange (gold):      #D6A134
+   ============================================ */
+
+/* ============================================
+   FULL-PAGE BACKGROUND (applies to entire page)
+   ============================================ */
+
+/* Apply background to entire page when flower-fest is active */
+body:has(.flower-fest-container) {
+	background-color: #400c12 !important;
+	background-image:
+		/* Light spot - top left */
+		radial-gradient(ellipse 80% 60% at 10% 10%, rgba(170, 26, 26, 0.25) 0%, transparent 55%),
+		/* Light spot - center right */
+			radial-gradient(ellipse 70% 50% at 90% 30%, rgba(170, 26, 26, 0.2) 0%, transparent 50%),
+		/* Light spot - bottom center */
+			radial-gradient(ellipse 90% 70% at 50% 90%, rgba(170, 26, 26, 0.22) 0%, transparent 45%),
+		/* Subtle ambient glow */
+			radial-gradient(ellipse 120% 100% at 50% 50%, rgba(100, 20, 30, 0.15) 0%, transparent 60%),
+		/* Base gradient for depth */
+			linear-gradient(180deg, #2d0810 0%, #400c12 20%, #4a0f15 50%, #400c12 80%, #2d0810 100%) !important;
+	background-attachment: fixed !important;
+}
+
+/* Film grain overlay for entire page - medium grain texture */
+body:has(.flower-fest-container)::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 500 500' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+	opacity: 0.2;
+	pointer-events: none;
+	z-index: 0;
+	mix-blend-mode: soft-light;
+}
+
+/* Secondary grain layer for more texture depth */
+body:has(.flower-fest-container)::after {
+	content: "";
+	position: fixed;
+	inset: 0;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise2'%3E%3CfeTurbulence type='turbulence' baseFrequency='1.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise2)'/%3E%3C/svg%3E");
+	opacity: 0.14;
+	pointer-events: none;
+	z-index: 0;
+	mix-blend-mode: overlay;
+}
+
+/* Ensure all content is above the grain overlays */
+body:has(.flower-fest-container) > * {
+	position: relative;
+	z-index: 2;
+}
+
+/* ============================================
+   HEADER STYLING (when flower-fest active)
+   ============================================ */
+
+body:has(.flower-fest-container) header {
+	background: rgba(64, 12, 18, 0.95) !important;
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid rgba(217, 195, 169, 0.2) !important;
+}
+
+body:has(.flower-fest-container) header a,
+body:has(.flower-fest-container) header span,
+body:has(.flower-fest-container) header button {
+	color: #d9c3a9 !important;
+}
+
+body:has(.flower-fest-container) header a:hover {
+	color: #d6a134 !important;
+}
+
+/* Header icons */
+body:has(.flower-fest-container) header svg {
+	color: #d9c3a9 !important;
+}
+
+/* Header logo/brand */
+body:has(.flower-fest-container) header [class*="font-bold"],
+body:has(.flower-fest-container) header [class*="font-semibold"] {
+	color: #d9c3a9 !important;
+}
+
+/* Cart button in header */
+body:has(.flower-fest-container) header [href*="cart"] {
+	color: #d9c3a9 !important;
+}
+
+/* ============================================
+   PAGE TITLE STYLING
+   ============================================ */
+
+body:has(.flower-fest-container) main h1 {
+	color: #e8d4bc !important; /* Lighter for better visibility */
+	text-shadow:
+		0 3px 12px rgba(0, 0, 0, 0.8),
+		0 0 30px rgba(170, 26, 26, 0.3),
+		/* Subtle red glow */ 0 1px 3px rgba(0, 0, 0, 0.9); /* Dark outline */
+	letter-spacing: 0.02em;
+}
+
+body:has(.flower-fest-container) main > div > div > p.text-muted-foreground {
+	color: #d9c3a9 !important;
+}
+
+/* ============================================
+   FOOTER STYLING (when flower-fest active)
+   ============================================ */
+
+body:has(.flower-fest-container) footer {
+	background: rgba(45, 8, 16, 0.95) !important;
+	border-top: 1px solid rgba(217, 195, 169, 0.2) !important;
+}
+
+body:has(.flower-fest-container) footer,
+body:has(.flower-fest-container) footer a,
+body:has(.flower-fest-container) footer span,
+body:has(.flower-fest-container) footer p,
+body:has(.flower-fest-container) footer h3,
+body:has(.flower-fest-container) footer h4 {
+	color: #d9c3a9 !important;
+}
+
+body:has(.flower-fest-container) footer a:hover {
+	color: #d9c3a9 !important;
+}
+
+/* Footer muted text */
+body:has(.flower-fest-container) footer .text-muted-foreground {
+	color: #aa9a86 !important; /* Gray Orange - official palette for muted text */
+}
+
+/* ============================================
+   CONTAINER STYLING (no longer needs background)
+   ============================================ */
 
 .flower-fest-container {
 	position: relative;
+	min-height: auto;
 }
+
+/* Ensure content is above the grain overlay */
+.flower-fest-container > * {
+	position: relative;
+	z-index: 1;
+}
+
+/* ============================================
+   CARD STYLING - CREAM WITH DARK RED ACCENTS
+   ============================================ */
+
+.flower-fest-card {
+	/* 30% Secondary - Muted warm neutrals that blend with burgundy */
+	/* Using Pastel Gray Red (#D3B3AD) and Pastel Gray Orange (#D9C3A9) as base */
+	background: linear-gradient(
+		145deg,
+		rgba(211, 179, 173, 0.35) 0%,
+		rgba(217, 195, 169, 0.32) 50%,
+		rgba(211, 179, 173, 0.3) 100%
+	) !important;
+	border: 1px solid rgba(217, 195, 169, 0.3) !important;
+	box-shadow:
+		0 4px 20px rgba(0, 0, 0, 0.5),
+		0 2px 10px rgba(64, 12, 18, 0.4),
+		inset 0 1px 0 rgba(217, 195, 169, 0.2);
+	backdrop-filter: blur(14px) saturate(1.2);
+	transition: all 0.3s ease;
+	overflow: hidden;
+	position: relative;
+}
+
+/* Add subtle inner glow effect */
+.flower-fest-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(214, 161, 52, 0.3), transparent);
+}
+
+/* Dark mode adjustments for cards */
+:is(.dark) .flower-fest-card {
+	background: linear-gradient(145deg, #2a1518 0%, #1f1012 100%) !important;
+	box-shadow:
+		0 4px 24px rgba(0, 0, 0, 0.5),
+		0 2px 8px rgba(64, 12, 18, 0.4),
+		inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.flower-fest-card:hover {
+	transform: translateY(-6px) scale(1.01);
+	background: linear-gradient(
+		145deg,
+		rgba(211, 179, 173, 0.45) 0%,
+		rgba(217, 195, 169, 0.42) 50%,
+		rgba(211, 179, 173, 0.4) 100%
+	) !important;
+	box-shadow:
+		0 16px 40px rgba(0, 0, 0, 0.6),
+		0 8px 20px rgba(64, 12, 18, 0.4),
+		inset 0 1px 0 rgba(217, 195, 169, 0.3);
+	border-color: rgba(217, 195, 169, 0.5) !important;
+}
+
+:is(.dark) .flower-fest-card:hover {
+	background: linear-gradient(145deg, #3a1f22 0%, #2a1518 100%) !important;
+	box-shadow:
+		0 16px 48px rgba(0, 0, 0, 0.8),
+		0 8px 24px rgba(170, 26, 26, 0.3),
+		inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	border-color: rgba(170, 26, 26, 0.4) !important;
+}
+
+/* Card title styling - Official palette color */
+.flower-fest-card h3,
+.flower-fest-card .text-lg.font-semibold,
+.flower-fest-card .font-semibold {
+	color: #e8d4bc !important; /* Lighter variation for better contrast */
+	text-shadow:
+		0 2px 6px rgba(0, 0, 0, 0.7),
+		0 1px 2px rgba(170, 26, 26, 0.3); /* Add burgundy shadow for depth */
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+:is(.dark) .flower-fest-card h3,
+:is(.dark) .flower-fest-card .text-lg.font-semibold,
+:is(.dark) .flower-fest-card .font-semibold {
+	color: #e8d4bc !important;
+}
+
+/* Card description text - Warm neutral */
+.flower-fest-card .text-muted-foreground,
+.flower-fest-card p,
+.flower-fest-card .text-sm {
+	color: #d9c3a9 !important; /* Pastel Gray Orange */
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+	line-height: 1.6;
+	letter-spacing: 0.01em;
+}
+
+:is(.dark) .flower-fest-card .text-muted-foreground,
+:is(.dark) .flower-fest-card p,
+:is(.dark) .flower-fest-card .text-sm {
+	color: #d3b3ad !important;
+}
+
+/* Price styling in cards - Subtle accent */
+.flower-fest-card .text-pink-600,
+.flower-fest-card .text-pink-400,
+.flower-fest-card .text-2xl.font-bold,
+.flower-fest-card .text-2xl,
+.flower-fest-card span.text-2xl {
+	color: #e8d4bc !important; /* Match title color for consistency */
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+:is(.dark) .flower-fest-card .text-pink-600,
+:is(.dark) .flower-fest-card .text-pink-400,
+:is(.dark) .flower-fest-card .text-2xl.font-bold,
+:is(.dark) .flower-fest-card .text-2xl,
+:is(.dark) .flower-fest-card span.text-2xl {
+	color: #e8d4bc !important;
+}
+
+/* 10% Accent - Red buttons (not carousel buttons) */
+.flower-fest-card button:not([class*="absolute"]):not(.absolute) {
+	background: linear-gradient(135deg, #c42020 0%, #aa1a1a 50%, #8a1515 100%) !important;
+	border: 1px solid rgba(214, 161, 52, 0.3) !important; /* Subtle gold border */
+	box-shadow:
+		0 4px 12px rgba(170, 26, 26, 0.6),
+		inset 0 1px 0 rgba(255, 255, 255, 0.08); /* Subtle inner highlight */
+	color: #e8d4bc !important; /* Lighter text for better contrast */
+	font-weight: 600;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	transition: all 0.2s ease;
+}
+
+.flower-fest-card button:not([class*="absolute"]):not(.absolute):hover:not(:disabled) {
+	background: linear-gradient(135deg, #d92828 0%, #c42020 50%, #aa1a1a 100%) !important;
+	box-shadow:
+		0 6px 18px rgba(170, 26, 26, 0.7),
+		inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	border-color: rgba(214, 161, 52, 0.5) !important;
+	transform: scale(1.03) translateY(-1px);
+}
+
+.flower-fest-card button:disabled {
+	background: #d9c3a9 !important;
+	color: #888 !important;
+	box-shadow: none;
+}
+
+/* Badge styling - 10% Accent */
+.flower-fest-card .bg-pink-500,
+.flower-fest-card [class*="bg-primary"] {
+	background: linear-gradient(135deg, #c42020 0%, #aa1a1a 100%) !important;
+	color: #e8d4bc !important; /* Lighter text for better contrast */
+	box-shadow: 0 2px 8px rgba(170, 26, 26, 0.5);
+	border: 1px solid rgba(214, 161, 52, 0.3); /* Gold border */
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	font-weight: 500;
+}
+
+/* ============================================
+   SECTION STYLING
+   ============================================ */
+
+/* Section titles - 30% Secondary with 10% Accent highlights */
+.flower-fest-section-title {
+	position: relative;
+	padding-left: 0;
+	color: #e8d4bc !important; /* Lighter for better contrast */
+	text-shadow:
+		0 3px 10px rgba(0, 0, 0, 0.7),
+		0 1px 3px rgba(170, 26, 26, 0.4); /* Add burgundy shadow */
+	letter-spacing: 0.02em;
+}
+
+.flower-fest-section-title svg {
+	color: #d6a134 !important; /* Gold accent */
+	filter: drop-shadow(0 2px 4px rgba(214, 161, 52, 0.5));
+}
+
+/* ============================================
+   TABS AND NAVIGATION STYLING
+   ============================================ */
+
+/* Main tabs list container - 30% Secondary tones */
+.flower-fest-container [role="tablist"] {
+	background: rgba(64, 12, 18, 0.7) !important;
+	border: 1px solid rgba(211, 179, 173, 0.25) !important;
+	border-radius: 0.5rem;
+	backdrop-filter: blur(8px);
+}
+
+/* Individual tab buttons - 30% Secondary */
+.flower-fest-container [role="tab"] {
+	color: #d3b3ad !important; /* Pastel Gray Red - 30% */
+	transition: all 0.2s ease;
+}
+
+.flower-fest-container [role="tab"]:hover {
+	color: #d9c3a9 !important;
+	background: rgba(211, 179, 173, 0.2) !important;
+}
+
+/* Active tab - 10% Accent highlight */
+.flower-fest-container [role="tab"][data-state="active"] {
+	color: #d9c3a9 !important; /* Pastel Gray Orange - official palette */
+	background: rgba(170, 26, 26, 0.6) !important;
+	box-shadow: 0 2px 6px rgba(170, 26, 26, 0.3);
+}
+
+/* Tab icons (Sparkles, Star) */
+.flower-fest-container [role="tab"] svg {
+	color: #d6a134 !important;
+}
+
+/* Search input styling - 30% Secondary tones */
+.flower-fest-container input,
+.flower-fest-container input[type="search"],
+.flower-fest-container input[type="text"] {
+	background: rgba(211, 179, 173, 0.15) !important; /* Subtle pastel gray red */
+	border-color: rgba(217, 195, 169, 0.3) !important;
+	color: #d9c3a9 !important; /* Pastel Gray Orange - official palette */
+	backdrop-filter: blur(8px);
+}
+
+.flower-fest-container input::placeholder {
+	color: #d3b3ad !important; /* Pastel Gray Red */
+}
+
+.flower-fest-container input:focus {
+	border-color: rgba(214, 161, 52, 0.5) !important; /* Gold accent on focus */
+	box-shadow: 0 0 0 2px rgba(214, 161, 52, 0.2);
+}
+
+/* Search icon */
+.flower-fest-container .relative > svg.text-muted-foreground {
+	color: #aa9a86 !important; /* Gray Orange - official palette for muted elements */
+}
+
+/* Select/dropdown trigger button - 30% Secondary */
+.flower-fest-container button[role="combobox"],
+.flower-fest-container [data-radix-select-trigger] {
+	background: rgba(211, 179, 173, 0.15) !important;
+	border-color: rgba(217, 195, 169, 0.3) !important;
+	color: #d9c3a9 !important; /* Pastel Gray Orange - official palette */
+	backdrop-filter: blur(8px);
+}
+
+.flower-fest-container button[role="combobox"] svg,
+.flower-fest-container [data-radix-select-trigger] svg {
+	color: #d9c3a9 !important;
+}
+
+/* Cart button in shop navigation - 30% Secondary with 10% Accent hover */
+.flower-fest-container a[href="/shop/cart"] button {
+	background: rgba(211, 179, 173, 0.2) !important;
+	border-color: rgba(217, 195, 169, 0.4) !important;
+	color: #d9c3a9 !important;
+	backdrop-filter: blur(8px);
+}
+
+.flower-fest-container a[href="/shop/cart"] button:hover {
+	background: rgba(170, 26, 26, 0.5) !important;
+	border-color: rgba(214, 161, 52, 0.5) !important; /* Gold accent */
+	color: #d9c3a9 !important; /* Pastel Gray Orange - official palette */
+	box-shadow: 0 2px 8px rgba(170, 26, 26, 0.3);
+}
+
+.flower-fest-container a[href="/shop/cart"] button svg {
+	color: #d9c3a9 !important;
+}
+
+.flower-fest-container a[href="/shop/cart"] button:hover svg {
+	color: #d9c3a9 !important; /* Pastel Gray Orange - official palette */
+}
+
+/* Event category filter buttons - 30% Secondary */
+.flower-fest-container .flex.flex-wrap.gap-2 button {
+	background: rgba(211, 179, 173, 0.15) !important;
+	border-color: rgba(217, 195, 169, 0.3) !important;
+	color: #d3b3ad !important; /* Pastel Gray Red */
+	backdrop-filter: blur(8px);
+}
+
+.flower-fest-container .flex.flex-wrap.gap-2 button:hover {
+	background: rgba(211, 179, 173, 0.25) !important;
+	border-color: rgba(214, 161, 52, 0.4) !important; /* Gold accent */
+	color: #d9c3a9 !important;
+}
+
+/* Active category button - 10% Accent (Red with gold border) */
+.flower-fest-container .flex.flex-wrap.gap-2 button[data-state="active"],
+.flower-fest-container .flex.flex-wrap.gap-2 button.bg-primary {
+	background: linear-gradient(135deg, #aa1a1a 0%, #8a1515 100%) !important;
+	border: 1px solid rgba(214, 161, 52, 0.5) !important; /* Gold accent border */
+	color: #d9c3a9 !important;
+	box-shadow: 0 2px 8px rgba(170, 26, 26, 0.4);
+}
+
+/* Sign-in card styling - 30% Secondary with 10% Accent */
+.flower-fest-container .border-primary {
+	background: rgba(211, 179, 173, 0.2) !important;
+	border-color: rgba(170, 26, 26, 0.6) !important; /* Red accent border */
+	backdrop-filter: blur(12px);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.flower-fest-container .border-primary h3 {
+	color: #d9c3a9 !important;
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.flower-fest-container .border-primary p {
+	color: #d9c3a9 !important; /* Pastel Gray Orange */
+}
+
+.flower-fest-container .border-primary button {
+	background: linear-gradient(135deg, #aa1a1a 0%, #8a1515 100%) !important;
+	color: #d9c3a9 !important;
+	border: 1px solid rgba(214, 161, 52, 0.4) !important;
+	box-shadow: 0 4px 15px rgba(170, 26, 26, 0.6);
+}
+
+/* Empty state text - 30% Secondary */
+.flower-fest-container .text-muted-foreground {
+	color: #d3b3ad !important; /* Pastel Gray Red */
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Card select inputs */
+.flower-fest-card select,
+.flower-fest-card [data-radix-select-trigger] {
+	border-color: #d9c3a9 !important;
+	background: rgba(255, 255, 255, 0.95) !important;
+	color: #400c12 !important;
+}
+
+:is(.dark) .flower-fest-card select,
+:is(.dark) .flower-fest-card [data-radix-select-trigger] {
+	border-color: #5a3a3a !important;
+	background: rgba(42, 21, 24, 0.95) !important;
+	color: #d9c3a9 !important;
+}
+
+/* Carousel navigation buttons - light mode (ULTRA SPECIFIC) */
+.flower-fest-card .group .flex.items-center.justify-between button,
+.flower-fest-card div[class*="group"] button[class*="rounded-full"],
+.flower-fest-card button[class*="bg-background"] {
+	background: rgba(211, 179, 173, 0.95) !important;
+	background-image: linear-gradient(
+		145deg,
+		rgba(211, 179, 173, 0.95) 0%,
+		rgba(217, 195, 169, 0.9) 50%,
+		rgba(211, 179, 173, 0.85) 100%
+	) !important;
+	border-color: rgba(217, 195, 169, 0.6) !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+	backdrop-filter: blur(8px) !important;
+}
+
+/* Dark mode carousel buttons */
+:is(.dark) .flower-fest-card .group .flex.items-center.justify-between button,
+:is(.dark) .flower-fest-card div[class*="group"] button[class*="rounded-full"],
+:is(.dark) .flower-fest-card button[class*="bg-background"] {
+	background: rgba(42, 21, 24, 0.9) !important;
+	background-image: linear-gradient(
+		145deg,
+		rgba(42, 21, 24, 0.9) 0%,
+		rgba(31, 16, 18, 0.85) 100%
+	) !important;
+	border-color: rgba(170, 26, 26, 0.4) !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+}
+
+.flower-fest-card button[class*="absolute"][class*="top-1/2"]:hover,
+.flower-fest-card .absolute.top-1\/2 button:hover,
+.flower-fest-card button.absolute.top-1\/2:hover {
+	background: linear-gradient(
+		145deg,
+		rgba(211, 179, 173, 0.9) 0%,
+		rgba(217, 195, 169, 0.85) 50%,
+		rgba(211, 179, 173, 0.8) 100%
+	) !important;
+	border-color: rgba(217, 195, 169, 0.6) !important;
+	box-shadow: 0 3px 12px rgba(0, 0, 0, 0.5) !important;
+	transform: scale(1.05) !important;
+}
+
+/* Dark mode carousel buttons hover */
+:is(.dark) .flower-fest-card button[class*="absolute"][class*="top-1/2"]:hover,
+:is(.dark) .flower-fest-card .absolute.top-1\/2 button:hover,
+:is(.dark) .flower-fest-card button.absolute.top-1\/2:hover {
+	background: linear-gradient(
+		145deg,
+		rgba(58, 31, 34, 0.9) 0%,
+		rgba(42, 21, 24, 0.85) 100%
+	) !important;
+	border-color: rgba(170, 26, 26, 0.5) !important;
+	box-shadow: 0 3px 12px rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Chevron icons - light mode */
+.flower-fest-card .group button svg,
+.flower-fest-card button[class*="bg-background"] svg {
+	color: #2d0810 !important;
+	stroke: #2d0810 !important;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2)) !important;
+}
+
+/* Dark mode chevron icons */
+:is(.dark) .flower-fest-card .group button svg,
+:is(.dark) .flower-fest-card button[class*="bg-background"] svg {
+	color: #e8d4bc !important;
+	stroke: #e8d4bc !important;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)) !important;
+}
+
+/* Carousel thumbnail container - fix positioning and clipping */
+.flower-fest-card .flex.gap-2.mt-2,
+.flower-fest-card .flex.gap-2.overflow-x-auto,
+.flower-fest-card [class*="overflow-x"] {
+	margin-top: 0.5rem !important;
+	padding: 0.25rem !important;
+	width: 100% !important;
+	overflow-x: auto !important;
+	overflow-y: hidden !important;
+}
+
+/* Individual thumbnail images */
+.flower-fest-card .flex.gap-2 img,
+.flower-fest-card .flex.gap-2 > div {
+	flex-shrink: 0 !important;
+	border-radius: 0.375rem !important;
+	border: 2px solid rgba(217, 195, 169, 0.3) !important;
+	transition: all 0.2s ease !important;
+}
+
+/* Active/selected thumbnail */
+.flower-fest-card .flex.gap-2 img[class*="ring"],
+.flower-fest-card .flex.gap-2 > div[class*="ring"] {
+	border-color: rgba(214, 161, 52, 0.6) !important;
+}
+
+/* Thumbnail hover effect */
+.flower-fest-card .flex.gap-2 img:hover,
+.flower-fest-card .flex.gap-2 > div:hover {
+	border-color: rgba(214, 161, 52, 0.5) !important;
+	transform: scale(1.05) !important;
+}
+
+/* ============================================
+   SKELETON LOADING STYLES
+   ============================================ */
+
+/* Skeleton elements - match the burgundy theme */
+body:has(.flower-fest-container) .animate-pulse,
+.flower-fest-container .animate-pulse {
+	background: linear-gradient(
+		90deg,
+		rgba(211, 179, 173, 0.15) 0%,
+		rgba(217, 195, 169, 0.25) 50%,
+		rgba(211, 179, 173, 0.15) 100%
+	) !important;
+	background-size: 200% 100% !important;
+}
+
+/* Skeleton cards */
+body:has(.flower-fest-container) .animate-pulse > div,
+.flower-fest-container .animate-pulse > div {
+	background: rgba(211, 179, 173, 0.2) !important;
+}
+
+/* Override default skeleton colors */
+body:has(.flower-fest-container) [class*="skeleton"],
+body:has(.flower-fest-container) .bg-muted,
+.flower-fest-container [class*="skeleton"],
+.flower-fest-container .bg-muted {
+	background: linear-gradient(
+		90deg,
+		rgba(211, 179, 173, 0.2) 0%,
+		rgba(217, 195, 169, 0.3) 50%,
+		rgba(211, 179, 173, 0.2) 100%
+	) !important;
+	animation: skeleton-loading 2s ease-in-out infinite !important;
+}
+
+@keyframes skeleton-loading {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* ============================================
+   DROPDOWN CONTENT (renders in portal)
+   Style when flower-fest is active
+   ============================================ */
+
+body:has(.flower-fest-container) [data-radix-select-content],
+body:has(.flower-fest-container) [role="listbox"] {
+	background: rgba(242, 236, 224, 0.98) !important;
+	border-color: rgba(217, 195, 169, 0.5) !important;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+body:has(.flower-fest-container) [data-radix-select-item],
+body:has(.flower-fest-container) [role="option"] {
+	color: #400c12 !important;
+}
+
+body:has(.flower-fest-container) [data-radix-select-item]:hover,
+body:has(.flower-fest-container) [role="option"]:hover,
+body:has(.flower-fest-container) [data-radix-select-item][data-highlighted],
+body:has(.flower-fest-container) [role="option"][data-highlighted] {
+	background: rgba(170, 26, 26, 0.15) !important;
+	color: #400c12 !important;
+}
+
+body:has(.flower-fest-container) [data-radix-select-item][data-state="checked"],
+body:has(.flower-fest-container) [role="option"][aria-selected="true"] {
+	background: rgba(170, 26, 26, 0.25) !important;
+}
+
+/* ============================================
+   SIGN-IN CARD STYLING
+   ============================================ */
+
+.flower-fest-container [class*="border-primary"] {
+	background: rgba(242, 236, 224, 0.95) !important;
+	border-color: #aa1a1a !important;
+}
+
+.flower-fest-container [class*="border-primary"] h3 {
+	color: #400c12 !important;
+}
+
+.flower-fest-container [class*="border-primary"] p {
+	color: #5a3a3a !important;
+}
+
+/* ============================================
+   EMPTY STATE STYLING
+   ============================================ */
+
+.flower-fest-container .text-muted-foreground {
+	color: #d9c3a9;
+}
+
+/* ============================================
+   HERO SECTION STYLING
+   ============================================ */
+
+.flower-fest-hero {
+	border-radius: 1rem;
+	overflow: hidden;
+	box-shadow:
+		0 8px 32px rgba(0, 0, 0, 0.4),
+		0 4px 16px rgba(64, 12, 18, 0.25);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 
 /* Petal shapes */
 .petal {
@@ -10,7 +737,7 @@
 	transform: rotate(45deg);
 }
 
-/* Falling animation for petals */
+/* Falling animation for petals (continuous) */
 @keyframes fall {
 	0% {
 		transform: translateY(-100px) rotate(0deg);
@@ -24,6 +751,41 @@
 
 .animate-fall {
 	animation: fall linear infinite;
+}
+
+/* Initial burst petal fall animation (one-time) */
+@keyframes petalFall {
+	0% {
+		transform: translateY(0) rotate(0deg) translateX(0);
+		opacity: 0;
+	}
+	3% {
+		opacity: 1;
+	}
+	90% {
+		opacity: 0.8;
+	}
+	100% {
+		transform: translateY(110vh) rotate(720deg) translateX(var(--sway, 50px));
+		opacity: 0;
+	}
+}
+
+/* Apply random sway directions to each petal */
+.petal-burst:nth-child(odd) {
+	--sway: 60px;
+}
+
+.petal-burst:nth-child(even) {
+	--sway: -50px;
+}
+
+.petal-burst:nth-child(3n) {
+	--sway: 80px;
+}
+
+.petal-burst:nth-child(5n) {
+	--sway: -70px;
 }
 
 /* Floating up animation for hearts */
@@ -66,24 +828,6 @@
 	animation: sparkle ease-in-out infinite;
 }
 
-/* Card hover effects */
-.flower-fest-card {
-	transition: all 0.3s ease;
-}
-
-.flower-fest-card:hover {
-	transform: translateY(-4px);
-	box-shadow:
-		0 10px 40px -10px rgba(236, 72, 153, 0.3),
-		0 4px 20px -5px rgba(236, 72, 153, 0.2);
-}
-
-/* Section titles */
-.flower-fest-section-title {
-	position: relative;
-	padding-left: 0;
-}
-
 /* Header gradient animation */
 .flower-fest-header {
 	background-size: 200% 200%;
@@ -102,12 +846,10 @@
 	}
 }
 
-/* Button hover effects */
-.flower-fest-card button:hover:not(:disabled) {
-	transform: scale(1.02);
-}
+/* ============================================
+   ACCESSIBILITY - REDUCED MOTION
+   ============================================ */
 
-/* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
 	.animate-fall,
 	.animate-float-up,
@@ -121,16 +863,74 @@
 	}
 
 	.petal,
-	.animate-float-up > svg {
+	.animate-float-up > svg,
+	.petal-burst {
 		display: none;
+	}
+
+	/* Disable petal fall animation */
+	[style*="petalFall"] {
+		animation: none !important;
+		display: none !important;
 	}
 }
 
-/* Mobile optimizations */
+/* ============================================
+   MOBILE OPTIMIZATIONS
+   ============================================ */
+
 @media (max-width: 768px) {
 	/* Reduce number of animation elements on mobile */
 	.petal:nth-child(n + 10),
 	.animate-float-up:nth-child(n + 8) {
 		display: none;
+	}
+
+	/* Simpler background gradient for mobile performance */
+	body:has(.flower-fest-container) {
+		background-image:
+			radial-gradient(ellipse 90% 70% at 15% 15%, rgba(170, 26, 26, 0.2) 0%, transparent 45%),
+			radial-gradient(ellipse 80% 60% at 85% 85%, rgba(170, 26, 26, 0.18) 0%, transparent 40%),
+			linear-gradient(180deg, #2d0810 0%, #400c12 50%, #2d0810 100%) !important;
+	}
+
+	/* Lighter grain on mobile for better performance */
+	body:has(.flower-fest-container)::before {
+		opacity: 0.08;
+	}
+
+	body:has(.flower-fest-container)::after {
+		opacity: 0.05;
+	}
+
+	/* Card adjustments for mobile */
+	.flower-fest-card {
+		box-shadow:
+			0 2px 12px rgba(0, 0, 0, 0.25),
+			0 1px 4px rgba(64, 12, 18, 0.15);
+	}
+
+	.flower-fest-card:hover {
+		transform: none; /* Disable hover transform on mobile */
+	}
+
+	/* Touch-friendly active state */
+	.flower-fest-card:active {
+		transform: scale(0.98);
+		box-shadow:
+			0 1px 6px rgba(0, 0, 0, 0.2),
+			0 1px 2px rgba(64, 12, 18, 0.1);
+	}
+}
+
+/* Small mobile screens */
+@media (max-width: 480px) {
+	/* Even simpler background for small screens */
+	body:has(.flower-fest-container)::before {
+		opacity: 0.06;
+	}
+
+	body:has(.flower-fest-container)::after {
+		opacity: 0.03;
 	}
 }

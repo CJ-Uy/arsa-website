@@ -168,6 +168,9 @@ type ShopEvent = {
 	products: EventProduct[];
 	categories: EventCategory[];
 	admins: EventAdmin[];
+	minDeliveryDate: Date | null;
+	maxDeliveryDate: Date | null;
+	blockedDeliverySlots: unknown;
 	_count: {
 		orders: number;
 	};
@@ -236,6 +239,14 @@ type FormCheckoutField = {
 	min?: number;
 	max?: number;
 	step?: number;
+	// Date field constraints
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	// Time field constraints
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
 	// Conditional display
 	showWhen?: FieldCondition;
 	// Message content (for type: "message")
@@ -346,6 +357,12 @@ const FIELD_TYPE_OPTIONS: {
 	},
 ];
 
+type BlockedSlot = {
+	date: string;
+	timeSlot?: string;
+	reason?: string;
+};
+
 type FormData = {
 	name: string;
 	slug: string;
@@ -370,6 +387,10 @@ type FormData = {
 	checkoutPaymentOptions: { id: string; title: string; instructions: string; imageUrl?: string }[];
 	eventProducts: FormEventProduct[];
 	eventCategories: FormEventCategory[];
+	// Delivery control
+	minDeliveryDate: string;
+	maxDeliveryDate: string;
+	blockedDeliverySlots: BlockedSlot[];
 };
 
 const defaultThemeConfig: ThemeConfig = {
@@ -458,6 +479,9 @@ export function EventsManagement({
 		checkoutPaymentOptions: [],
 		eventProducts: [],
 		eventCategories: [],
+		minDeliveryDate: "",
+		maxDeliveryDate: "",
+		blockedDeliverySlots: [],
 	});
 
 	const resetForm = () => {
@@ -485,6 +509,9 @@ export function EventsManagement({
 			checkoutPaymentOptions: [],
 			eventProducts: [],
 			eventCategories: [],
+			minDeliveryDate: "",
+			maxDeliveryDate: "",
+			blockedDeliverySlots: [],
 		});
 		setEditingEvent(null);
 		setActiveTab("basic");
@@ -539,6 +566,11 @@ export function EventsManagement({
 						min: f.min,
 						max: f.max,
 						step: f.step,
+						// Date/Time field constraints
+						minDate: f.minDate,
+						maxDate: f.maxDate,
+						disabledDates: f.disabledDates || [],
+						disabledTimeSlots: f.disabledTimeSlots || [],
 						// Conditional display
 						showWhen: f.showWhen || undefined,
 						// Message content
@@ -570,6 +602,13 @@ export function EventsManagement({
 					displayOrder: c.displayOrder,
 					color: c.color || undefined,
 				})),
+				minDeliveryDate: event.minDeliveryDate
+					? new Date(event.minDeliveryDate).toISOString().slice(0, 10)
+					: "",
+				maxDeliveryDate: event.maxDeliveryDate
+					? new Date(event.maxDeliveryDate).toISOString().slice(0, 10)
+					: "",
+				blockedDeliverySlots: (event.blockedDeliverySlots as BlockedSlot[] | null) || [],
 			});
 		} else {
 			resetForm();
@@ -805,6 +844,14 @@ export function EventsManagement({
 								min: f.type === "number" ? f.min : undefined,
 								max: f.type === "number" ? f.max : undefined,
 								step: f.type === "number" ? f.step : undefined,
+								// Date field constraints
+								minDate: f.type === "date" ? f.minDate : undefined,
+								maxDate: f.type === "date" ? f.maxDate : undefined,
+								disabledDates: f.type === "date" ? f.disabledDates : undefined,
+								// Time field constraints
+								minTime: f.type === "time" ? f.minTime : undefined,
+								maxTime: f.type === "time" ? f.maxTime : undefined,
+								blockedTimes: f.type === "time" ? f.blockedTimes : undefined,
 								// Conditional display
 								showWhen: f.showWhen || undefined,
 								// Message content
@@ -844,6 +891,10 @@ export function EventsManagement({
 				checkoutConfig,
 				products: formData.eventProducts.filter((p) => p.productId || p.packageId),
 				categories: formData.eventCategories.filter((c) => c.name.trim()),
+				minDeliveryDate: formData.minDeliveryDate || undefined,
+				maxDeliveryDate: formData.maxDeliveryDate || undefined,
+				blockedDeliverySlots:
+					formData.blockedDeliverySlots.length > 0 ? formData.blockedDeliverySlots : undefined,
 			};
 
 			const result = editingEvent
@@ -1680,6 +1731,34 @@ export function EventsManagement({
 									/>
 								</div>
 
+								<div>
+									<Label htmlFor="backgroundPattern">Background Pattern</Label>
+									<Select
+										value={formData.themeConfig.backgroundPattern || "none"}
+										onValueChange={(value: string) =>
+											setFormData({
+												...formData,
+												themeConfig: {
+													...formData.themeConfig,
+													backgroundPattern: value === "none" ? "" : value,
+												},
+											})
+										}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">None (Default)</SelectItem>
+											<SelectItem value="burgundy-grain">Burgundy Grain (Flower Fest)</SelectItem>
+										</SelectContent>
+									</Select>
+									<p className="text-muted-foreground mt-1 text-xs">
+										Apply a special background style to the entire shop view when this event is
+										active
+									</p>
+								</div>
+
 								<div className="flex items-center space-x-2">
 									<Switch
 										id="tabGlow"
@@ -2252,6 +2331,247 @@ export function EventsManagement({
 																		</div>
 																	</div>
 																)}
+
+																{/* Date Field Constraints */}
+																{field.type === "date" && (
+																	<div className="space-y-4 rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
+																		<div className="flex items-center gap-2">
+																			<Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+																			<Label className="text-base font-semibold">
+																				Date Restrictions
+																			</Label>
+																		</div>
+																		<p className="text-muted-foreground text-xs">
+																			Control which dates customers can select
+																		</p>
+
+																		{/* Min and Max Dates */}
+																		<div className="grid grid-cols-2 gap-3">
+																			<div>
+																				<Label className="text-xs">Earliest Date</Label>
+																				<Input
+																					type="date"
+																					value={field.minDate || ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							minDate: e.target.value || undefined,
+																						})
+																					}
+																					placeholder="No minimum"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Customers cannot select before this
+																				</p>
+																			</div>
+																			<div>
+																				<Label className="text-xs">Latest Date</Label>
+																				<Input
+																					type="date"
+																					value={field.maxDate || ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							maxDate: e.target.value || undefined,
+																						})
+																					}
+																					placeholder="No maximum"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Customers cannot select after this
+																				</p>
+																			</div>
+																		</div>
+
+																		{/* Blocked Dates */}
+																		<div>
+																			<div className="mb-2 flex items-center justify-between">
+																				<Label className="text-xs">Blocked Dates</Label>
+																				<Button
+																					type="button"
+																					variant="outline"
+																					size="sm"
+																					onClick={() => {
+																						const today = new Date().toISOString().split("T")[0];
+																						updateCheckoutField(index, {
+																							disabledDates: [
+																								...(field.disabledDates || []),
+																								today,
+																							],
+																						});
+																					}}
+																				>
+																					<Plus className="mr-1 h-3 w-3" />
+																					Block Date
+																				</Button>
+																			</div>
+																			<p className="text-muted-foreground mb-2 text-[10px]">
+																				Specific dates customers cannot select (e.g., holidays,
+																				fully booked days)
+																			</p>
+																			{field.disabledDates && field.disabledDates.length > 0 ? (
+																				<div className="space-y-2">
+																					{field.disabledDates.map((date, dateIndex) => (
+																						<div
+																							key={dateIndex}
+																							className="flex items-center gap-2"
+																						>
+																							<Input
+																								type="date"
+																								value={date}
+																								onChange={(e) => {
+																									const newDates = [...field.disabledDates!];
+																									newDates[dateIndex] = e.target.value;
+																									updateCheckoutField(index, {
+																										disabledDates: newDates,
+																									});
+																								}}
+																							/>
+																							<Button
+																								type="button"
+																								variant="ghost"
+																								size="icon"
+																								onClick={() => {
+																									updateCheckoutField(index, {
+																										disabledDates: field.disabledDates!.filter(
+																											(_, i) => i !== dateIndex,
+																										),
+																									});
+																								}}
+																							>
+																								<X className="h-4 w-4" />
+																							</Button>
+																						</div>
+																					))}
+																				</div>
+																			) : (
+																				<p className="text-muted-foreground text-center text-xs">
+																					No blocked dates. All dates within min/max range are
+																					selectable.
+																				</p>
+																			)}
+																		</div>
+																	</div>
+																)}
+
+																{field.type === "time" && (
+																	<div className="space-y-4 rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
+																		<div className="flex items-center gap-2">
+																			<Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+																			<Label className="text-base font-semibold">
+																				Time Restrictions
+																			</Label>
+																		</div>
+																		<p className="text-muted-foreground text-xs">
+																			Control which times customers can select
+																		</p>
+
+																		{/* Min and Max Times */}
+																		<div className="grid grid-cols-2 gap-3">
+																			<div>
+																				<Label className="text-xs">Earliest Time</Label>
+																				<Input
+																					type="time"
+																					value={field.minTime || ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							minTime: e.target.value || undefined,
+																						})
+																					}
+																					placeholder="No minimum"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Customers cannot select before this time
+																				</p>
+																			</div>
+																			<div>
+																				<Label className="text-xs">Latest Time</Label>
+																				<Input
+																					type="time"
+																					value={field.maxTime || ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							maxTime: e.target.value || undefined,
+																						})
+																					}
+																					placeholder="No maximum"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Customers cannot select after this time
+																				</p>
+																			</div>
+																		</div>
+
+																		{/* Blocked Times */}
+																		<div>
+																			<div className="mb-2 flex items-center justify-between">
+																				<Label className="text-sm">Blocked Times</Label>
+																				<Button
+																					type="button"
+																					variant="outline"
+																					size="sm"
+																					onClick={() => {
+																						const now = new Date();
+																						const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+																						updateCheckoutField(index, {
+																							blockedTimes: [
+																								...(field.blockedTimes || []),
+																								currentTime,
+																							],
+																						});
+																					}}
+																				>
+																					<Plus className="mr-1 h-3 w-3" />
+																					Block Time
+																				</Button>
+																			</div>
+																			<p className="text-muted-foreground mb-2 text-[10px]">
+																				Specific times customers cannot select (e.g., fully booked
+																				slots)
+																			</p>
+																			{field.blockedTimes && field.blockedTimes.length > 0 ? (
+																				<div className="space-y-2">
+																					{field.blockedTimes.map((time, timeIndex) => (
+																						<div
+																							key={timeIndex}
+																							className="flex items-center gap-2"
+																						>
+																							<Input
+																								type="time"
+																								value={time}
+																								onChange={(e) => {
+																									const newTimes = [...field.blockedTimes!];
+																									newTimes[timeIndex] = e.target.value;
+																									updateCheckoutField(index, {
+																										blockedTimes: newTimes,
+																									});
+																								}}
+																							/>
+																							<Button
+																								type="button"
+																								variant="ghost"
+																								size="icon"
+																								onClick={() => {
+																									updateCheckoutField(index, {
+																										blockedTimes: field.blockedTimes!.filter(
+																											(_, i) => i !== timeIndex,
+																										),
+																									});
+																								}}
+																							>
+																								<X className="h-4 w-4" />
+																							</Button>
+																						</div>
+																					))}
+																				</div>
+																			) : (
+																				<p className="text-muted-foreground text-center text-xs">
+																					No blocked times. All times within min/max range are
+																					selectable.
+																				</p>
+																			)}
+																		</div>
+																	</div>
+																)}
+
 																{field.type === "repeater" && (
 																	<div className="space-y-4 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
 																		<div className="flex items-center gap-2">
@@ -2374,10 +2694,21 @@ export function EventsManagement({
 																										<SelectValue />
 																									</SelectTrigger>
 																									<SelectContent>
-																										<SelectItem value="text">Text</SelectItem>
-																										<SelectItem value="date">Date</SelectItem>
-																										<SelectItem value="time">Time</SelectItem>
-																										<SelectItem value="select">Dropdown</SelectItem>
+																										<SelectItem value="text">📝 Text</SelectItem>
+																										<SelectItem value="textarea">
+																											📄 Long Text
+																										</SelectItem>
+																										<SelectItem value="number">
+																											🔢 Number
+																										</SelectItem>
+																										<SelectItem value="date">📅 Date</SelectItem>
+																										<SelectItem value="time">🕒 Time</SelectItem>
+																										<SelectItem value="select">
+																											📋 Dropdown
+																										</SelectItem>
+																										<SelectItem value="checkbox">
+																											✅ Checkbox
+																										</SelectItem>
 																									</SelectContent>
 																								</Select>
 																							</div>
@@ -2424,6 +2755,358 @@ export function EventsManagement({
 																									rows={2}
 																									placeholder="Option 1&#10;Option 2"
 																								/>
+																							</div>
+																						)}
+
+																						{col.type === "date" && (
+																							<div className="space-y-2 rounded border bg-blue-50 p-2 dark:bg-blue-950">
+																								<Label className="text-[10px] font-semibold">
+																									Date Constraints
+																								</Label>
+																								<div className="grid grid-cols-2 gap-2">
+																									<div>
+																										<Label className="text-[9px]">Min Date</Label>
+																										<Input
+																											type="date"
+																											className="h-7 text-xs"
+																											value={col.minDate || ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													minDate: e.target.value || undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										/>
+																									</div>
+																									<div>
+																										<Label className="text-[9px]">Max Date</Label>
+																										<Input
+																											type="date"
+																											className="h-7 text-xs"
+																											value={col.maxDate || ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													maxDate: e.target.value || undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										/>
+																									</div>
+																								</div>
+																								<div>
+																									<div className="mb-1 flex items-center justify-between">
+																										<Label className="text-[9px]">
+																											Blocked Dates
+																										</Label>
+																										<Button
+																											type="button"
+																											variant="ghost"
+																											size="sm"
+																											className="h-5 px-1 text-[9px]"
+																											onClick={() => {
+																												const today = new Date()
+																													.toISOString()
+																													.split("T")[0];
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													disabledDates: [
+																														...(newCols[colIndex].disabledDates ||
+																															[]),
+																														today,
+																													],
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										>
+																											<Plus className="mr-0.5 h-2 w-2" />
+																											Add
+																										</Button>
+																									</div>
+																									{col.disabledDates &&
+																									col.disabledDates.length > 0 ? (
+																										<div className="space-y-1">
+																											{col.disabledDates.map((date, dateIdx) => (
+																												<div
+																													key={dateIdx}
+																													className="flex items-center gap-1"
+																												>
+																													<Input
+																														type="date"
+																														className="h-6 text-[10px]"
+																														value={date}
+																														onChange={(e) => {
+																															const newCols = [
+																																...(field.columns || []),
+																															];
+																															const newDates = [
+																																...newCols[colIndex].disabledDates!,
+																															];
+																															newDates[dateIdx] = e.target.value;
+																															newCols[colIndex] = {
+																																...newCols[colIndex],
+																																disabledDates: newDates,
+																															};
+																															updateCheckoutField(index, {
+																																columns: newCols,
+																															});
+																														}}
+																													/>
+																													<Button
+																														type="button"
+																														variant="ghost"
+																														size="icon"
+																														className="h-6 w-6"
+																														onClick={() => {
+																															const newCols = [
+																																...(field.columns || []),
+																															];
+																															newCols[colIndex] = {
+																																...newCols[colIndex],
+																																disabledDates: newCols[
+																																	colIndex
+																																].disabledDates!.filter(
+																																	(_, i) => i !== dateIdx,
+																																),
+																															};
+																															updateCheckoutField(index, {
+																																columns: newCols,
+																															});
+																														}}
+																													>
+																														<X className="h-3 w-3" />
+																													</Button>
+																												</div>
+																											))}
+																										</div>
+																									) : (
+																										<p className="text-muted-foreground text-center text-[9px]">
+																											No blocked dates
+																										</p>
+																									)}
+																								</div>
+																							</div>
+																						)}
+
+																						{col.type === "time" && (
+																							<div className="space-y-2 rounded border bg-blue-50 p-2 dark:bg-blue-950">
+																								<Label className="text-[10px] font-semibold">
+																									Time Constraints
+																								</Label>
+																								<div className="grid grid-cols-2 gap-2">
+																									<div>
+																										<Label className="text-[9px]">Min Time</Label>
+																										<Input
+																											type="time"
+																											className="h-7 text-xs"
+																											value={col.minTime || ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													minTime: e.target.value || undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										/>
+																									</div>
+																									<div>
+																										<Label className="text-[9px]">Max Time</Label>
+																										<Input
+																											type="time"
+																											className="h-7 text-xs"
+																											value={col.maxTime || ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													maxTime: e.target.value || undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										/>
+																									</div>
+																								</div>
+																								<div>
+																									<div className="mb-1 flex items-center justify-between">
+																										<Label className="text-[9px]">
+																											Blocked Times
+																										</Label>
+																										<Button
+																											type="button"
+																											variant="ghost"
+																											size="sm"
+																											className="h-5 px-1 text-[9px]"
+																											onClick={() => {
+																												const now = new Date();
+																												const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													blockedTimes: [
+																														...(newCols[colIndex].blockedTimes ||
+																															[]),
+																														currentTime,
+																													],
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																										>
+																											<Plus className="mr-0.5 h-2 w-2" />
+																											Add
+																										</Button>
+																									</div>
+																									{col.blockedTimes &&
+																									col.blockedTimes.length > 0 ? (
+																										<div className="space-y-1">
+																											{col.blockedTimes.map((time, timeIdx) => (
+																												<div
+																													key={timeIdx}
+																													className="flex items-center gap-1"
+																												>
+																													<Input
+																														type="time"
+																														className="h-6 text-[10px]"
+																														value={time}
+																														onChange={(e) => {
+																															const newCols = [
+																																...(field.columns || []),
+																															];
+																															const newTimes = [
+																																...newCols[colIndex].blockedTimes!,
+																															];
+																															newTimes[timeIdx] = e.target.value;
+																															newCols[colIndex] = {
+																																...newCols[colIndex],
+																																blockedTimes: newTimes,
+																															};
+																															updateCheckoutField(index, {
+																																columns: newCols,
+																															});
+																														}}
+																													/>
+																													<Button
+																														type="button"
+																														variant="ghost"
+																														size="icon"
+																														className="h-6 w-6"
+																														onClick={() => {
+																															const newCols = [
+																																...(field.columns || []),
+																															];
+																															newCols[colIndex] = {
+																																...newCols[colIndex],
+																																blockedTimes: newCols[
+																																	colIndex
+																																].blockedTimes!.filter(
+																																	(_, i) => i !== timeIdx,
+																																),
+																															};
+																															updateCheckoutField(index, {
+																																columns: newCols,
+																															});
+																														}}
+																													>
+																														<X className="h-3 w-3" />
+																													</Button>
+																												</div>
+																											))}
+																										</div>
+																									) : (
+																										<p className="text-muted-foreground text-center text-[9px]">
+																											No blocked times
+																										</p>
+																									)}
+																								</div>
+																							</div>
+																						)}
+
+																						{col.type === "number" && (
+																							<div className="space-y-2 rounded border bg-amber-50 p-2 dark:bg-amber-950">
+																								<Label className="text-[10px] font-semibold">
+																									Number Constraints
+																								</Label>
+																								<div className="grid grid-cols-3 gap-2">
+																									<div>
+																										<Label className="text-[9px]">Min</Label>
+																										<Input
+																											type="number"
+																											className="h-7 text-xs"
+																											value={col.min ?? ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													min: e.target.value
+																														? parseFloat(e.target.value)
+																														: undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																											placeholder="No min"
+																										/>
+																									</div>
+																									<div>
+																										<Label className="text-[9px]">Max</Label>
+																										<Input
+																											type="number"
+																											className="h-7 text-xs"
+																											value={col.max ?? ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													max: e.target.value
+																														? parseFloat(e.target.value)
+																														: undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																											placeholder="No max"
+																										/>
+																									</div>
+																									<div>
+																										<Label className="text-[9px]">Step</Label>
+																										<Input
+																											type="number"
+																											className="h-7 text-xs"
+																											value={col.step ?? ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													step: e.target.value
+																														? parseFloat(e.target.value)
+																														: undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																											placeholder="Any"
+																										/>
+																									</div>
+																								</div>
 																							</div>
 																						)}
 																					</div>

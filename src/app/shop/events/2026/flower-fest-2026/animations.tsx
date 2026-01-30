@@ -1,9 +1,99 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { EventAnimationProps } from "../../types";
+import confetti from "canvas-confetti";
+import "./styles.css"; // Ensure CSS is loaded
 
-// Flower Petals Animation using CSS
+// Initial falling petals burst animation (plays once on load)
+export function InitialPetalsBurst({ isActive }: { isActive: boolean }) {
+	// Check for reduced motion preference on mount
+	const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+	useEffect(() => {
+		const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+		setPrefersReducedMotion(mediaQuery.matches);
+	}, []);
+
+	useEffect(() => {
+		if (!isActive || prefersReducedMotion) return;
+
+		// Petal colors from the color palette
+		const petalColors = ["#E8B4B4", "#AA1A1A", "#FF6B6B", "#FFB6C1", "#FF8FA3"];
+
+		// Heart shape
+		const heartShape = confetti.shapeFromPath({
+			path: "M0,-6 C-2,-8 -5,-8 -7,-6 C-9,-4 -9,-1 -7,2 L0,10 L7,2 C9,-1 9,-4 7,-6 C5,-8 2,-8 0,-6 Z",
+		});
+
+		// Sampaguita flower (5 rounded petals meeting at center)
+		const sampaguitaFlower = confetti.shapeFromPath({
+			// Center circle
+			path:
+				"M0,-2 A2,2 0 1,0 0,2 A2,2 0 1,0 0,-2 Z " +
+				// Top petal (12 o'clock) - rounded tip
+				"M-1.5,-2 Q-2.5,-5 -1,-8 Q0,-9 1,-8 Q2.5,-5 1.5,-2 Z " +
+				// Top-right petal (2 o'clock) - rounded tip
+				"M1.5,-1 Q4,-3 6,-4 Q7,-4 7,-3 Q6,0 3,1 Z " +
+				// Bottom-right petal (5 o'clock) - rounded tip
+				"M2,1.5 Q5,3 6,6 Q6,7 5,7 Q2,5 1,2 Z " +
+				// Bottom-left petal (7 o'clock) - rounded tip
+				"M-1,2 Q-2,5 -5,7 Q-6,7 -6,6 Q-5,3 -2,1.5 Z " +
+				// Top-left petal (10 o'clock) - rounded tip
+				"M-3,1 Q-6,0 -7,-3 Q-7,-4 -6,-4 Q-4,-3 -1.5,-1 Z",
+		});
+
+		// Delay animation start by 0.5 seconds
+		const startDelay = setTimeout(() => {
+			// Create falling petals effect
+			const duration = 5000; // 5 seconds
+			const animationEnd = Date.now() + duration;
+
+			function randomInRange(min: number, max: number) {
+				return Math.random() * (max - min) + min;
+			}
+
+			const interval = setInterval(() => {
+				const timeLeft = animationEnd - Date.now();
+				if (timeLeft <= 0) {
+					clearInterval(interval);
+					return;
+				}
+
+				const particleCount = 4; // A few more particles per frame
+
+				// Launch petals from random positions across the top
+				confetti({
+					particleCount,
+					startVelocity: 25, // Faster fall
+					spread: 60,
+					angle: randomInRange(55, 125), // Vary the angle
+					origin: {
+						x: randomInRange(0.1, 0.9), // Spread across the width
+						y: -0.1, // Start above the viewport
+					},
+					colors: petalColors,
+					gravity: 0.8, // Stronger gravity for faster fall
+					scalar: randomInRange(1.2, 2.0), // Larger petals
+					drift: randomInRange(-1, 1), // More horizontal drift
+					ticks: 250, // How long particles last
+					shapes: ["circle", heartShape, heartShape, heartShape, sampaguitaFlower], // More hearts (60%), circles (20%), flowers (20%)
+					flat: false, // 3D appearance with rotation
+					zIndex: 9999,
+				});
+			}, 80); // Fire every 80ms for smoother effect
+
+			// Cleanup interval on unmount
+			return () => clearInterval(interval);
+		}, 500); // 0.5 second delay
+
+		return () => clearTimeout(startDelay);
+	}, [isActive, prefersReducedMotion]);
+
+	return null;
+}
+
+// Flower Petals Animation using CSS (continuous)
 export function FlowerPetalsAnimation({ config, isActive }: EventAnimationProps) {
 	if (!isActive) return null;
 
