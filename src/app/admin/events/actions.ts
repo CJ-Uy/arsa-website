@@ -99,6 +99,7 @@ export type CheckoutField = {
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
+	description?: string; // Optional description for repeater fields
 };
 
 export type CheckoutConfig = {

@@ -79,6 +79,13 @@ type RepeaterColumn = {
 	placeholder?: string;
 	options?: string[];
 	width?: "sm" | "md" | "lg";
+	// Date/Time constraints for date and time columns
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
 };
 
 type FieldCondition = {
@@ -126,6 +133,7 @@ type CheckoutField = {
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
+	description?: string; // Optional description text for repeaters
 };
 
 type PaymentOption = {
@@ -805,6 +813,11 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 
 											{field.type === "repeater" && field.columns && (
 												<div className="mt-3 space-y-3">
+													{/* Description */}
+													{field.description && (
+														<p className="text-muted-foreground text-sm">{field.description}</p>
+													)}
+
 													{/* Column headers for desktop */}
 													<div className="hidden gap-2 md:flex">
 														{field.columns.map((col) => (
@@ -880,6 +893,11 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																				)
 																			}
 																			placeholder={col.placeholder || "Select date"}
+																			minDate={col.minDate ? new Date(col.minDate) : undefined}
+																			maxDate={col.maxDate ? new Date(col.maxDate) : undefined}
+																			disabledDates={
+																				col.disabledDates?.map((d) => new Date(d)) || undefined
+																			}
 																		/>
 																	)}
 
@@ -890,6 +908,8 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																				updateRepeaterCell(field.id, rowIndex, col.id, time)
 																			}
 																			placeholder={col.placeholder || "Select time"}
+																			minTime={col.minTime}
+																			maxTime={col.maxTime}
 																		/>
 																	)}
 

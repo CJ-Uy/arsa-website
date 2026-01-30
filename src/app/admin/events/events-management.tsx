@@ -876,6 +876,7 @@ export function EventsManagement({
 								minRows: f.type === "repeater" ? f.minRows : undefined,
 								maxRows: f.type === "repeater" ? f.maxRows : undefined,
 								defaultRows: f.type === "repeater" ? f.defaultRows : undefined,
+								description: f.type === "repeater" ? f.description : undefined,
 							})),
 							termsMessage: formData.checkoutTermsMessage || undefined,
 							confirmationMessage: formData.checkoutConfirmationMessage || undefined,
@@ -2640,6 +2641,24 @@ export function EventsManagement({
 																			<Label className="text-base font-semibold">
 																				Repeater Configuration
 																			</Label>
+																		</div>
+
+																		{/* Description */}
+																		<div>
+																			<Label className="text-xs">Description (optional)</Label>
+																			<Textarea
+																				value={field.description || ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						description: e.target.value || undefined,
+																					})
+																				}
+																				placeholder="Add instructions or context for this repeater field"
+																				rows={2}
+																			/>
+																			<p className="text-muted-foreground mt-1 text-xs">
+																				This description will be shown to customers above the repeater
+																			</p>
 																		</div>
 
 																		{/* Row Limits */}
