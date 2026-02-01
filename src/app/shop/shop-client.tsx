@@ -818,7 +818,23 @@ export function ShopClient({
 							<div className="flex-1 space-y-2">
 								<h3 className="text-lg font-semibold">Sign in to shop</h3>
 								<p className="text-muted-foreground text-sm leading-relaxed">
-									Sign in with your Google account to start shopping
+									Sign in with Google to shop. If you have trouble, try refreshing or using a
+									different browser/device. Still need help? Contact the{" "}
+									<a
+										className="text-[#165B95] underline"
+										target="_blank"
+										href="https://www.facebook.com/ARSAFlowerFest"
+									>
+										Flower Fest Help Desk
+									</a>{" "}
+									or email{" "}
+									<a
+										className="text-[#165B95] underline"
+										target="_blank"
+										href="mailto:arsa.resgen@gmail.com?subject='ARSA Shop Sign-in Issue'"
+									>
+										arsa.resgen@gmail.com
+									</a>
 								</p>
 							</div>
 							<Button
