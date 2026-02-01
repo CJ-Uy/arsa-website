@@ -9,12 +9,14 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     restart: unless-stopped
 
-    # Resource limits (adjust based on your server capacity)
+    # Resource configuration
+    # Note: No hard limits set - container can use available resources as needed
+    # Next.js RSC serialization requires adequate memory to avoid truncated responses
     deploy:
       resources:
         reservations:
           cpus: "0.25"
-          memory: 256M
+          memory: 512M
 
     # Security options
     security_opt:

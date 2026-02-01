@@ -353,7 +353,8 @@ export async function createEvent(data: EventFormData) {
 		// Invalidate cache
 		cache.deletePattern("events:");
 
-		return { success: true, event };
+		// Return minimal data to avoid RSC serialization issues with large JSON payloads
+		return { success: true, eventId: event.id };
 	} catch (error) {
 		console.error("Create event error:", error);
 		return { success: false, message: "Failed to create event" };
@@ -466,7 +467,8 @@ export async function updateEvent(id: string, data: EventFormData) {
 		// Invalidate cache
 		cache.deletePattern("events:");
 
-		return { success: true, event };
+		// Return minimal data to avoid RSC serialization issues with large JSON payloads
+		return { success: true, eventId: event.id };
 	} catch (error) {
 		console.error("Update event error:", error);
 		return { success: false, message: "Failed to update event" };
