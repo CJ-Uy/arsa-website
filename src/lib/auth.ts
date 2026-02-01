@@ -2,7 +2,14 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const auth = betterAuth({
+	baseURL: process.env.BETTER_AUTH_URL,
+	trustedOrigins: [
+		process.env.BETTER_AUTH_URL!,
+		process.env.NEXT_PUBLIC_APP_URL!,
+	].filter(Boolean),
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
@@ -14,6 +21,20 @@ export const auth = betterAuth({
 	},
 	emailAndPassword: {
 		enabled: false, // Only allow OAuth login
+	},
+	session: {
+		cookieCache: {
+			enabled: true,
+			maxAge: 5 * 60, // 5 minutes - reduces DB lookups
+		},
+	},
+	advanced: {
+		// Use secure cookies in production (requires HTTPS)
+		useSecureCookies: isProduction,
+		// Cookie prefix for namespacing
+		cookiePrefix: "arsa",
+		// Cross-subdomain cookies (set to your domain if using subdomains)
+		// crossSubDomainCookies: { enabled: true, domain: ".yourdomain.com" },
 	},
 	user: {
 		additionalFields: {
