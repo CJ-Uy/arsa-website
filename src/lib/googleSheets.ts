@@ -16,6 +16,80 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { Readable } from "stream";
 
+// Types imported from src/app/admin/events/actions.ts for checkout config structure
+type CheckoutFieldType =
+	| "text"
+	| "textarea"
+	| "select"
+	| "checkbox"
+	| "date"
+	| "time"
+	| "number"
+	| "email"
+	| "phone"
+	| "radio"
+	| "repeater"
+	| "message"
+	| "toggle";
+
+type RepeaterColumn = {
+	id: string;
+	label: string;
+	type: "text" | "textarea" | "number" | "date" | "time" | "select" | "checkbox";
+	placeholder?: string;
+	options?: string[];
+	width?: "sm" | "md" | "lg";
+	min?: number;
+	max?: number;
+	step?: number;
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	minDateOffset?: number;
+	maxDateOffset?: number;
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
+};
+
+type FieldCondition = {
+	fieldId: string;
+	value: string | string[];
+};
+
+type CheckoutField = {
+	id: string;
+	label: string;
+	type: CheckoutFieldType;
+	required: boolean;
+	placeholder?: string;
+	options?: string[];
+	maxLength?: number;
+	min?: number;
+	max?: number;
+	step?: number;
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	minDateOffset?: number;
+	maxDateOffset?: number;
+	disabledTimeSlots?: { date: string; times: string[] }[];
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
+	showWhen?: FieldCondition;
+	messageContent?: string;
+	toggleOffMessage?: string;
+	toggleOnMessage?: string;
+	description?: string;
+	columns?: RepeaterColumn[];
+	minRows?: number;
+	maxRows?: number;
+	defaultRows?: number;
+	rowLabel?: string;
+	autoSortByDateTime?: boolean;
+};
+
 /**
  * Get authenticated Google Sheets client
  */
@@ -181,22 +255,18 @@ async function getOrdersForSync(eventId?: string) {
 /**
  * Parse checkout config to get field definitions with proper labels
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseCheckoutConfig(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	checkoutConfig: any,
-): Map<string, { label: string; type: string; columns?: any[] }> {
-	const fieldMap = new Map();
+): Map<string, CheckoutField> {
+	const fieldMap = new Map<string, CheckoutField>();
 
 	if (!checkoutConfig?.additionalFields) return fieldMap;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	checkoutConfig.additionalFields.forEach((field: any) => {
+	checkoutConfig.additionalFields.forEach((field: CheckoutField) => {
 		// Use the field label as the key (that's what's stored in order.eventData.fields)
-		fieldMap.set(field.label, {
-			label: field.label,
-			type: field.type,
-			columns: field.columns, // For repeater fields
-		});
+		fieldMap.set(field.label, field);
 	});
 
 	return fieldMap;
@@ -250,8 +320,20 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 
 				if (fieldDef?.type === "repeater" && Array.isArray(value)) {
 					// For repeater fields, track the maximum count
-					const currentMax = eventColumnsMap.get(key) || 0;
-					eventColumnsMap.set(key, Math.max(currentMax, value.length));
+					let currentMax = eventColumnsMap.get(key) || 0;
+
+					// Check if this repeater field contains both 'date' and 'time' columns,
+					// which suggests it's a delivery details repeater.
+					const hasDateColumn = fieldDef.columns?.some((col) => col.type === "date");
+					const hasTimeColumn = fieldDef.columns?.some((col) => col.type === "time");
+
+					if (hasDateColumn && hasTimeColumn) {
+						// Ensure there are always at least 5 slots for delivery details
+						currentMax = Math.max(currentMax, value.length, 5);
+					} else {
+						currentMax = Math.max(currentMax, value.length);
+					}
+					eventColumnsMap.set(key, currentMax);
 				} else {
 					// For simple fields, just track that it exists
 					if (!eventColumnsMap.has(key)) {

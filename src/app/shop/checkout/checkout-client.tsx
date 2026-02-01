@@ -600,7 +600,9 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 						toast.success(`Reference number extracted: ${receiptData.referenceNumber}`);
 					} else {
 						toast.dismiss();
-						toast.warning("Could not extract reference number. You may still place the order but please ensure receipt is clear.");
+						toast.warning(
+							"Could not extract reference number. You may still place the order but please ensure receipt is clear.",
+						);
 					}
 				} else if (isPDF) {
 					// For PDFs, extract server-side
@@ -1703,7 +1705,12 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 								</div>
 							</div>
 
-							<Button type="submit" className="w-full" size="lg" disabled={loading || !isFormValid()}>
+							<Button
+								type="submit"
+								className="w-full"
+								size="lg"
+								disabled={loading || !isFormValid()}
+							>
 								{loading ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -93,6 +93,11 @@ export async function deleteOrder(orderId: string) {
 	try {
 		await checkShopAdmin();
 
+		// Delete associated ShopPurchase record
+		await prisma.shopPurchase.deleteMany({
+			where: { orderId: orderId },
+		});
+
 		await prisma.order.delete({
 			where: { id: orderId },
 		});
