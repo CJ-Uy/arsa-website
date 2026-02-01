@@ -778,7 +778,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 					<Card>
 						<CardHeader>
 							<CardTitle>Customer Information</CardTitle>
-							<CardDescription>Please provide your delivery information</CardDescription>
+							<CardDescription>Please provide your information</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -817,9 +817,6 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 									onChange={(e) => setStudentId(e.target.value)}
 									className="mt-2"
 								/>
-								<p className="text-muted-foreground mt-1 text-xs">
-									Helps us verify your identity for pickup
-								</p>
 							</div>
 							<div>
 								<Label>Email</Label>
