@@ -67,6 +67,7 @@ export default async function OrdersPage() {
 								</div>
 								<p className="text-muted-foreground text-sm">
 									{new Date(order.createdAt).toLocaleDateString("en-US", {
+										timeZone: "Asia/Manila",
 										year: "numeric",
 										month: "long",
 										day: "numeric",

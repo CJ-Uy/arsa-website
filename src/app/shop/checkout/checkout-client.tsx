@@ -227,6 +227,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 			deliveryDate.setDate(deliveryDate.getDate() + daysOffset);
 
 			const formattedDate = deliveryDate.toLocaleDateString("en-US", {
+				timeZone: "Asia/Manila",
 				month: "long",
 				day: "numeric",
 				year: "numeric",
@@ -676,6 +677,61 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		}
 
 		return true;
+	}, [
+		firstName,
+		lastName,
+		receiptFile,
+		additionalFields,
+		eventFieldValues,
+		repeaterValues,
+		isFieldVisible,
+	]);
+
+	// Get the reason why the form is invalid (for showing to user)
+	const getFormInvalidReason = useCallback((): string | null => {
+		if (!firstName.trim() && !lastName.trim()) {
+			return "Please enter your first and last name";
+		}
+		if (!firstName.trim()) {
+			return "Please enter your first name";
+		}
+		if (!lastName.trim()) {
+			return "Please enter your last name";
+		}
+
+		if (!receiptFile) {
+			return "Please upload your payment receipt";
+		}
+
+		for (const field of additionalFields) {
+			if (isFieldVisible(field) && field.required) {
+				if (field.type === "repeater") {
+					const rows = repeaterValues[field.id] || [];
+					const minRows = field.minRows || 1;
+					if (rows.length < minRows) {
+						return `"${field.label}" requires at least ${minRows} row(s)`;
+					}
+					for (let i = 0; i < rows.length; i++) {
+						for (const col of field.columns || []) {
+							if (!rows[i][col.id] || String(rows[i][col.id]).trim() === "") {
+								return `Please fill in all fields in "${field.label}" row ${i + 1}`;
+							}
+						}
+					}
+				} else if (field.type === "checkbox") {
+					if (!eventFieldValues[field.id]) {
+						return `Please check "${field.label}"`;
+					}
+				} else {
+					const value = eventFieldValues[field.id];
+					if (!value || (typeof value === "string" && !value.trim())) {
+						return `Please fill in "${field.label}"`;
+					}
+				}
+			}
+		}
+
+		return null;
 	}, [
 		firstName,
 		lastName,
@@ -1720,6 +1776,10 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 									"Place Order"
 								)}
 							</Button>
+
+							{!loading && !isFormValid() && (
+								<p className="text-destructive text-center text-sm">{getFormInvalidReason()}</p>
+							)}
 
 							<p className="text-muted-foreground text-center text-xs">
 								{checkoutConfig?.termsMessage

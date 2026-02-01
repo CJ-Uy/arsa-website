@@ -277,7 +277,12 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 												</div>
 												<div className="text-muted-foreground text-sm">
 													<p>Customer: {order.user.name || order.user.email}</p>
-													<p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+													<p>
+														Date:{" "}
+														{new Date(order.createdAt).toLocaleDateString("en-US", {
+															timeZone: "Asia/Manila",
+														})}
+													</p>
 													{order.gcashReferenceNumber && (
 														<p className="flex items-center gap-2">
 															<span>GCash Ref:</span>

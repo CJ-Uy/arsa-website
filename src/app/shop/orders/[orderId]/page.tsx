@@ -84,7 +84,8 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 							<div>
 								<p className="text-muted-foreground text-sm">Order Date</p>
 								<p className="text-sm">
-									{new Date(order.createdAt).toLocaleDateString("en-US", {
+									{new Date(order.createdAt).toLocaleString("en-US", {
+										timeZone: "Asia/Manila",
 										year: "numeric",
 										month: "long",
 										day: "numeric",

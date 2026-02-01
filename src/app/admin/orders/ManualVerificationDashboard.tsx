@@ -108,7 +108,9 @@ export function ManualVerificationDashboard() {
 											{order.orderItems.length} item(s) - ₱{order.totalAmount.toFixed(2)}
 										</div>
 										<div className="text-muted-foreground text-xs">
-											{new Date(order.createdAt).toLocaleString()}
+											{new Date(order.createdAt).toLocaleString("en-US", {
+												timeZone: "Asia/Manila",
+											})}
 										</div>
 									</div>
 									<div className="flex flex-col gap-2">

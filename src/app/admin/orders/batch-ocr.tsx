@@ -194,7 +194,12 @@ export function BatchOcrProcessor() {
 												<div className="text-muted-foreground mt-1 text-sm">
 													<p>Customer: {order.user.name || order.user.email}</p>
 													<p>Amount: ₱{order.totalAmount.toFixed(2)}</p>
-													<p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+													<p>
+														Date:{" "}
+														{new Date(order.createdAt).toLocaleDateString("en-US", {
+															timeZone: "Asia/Manila",
+														})}
+													</p>
 												</div>
 											</div>
 										</CardContent>

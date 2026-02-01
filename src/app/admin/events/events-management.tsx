@@ -466,7 +466,6 @@ const formatDateForDatetimeLocal = (date: Date): string => {
 	return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-
 export function EventsManagement({
 	initialEvents,
 	availableProducts,
@@ -1180,11 +1179,19 @@ export function EventsManagement({
 									<div className="grid grid-cols-2 gap-2 text-sm">
 										<div className="flex items-center gap-1">
 											<Calendar className="text-muted-foreground h-4 w-4" />
-											<span>{new Date(event.startDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })}</span>
+											<span>
+												{new Date(event.startDate).toLocaleDateString("en-US", {
+													timeZone: "Asia/Manila",
+												})}
+											</span>
 										</div>
 										<div className="flex items-center gap-1">
 											<Clock className="text-muted-foreground h-4 w-4" />
-											<span>{new Date(event.endDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })}</span>
+											<span>
+												{new Date(event.endDate).toLocaleDateString("en-US", {
+													timeZone: "Asia/Manila",
+												})}
+											</span>
 										</div>
 									</div>
 

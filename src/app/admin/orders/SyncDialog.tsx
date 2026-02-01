@@ -384,7 +384,9 @@ export function SyncDialog({ open, onOpenChange }: SyncDialogProps) {
 							<div className="flex items-center justify-between">
 								<span className="text-muted-foreground">Last Synced:</span>
 								<span className="font-medium">
-									{new Date(syncStatus.lastSync).toLocaleString()}
+									{new Date(syncStatus.lastSync).toLocaleString("en-US", {
+										timeZone: "Asia/Manila",
+									})}
 								</span>
 							</div>
 							{syncStatus.orderCount !== undefined && (

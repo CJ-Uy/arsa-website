@@ -283,14 +283,18 @@ export async function addPackageToCart(
 
 // Purchase Code Generation Helpers
 
-// Format timestamp as MM-DD-YY-HH:mm for purchase codes
+// Format timestamp as MM-DD-YY-HH:mm for purchase codes (UTC+8 / Asia/Manila)
 function formatPurchaseTimestamp(): string {
+	// Convert to UTC+8 by adding 8 hours to UTC time
 	const now = new Date();
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const day = String(now.getDate()).padStart(2, "0");
-	const year = String(now.getFullYear()).slice(-2);
-	const hours = String(now.getHours()).padStart(2, "0");
-	const minutes = String(now.getMinutes()).padStart(2, "0");
+	const utcPlus8Offset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+	const manilaTime = new Date(now.getTime() + utcPlus8Offset);
+
+	const month = String(manilaTime.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(manilaTime.getUTCDate()).padStart(2, "0");
+	const year = String(manilaTime.getUTCFullYear()).slice(-2);
+	const hours = String(manilaTime.getUTCHours()).padStart(2, "0");
+	const minutes = String(manilaTime.getUTCMinutes()).padStart(2, "0");
 	return `${month}-${day}-${year}-${hours}:${minutes}`;
 }
 

@@ -178,7 +178,9 @@ export async function exportOrdersData(eventId?: string) {
 
 				const baseData: Record<string, any> = {
 					"Order ID": order.id,
-					"Order Date": new Date(order.createdAt).toLocaleString(),
+					"Order Date": new Date(order.createdAt).toLocaleString("en-US", {
+						timeZone: "Asia/Manila",
+					}),
 					"Customer Name": order.user.name || "N/A",
 					"First Name": order.user.firstName || "N/A",
 					"Last Name": order.user.lastName || "N/A",
