@@ -29,7 +29,12 @@ export default async function AdminProductsPage() {
 	const productsRaw = await prisma.product.findMany({
 		include: {
 			eventProducts: {
-				include: {
+				select: {
+					eventId: true,
+					eventPrice: true,
+					productCode: true,
+					categoryId: true,
+					sortOrder: true,
 					event: {
 						select: {
 							id: true,

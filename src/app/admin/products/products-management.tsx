@@ -64,7 +64,12 @@ type Product = {
 	specialNote: string | null;
 	isEventExclusive: boolean;
 	sizePricing: Record<string, number> | null;
-	eventProducts: Array<{ eventId: string; eventPrice: number | null }>;
+	eventProducts: Array<{
+		eventId: string;
+		eventPrice: number | null;
+		productCode: string | null;
+		categoryId: string | null;
+	}>;
 };
 
 type ProductsManagementProps = {
@@ -87,7 +92,12 @@ type ProductFormData = {
 	specialNote: string;
 	isEventExclusive: boolean;
 	sizePricing: Record<string, number>;
-	assignedEvents: Array<{ eventId: string; eventPrice: number | null }>;
+	assignedEvents: Array<{
+		eventId: string;
+		eventPrice: number | null;
+		productCode: string | null;
+		categoryId: string | null;
+	}>;
 };
 
 export function ProductsManagement({ initialProducts, availableEvents }: ProductsManagementProps) {
@@ -563,7 +573,12 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 																				...formData,
 																				assignedEvents: [
 																					...formData.assignedEvents,
-																					{ eventId: event.id, eventPrice: null },
+																					{
+																						eventId: event.id,
+																						eventPrice: null,
+																						productCode: null,
+																						categoryId: null,
+																					},
 																				],
 																			});
 																		} else {

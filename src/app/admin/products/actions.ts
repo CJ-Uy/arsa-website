@@ -53,6 +53,8 @@ const productSchema = z.object({
 			z.object({
 				eventId: z.string(),
 				eventPrice: z.number().nullable(),
+				productCode: z.string().nullable().optional(),
+				categoryId: z.string().nullable().optional(),
 			}),
 		)
 		.default([]),
@@ -73,6 +75,8 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 					create: assignedEvents.map((event, index) => ({
 						eventId: event.eventId,
 						eventPrice: event.eventPrice,
+						productCode: event.productCode ?? null,
+						categoryId: event.categoryId ?? null,
 						sortOrder: index,
 					})),
 				},
@@ -111,6 +115,8 @@ export async function updateProduct(id: string, data: z.infer<typeof productSche
 					create: assignedEvents.map((event, index) => ({
 						eventId: event.eventId,
 						eventPrice: event.eventPrice,
+						productCode: event.productCode ?? null,
+						categoryId: event.categoryId ?? null,
 						sortOrder: index,
 					})),
 				},
