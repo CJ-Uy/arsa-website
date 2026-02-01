@@ -636,6 +636,54 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		}
 	};
 
+	const isFormValid = useCallback(() => {
+		if (!firstName.trim() || !lastName.trim()) {
+			return false;
+		}
+
+		if (!receiptFile) {
+			return false;
+		}
+
+		for (const field of additionalFields) {
+			if (isFieldVisible(field) && field.required) {
+				if (field.type === "repeater") {
+					const rows = repeaterValues[field.id] || [];
+					const minRows = field.minRows || 1;
+					if (rows.length < minRows) {
+						return false;
+					}
+					for (const row of rows) {
+						for (const col of field.columns || []) {
+							if (!row[col.id] || String(row[col.id]).trim() === "") {
+								return false;
+							}
+						}
+					}
+				} else if (field.type === "checkbox") {
+					if (!eventFieldValues[field.id]) {
+						return false;
+					}
+				} else {
+					const value = eventFieldValues[field.id];
+					if (!value || (typeof value === "string" && !value.trim())) {
+						return false;
+					}
+				}
+			}
+		}
+
+		return true;
+	}, [
+		firstName,
+		lastName,
+		receiptFile,
+		additionalFields,
+		eventFieldValues,
+		repeaterValues,
+		isFieldVisible,
+	]);
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
@@ -1655,7 +1703,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 								</div>
 							</div>
 
-							<Button type="submit" className="w-full" size="lg" disabled={loading || !receiptFile}>
+							<Button type="submit" className="w-full" size="lg" disabled={loading || !isFormValid()}>
 								{loading ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
