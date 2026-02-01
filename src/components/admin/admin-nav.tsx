@@ -4,7 +4,15 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState, useTransition } from "react";
-import { Loader2, ShoppingCart, Package, Gift, CalendarHeart, Megaphone } from "lucide-react";
+import {
+	Loader2,
+	ShoppingCart,
+	Package,
+	Gift,
+	CalendarHeart,
+	Megaphone,
+	Settings,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -19,6 +27,7 @@ const iconMap = {
 	packages: Gift,
 	events: CalendarHeart,
 	banner: Megaphone,
+	settings: Settings,
 } as const;
 
 type AdminNavProps = {

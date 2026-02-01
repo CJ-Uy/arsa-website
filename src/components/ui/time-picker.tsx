@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface TimePickerProps {
 	value?: string; // "HH:mm" format
 	onChange?: (time: string) => void;
+	onComplete?: (time: string) => void; // Called when full time is selected (minute picked)
 	placeholder?: string;
 	disabled?: boolean;
 	className?: string;
@@ -22,6 +23,7 @@ interface TimePickerProps {
 export function TimePicker({
 	value,
 	onChange,
+	onComplete,
 	placeholder = "Pick a time",
 	disabled = false,
 	className,
@@ -30,6 +32,7 @@ export function TimePicker({
 	maxTime,
 }: TimePickerProps) {
 	const [open, setOpen] = React.useState(false);
+	const firstValidHourRef = React.useRef<HTMLButtonElement>(null);
 
 	// Parse current value
 	const [selectedHour, selectedMinute] = React.useMemo(() => {
@@ -90,9 +93,30 @@ export function TimePicker({
 
 	const handleMinuteSelect = (minute: number) => {
 		const hour = selectedHour ?? 9; // Default to 9 AM
-		onChange?.(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`);
+		const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+		onChange?.(time);
+		onComplete?.(time); // Notify that full time is selected
 		setOpen(false);
 	};
+
+	// Find first valid hour for auto-scrolling
+	const firstValidHour = React.useMemo(() => {
+		for (const hour of hours) {
+			const hasValidMinutes = minutes.some((minute) => !isTimeDisabled(hour, minute));
+			if (hasValidMinutes) return hour;
+		}
+		return 0;
+	}, [hours, minutes, isTimeDisabled]);
+
+	// Auto-scroll to first valid hour when popover opens
+	React.useEffect(() => {
+		if (open && firstValidHourRef.current) {
+			// Small delay to ensure popover is fully rendered
+			setTimeout(() => {
+				firstValidHourRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+			}, 0);
+		}
+	}, [open]);
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -124,9 +148,11 @@ export function TimePicker({
 									const ampm = hour < 12 ? "AM" : "PM";
 									// Check if this hour has any valid minutes
 									const hasValidMinutes = minutes.some((minute) => !isTimeDisabled(hour, minute));
+									const isFirstValid = hour === firstValidHour;
 									return (
 										<Button
 											key={hour}
+											ref={isFirstValid ? firstValidHourRef : undefined}
 											variant={selectedHour === hour ? "default" : "ghost"}
 											size="sm"
 											className="w-full justify-center text-xs"
@@ -190,6 +216,7 @@ export function TimePicker({
 									className="flex-1 text-xs"
 									onClick={() => {
 										onChange?.(preset.value);
+										onComplete?.(preset.value);
 										setOpen(false);
 									}}
 								>

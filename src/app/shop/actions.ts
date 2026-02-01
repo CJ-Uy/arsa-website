@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { cache, cacheKeys, withCache } from "@/lib/cache";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 // Get current session
 async function getSession() {
@@ -546,6 +547,49 @@ export async function createOrder(
 
 		// Invalidate cart cache
 		cache.delete(cacheKeys.cart(session.user.id));
+
+		// Send order confirmation email (non-blocking)
+		try {
+			// Get event name if applicable
+			let eventName: string | undefined;
+			if (eventId) {
+				const event = await prisma.shopEvent.findUnique({
+					where: { id: eventId },
+					select: { name: true },
+				});
+				eventName = event?.name;
+			}
+
+			// Build email data from cart items
+			const emailItems = cartItems.map((item) => ({
+				name: item.product?.name || item.package?.name || "Item",
+				size: item.size,
+				quantity: item.quantity,
+				price: item.product ? getProductPrice(item) : item.package?.price || 0,
+				purchaseCode:
+					orderItemsData.find(
+						(oi) =>
+							(item.productId && oi.productId === item.productId) ||
+							(item.packageId && oi.packageId === item.packageId),
+					)?.purchaseCode || null,
+			}));
+
+			const customerName =
+				firstName && lastName ? `${firstName} ${lastName}` : session.user.name || "Customer";
+
+			await sendOrderConfirmationEmail({
+				orderId: order.id,
+				customerName,
+				customerEmail: session.user.email,
+				items: emailItems,
+				totalAmount,
+				eventName,
+				orderDate: new Date(),
+			});
+		} catch (emailError) {
+			// Log error but don't fail the order
+			console.error("Failed to send order confirmation email:", emailError);
+		}
 
 		revalidatePath("/shop");
 		return { success: true, orderId: order.id, message: "Order created successfully" };

@@ -600,7 +600,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 						toast.success(`Reference number extracted: ${receiptData.referenceNumber}`);
 					} else {
 						toast.dismiss();
-						toast.warning("Could not extract reference number. Please ensure receipt is clear.");
+						toast.warning("Could not extract reference number. You may still place the order but please ensure receipt is clear.");
 					}
 				} else if (isPDF) {
 					// For PDFs, extract server-side
@@ -1282,10 +1282,23 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																					rowIndex,
 																					col.id,
 																					time,
-																					field.autoSortByDateTime,
+																					false, // Don't sort on partial selection
 																					field.columns,
 																				)
 																			}
+																			onComplete={(time) => {
+																				// Only sort when full time is selected
+																				if (field.autoSortByDateTime) {
+																					updateRepeaterCell(
+																						field.id,
+																						rowIndex,
+																						col.id,
+																						time,
+																						true,
+																						field.columns,
+																					);
+																				}
+																			}}
 																			placeholder={col.placeholder || "Select time"}
 																			minTime={col.minTime}
 																			maxTime={col.maxTime}
