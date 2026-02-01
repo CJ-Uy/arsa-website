@@ -2657,7 +2657,8 @@ export function EventsManagement({
 																				rows={2}
 																			/>
 																			<p className="text-muted-foreground mt-1 text-xs">
-																				This description will be shown to customers above the repeater
+																				This description will be shown to customers above the
+																				repeater
 																			</p>
 																		</div>
 
