@@ -401,7 +401,7 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const baseData: Record<string, any> = {
 				"Order ID": order.id,
-				"Order Date": new Date(order.createdAt).toLocaleString(),
+				"Order Date": new Date(order.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" }),
 				"Customer Name": order.user.name || "N/A",
 				"First Name": order.user.firstName || "N/A",
 				"Last Name": order.user.lastName || "N/A",
@@ -419,7 +419,10 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 				"Order Status": order.status,
 				"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "Needs Manual Checking" : "",
 				Notes: order.notes || "",
-				"Delivery Date": index === 0 ? order.deliveryDate || "N/A" : "",
+				"Delivery Date":
+					index === 0 && order.deliveryDate
+						? new Date(order.deliveryDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
+						: "",
 				"Delivery Time": index === 0 ? order.deliveryTimeSlot || "N/A" : "",
 				Event: index === 0 ? order.event?.name || "N/A" : "",
 				"Receipt URL": index === 0 ? order.receiptImageUrl || "" : "",
@@ -631,7 +634,16 @@ export async function syncOrdersToGoogleSheets(eventId?: string): Promise<{
 		});
 
 		// Update last sync timestamp in a metadata area
-		const syncTimestamp = new Date().toLocaleString();
+		const syncTimestamp = new Date().toLocaleString("en-US", {
+			timeZone: "Asia/Manila", // UTC+8
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+			hour12: true,
+		});
 		const metadataColumn = getColumnName(headers.length + 3); // 2 columns after data (column numbers start at 1)
 		await sheets.spreadsheets.values.update({
 			spreadsheetId,

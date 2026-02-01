@@ -832,7 +832,7 @@ export function ShopClient({
 										target="_blank"
 										href="https://www.facebook.com/ARSAFlowerFest"
 									>
-										Flower Fest Help Desk
+										FlowerFest Help Desk
 									</a>{" "}
 									or email{" "}
 									<a

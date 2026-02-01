@@ -444,6 +444,29 @@ const animationOptions = [
 	{ value: "petals", label: "Flower Petals" },
 ];
 
+/**
+ * Formats a Date object into a string suitable for datetime-local input (YYYY-MM-DDTHH:mm)
+ * in the Asia/Manila (UTC+8) timezone.
+ * @param date The date to format.
+ * @returns A string in YYYY-MM-DDTHH:mm format.
+ */
+const formatDateForDatetimeLocal = (date: Date): string => {
+	// Convert to UTC+8 by adding 8 hours to UTC time
+	const utcTime = date.getTime();
+	const utcPlus8Offset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+	const manilaTime = new Date(utcTime + utcPlus8Offset);
+
+	// Extract components from the adjusted UTC time (which now represents Manila time)
+	const year = manilaTime.getUTCFullYear();
+	const month = String(manilaTime.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(manilaTime.getUTCDate()).padStart(2, "0");
+	const hours = String(manilaTime.getUTCHours()).padStart(2, "0");
+	const minutes = String(manilaTime.getUTCMinutes()).padStart(2, "0");
+
+	return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+
 export function EventsManagement({
 	initialEvents,
 	availableProducts,
@@ -586,8 +609,8 @@ export function EventsManagement({
 				isPriority: event.isPriority,
 				tabOrder: event.tabOrder,
 				tabLabel: event.tabLabel || "",
-				startDate: new Date(event.startDate).toISOString().slice(0, 16),
-				endDate: new Date(event.endDate).toISOString().slice(0, 16),
+				startDate: formatDateForDatetimeLocal(new Date(event.startDate)),
+				endDate: formatDateForDatetimeLocal(new Date(event.endDate)),
 				componentPath: event.componentPath || "",
 				themeConfig: (event.themeConfig as ThemeConfig) || { ...defaultThemeConfig },
 				checkoutFields:
@@ -1157,11 +1180,11 @@ export function EventsManagement({
 									<div className="grid grid-cols-2 gap-2 text-sm">
 										<div className="flex items-center gap-1">
 											<Calendar className="text-muted-foreground h-4 w-4" />
-											<span>{new Date(event.startDate).toLocaleDateString()}</span>
+											<span>{new Date(event.startDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })}</span>
 										</div>
 										<div className="flex items-center gap-1">
 											<Clock className="text-muted-foreground h-4 w-4" />
-											<span>{new Date(event.endDate).toLocaleDateString()}</span>
+											<span>{new Date(event.endDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })}</span>
 										</div>
 									</div>
 
@@ -1784,7 +1807,7 @@ export function EventsManagement({
 												},
 											})
 										}
-										placeholder="e.g., 🌸 Flower Fest Special 🌸"
+										placeholder="e.g., 🌸 FlowerFest Special 🌸"
 									/>
 								</div>
 
@@ -1807,7 +1830,7 @@ export function EventsManagement({
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="none">None (Default)</SelectItem>
-											<SelectItem value="burgundy-grain">Burgundy Grain (Flower Fest)</SelectItem>
+											<SelectItem value="burgundy-grain">Burgundy Grain (FlowerFest)</SelectItem>
 										</SelectContent>
 									</Select>
 									<p className="text-muted-foreground mt-1 text-xs">
@@ -1847,7 +1870,7 @@ export function EventsManagement({
 												checkoutHeaderMessage: e.target.value,
 											})
 										}
-										placeholder="e.g., 🌸 Flower Fest Order 🌸"
+										placeholder="e.g., 🌸 FlowerFest Order 🌸"
 									/>
 								</div>
 

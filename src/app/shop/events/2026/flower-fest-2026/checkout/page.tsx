@@ -35,7 +35,7 @@ export default async function FlowerFestCheckoutPage() {
 				<div className="text-center">
 					<h1 className="mb-4 text-2xl font-bold">Shop Temporarily Closed</h1>
 					<p className="text-muted-foreground">
-						{event.closureMessage || "The Flower Fest shop is currently closed."}
+						{event.closureMessage || "The FlowerFest shop is currently closed."}
 					</p>
 				</div>
 			</div>
@@ -62,7 +62,7 @@ export default async function FlowerFestCheckoutPage() {
 
 	return (
 		<div className="container mx-auto py-8">
-			<h1 className="mb-8 text-3xl font-bold">Flower Fest Checkout 🌸</h1>
+			<h1 className="mb-8 text-3xl font-bold">FlowerFest Checkout 🌸</h1>
 			<FlowerFestCheckout event={event} cartItems={cartItems} user={session.user} />
 		</div>
 	);

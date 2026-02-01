@@ -292,8 +292,8 @@ export async function createEvent(data: EventFormData) {
 					isPriority: data.isPriority,
 					tabOrder: data.tabOrder,
 					tabLabel: data.tabLabel || null,
-					startDate: new Date(data.startDate),
-					endDate: new Date(data.endDate),
+					startDate: new Date(data.startDate + ":00+08:00"),
+					endDate: new Date(data.endDate + ":00+08:00"),
 					componentPath: data.componentPath || null,
 					themeConfig: data.themeConfig
 						? (data.themeConfig as Prisma.InputJsonValue)
@@ -396,8 +396,8 @@ export async function updateEvent(id: string, data: EventFormData) {
 					isPriority: data.isPriority,
 					tabOrder: data.tabOrder,
 					tabLabel: data.tabLabel || null,
-					startDate: new Date(data.startDate),
-					endDate: new Date(data.endDate),
+					startDate: new Date(data.startDate + ":00+08:00"),
+					endDate: new Date(data.endDate + ":00+08:00"),
 					componentPath: data.componentPath || null,
 					themeConfig: data.themeConfig
 						? (data.themeConfig as Prisma.InputJsonValue)
