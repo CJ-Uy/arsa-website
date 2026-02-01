@@ -34,8 +34,10 @@ import {
 	RotateCw,
 	ChevronDown,
 	ChevronUp,
+	Crop,
 } from "lucide-react";
 import { ProductImageCarousel } from "@/components/features/product-image-carousel";
+import { ImageCropEditor, type CropPosition } from "@/components/features/image-crop-editor";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -85,6 +87,7 @@ type PackageType = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	isAvailable: boolean;
 	specialNote: string | null;
 	items: PackageItem[];
@@ -113,6 +116,7 @@ type FormData = {
 	price: number;
 	image: string;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition>;
 	isAvailable: boolean;
 	specialNote: string;
 	items: FormPackageItem[];
@@ -138,11 +142,16 @@ export function PackagesManagement({
 		price: 0,
 		image: "",
 		imageUrls: [],
+		imageCropPositions: {},
 		isAvailable: true,
 		specialNote: "",
 		items: [],
 		pools: [],
 	});
+
+	// State for crop editor
+	const [cropEditorOpen, setCropEditorOpen] = useState(false);
+	const [cropEditorImageUrl, setCropEditorImageUrl] = useState<string>("");
 
 	const resetForm = () => {
 		setFormData({
@@ -151,6 +160,7 @@ export function PackagesManagement({
 			price: 0,
 			image: "",
 			imageUrls: [],
+			imageCropPositions: {},
 			isAvailable: true,
 			specialNote: "",
 			items: [],
@@ -169,6 +179,7 @@ export function PackagesManagement({
 				price: pkg.price,
 				image: pkg.image || "",
 				imageUrls: pkg.imageUrls || [],
+				imageCropPositions: (pkg.imageCropPositions as Record<string, CropPosition>) || {},
 				isAvailable: pkg.isAvailable,
 				specialNote: pkg.specialNote || "",
 				items: pkg.items.map((item) => ({
@@ -244,6 +255,29 @@ export function PackagesManagement({
 			...prev,
 			imageUrls: prev.imageUrls.filter((_, i) => i !== index),
 		}));
+	};
+
+	const handleOpenCropEditor = (index: number) => {
+		const url = formData.imageUrls[index];
+		setCropEditorImageUrl(url);
+		setCropEditorOpen(true);
+	};
+
+	const handleSaveCropPosition = (position: CropPosition) => {
+		const url = cropEditorImageUrl;
+		setFormData((prev) => ({
+			...prev,
+			imageCropPositions: {
+				...prev.imageCropPositions,
+				[url]: position,
+			},
+		}));
+		setCropEditorOpen(false);
+		toast.success("Crop position saved");
+	};
+
+	const handleCancelCropEditor = () => {
+		setCropEditorOpen(false);
 	};
 
 	// Package Items Management
@@ -421,6 +455,7 @@ export function PackagesManagement({
 											productName={pkg.name}
 											aspectRatio="landscape"
 											showThumbnails={false}
+											imageCropPositions={pkg.imageCropPositions}
 										/>
 									) : pkg.image ? (
 										<ProductImageCarousel
@@ -428,6 +463,7 @@ export function PackagesManagement({
 											productName={pkg.name}
 											aspectRatio="landscape"
 											showThumbnails={false}
+											imageCropPositions={pkg.imageCropPositions}
 										/>
 									) : (
 										<div className="bg-muted flex aspect-video items-center justify-center rounded-lg">
@@ -594,7 +630,21 @@ export function PackagesManagement({
 													src={url}
 													alt={`Package ${index + 1}`}
 													className="h-20 w-20 rounded border object-cover"
+													style={{
+														objectPosition: formData.imageCropPositions[url]
+															? `${formData.imageCropPositions[url].x}% ${formData.imageCropPositions[url].y}%`
+															: "center",
+													}}
 												/>
+												{/* Crop button */}
+												<button
+													type="button"
+													onClick={() => handleOpenCropEditor(index)}
+													className="bg-background/80 hover:bg-background absolute top-1 right-7 rounded p-1 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+													title="Adjust crop position"
+												>
+													<Crop className="h-3 w-3" />
+												</button>
 												<button
 													type="button"
 													onClick={() => handleRemoveImage(index)}
@@ -602,6 +652,12 @@ export function PackagesManagement({
 												>
 													<X className="h-3 w-3" />
 												</button>
+												{/* Crop indicator */}
+												{formData.imageCropPositions[url] && (
+													<div className="absolute bottom-0 left-0 rounded-tr bg-blue-500/90 px-1 py-0.5 text-[10px] text-white">
+														<Crop className="inline h-2.5 w-2.5" />
+													</div>
+												)}
 												{index === 0 && (
 													<div className="bg-primary/90 text-primary-foreground absolute right-0 bottom-0 left-0 py-0.5 text-center text-xs">
 														Main
@@ -835,6 +891,15 @@ export function PackagesManagement({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/* Image Crop Editor Dialog */}
+			<ImageCropEditor
+				open={cropEditorOpen}
+				imageUrl={cropEditorImageUrl}
+				currentPosition={formData.imageCropPositions[cropEditorImageUrl]}
+				onSave={handleSaveCropPosition}
+				onCancel={handleCancelCropEditor}
+			/>
 		</div>
 	);
 }

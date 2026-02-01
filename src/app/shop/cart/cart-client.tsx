@@ -84,6 +84,11 @@ function ProductDescription({
 	return <div className={compact ? "space-y-0.5" : "space-y-1"}>{elements}</div>;
 }
 
+type CropPosition = {
+	x: number;
+	y: number;
+};
+
 type Product = {
 	id: string;
 	name: string;
@@ -91,6 +96,7 @@ type Product = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	stock: number | null;
 	sizePricing: Record<string, number> | null;
 };
@@ -122,6 +128,7 @@ type Package = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	items: PackageItem[];
 	pools: PackagePool[];
 };
@@ -275,6 +282,7 @@ export function CartClient({ initialCart }: CartClientProps) {
 													productName={item.package.name}
 													aspectRatio="square"
 													showThumbnails={false}
+													imageCropPositions={item.package.imageCropPositions}
 												/>
 												<Badge className="bg-primary absolute top-2 left-2">
 													<Gift className="mr-1 h-3 w-3" />
@@ -403,6 +411,7 @@ export function CartClient({ initialCart }: CartClientProps) {
 												productName={item.product.name}
 												aspectRatio="square"
 												showThumbnails={false}
+												imageCropPositions={item.product.imageCropPositions}
 											/>
 										</div>
 

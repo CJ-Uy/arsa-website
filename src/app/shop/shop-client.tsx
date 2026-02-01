@@ -102,6 +102,11 @@ function ProductDescription({ description }: { description: string }) {
 	return <div className="space-y-1">{elements}</div>;
 }
 
+type CropPosition = {
+	x: number;
+	y: number;
+};
+
 type Product = {
 	id: string;
 	name: string;
@@ -110,6 +115,7 @@ type Product = {
 	category: string;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
@@ -155,6 +161,7 @@ type PackageType = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	isAvailable: boolean;
 	specialNote: string | null;
 	items: PackageItem[];
@@ -946,6 +953,7 @@ export function ShopClient({
 												aspectRatio="square"
 												showThumbnails={false}
 												className="mb-4"
+												imageCropPositions={pkg.imageCropPositions}
 											/>
 											<Badge className="bg-primary absolute top-2 left-2">
 												<Gift className="mr-1 h-3 w-3" />
@@ -1074,6 +1082,7 @@ export function ShopClient({
 											productName={product.name}
 											aspectRatio="square"
 											showThumbnails={true}
+											imageCropPositions={product.imageCropPositions}
 										/>
 									</div>
 									<div className="flex items-start justify-between">

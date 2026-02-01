@@ -119,6 +119,7 @@ export default function FlowerFestEvent({
 											aspectRatio="square"
 											showThumbnails={false}
 											className="mb-4"
+											imageCropPositions={pkg.imageCropPositions}
 										/>
 										<Badge
 											className="absolute top-2 left-2"
@@ -181,6 +182,7 @@ export default function FlowerFestEvent({
 											aspectRatio="square"
 											showThumbnails={false}
 											className="mb-4"
+											imageCropPositions={product.imageCropPositions}
 										/>
 										<CardTitle className="text-lg">{product.name}</CardTitle>
 										<p className="text-muted-foreground line-clamp-2 text-sm">

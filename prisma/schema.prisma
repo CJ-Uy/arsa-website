@@ -111,14 +111,15 @@ model Verification {
 
 // Shop Models
 model Product {
-  id               String   @id @default(uuid())
-  name             String
-  description      String
-  price            Float
-  category         String // "merch", "arsari-sari", "other"
-  image            String? // Kept for backward compatibility
-  imageUrls        String[] @default([]) // Array of image URLs for carousel
-  stock            Int? // Optional stock tracking
+  id                  String   @id @default(uuid())
+  name                String
+  description         String
+  price               Float
+  category            String // "merch", "arsari-sari", "other"
+  image               String? // Kept for backward compatibility
+  imageUrls           String[] @default([]) // Array of image URLs for carousel
+  imageCropPositions  Json? // Crop focus points: { [url: string]: { x: number, y: number } } (0-100%)
+  stock               Int? // Optional stock tracking
   isAvailable      Boolean  @default(true)
   isPreOrder       Boolean  @default(false) // If true, stock shows order count
   isEventExclusive Boolean  @default(false) // If true, only shows under assigned events, not in All/categories
@@ -137,13 +138,14 @@ model Product {
 
 // Package Models (Product Bundles)
 model Package {
-  id               String   @id @default(uuid())
-  name             String
-  description      String
-  price            Float // Bundle price (usually discounted)
-  image            String? // Package hero image
-  imageUrls        String[] @default([])
-  isAvailable      Boolean  @default(true)
+  id                  String   @id @default(uuid())
+  name                String
+  description         String
+  price               Float // Bundle price (usually discounted)
+  image               String? // Package hero image
+  imageUrls           String[] @default([])
+  imageCropPositions  Json? // Crop focus points: { [url: string]: { x: number, y: number } } (0-100%)
+  isAvailable         Boolean  @default(true)
   isEventExclusive Boolean  @default(false) // If true, only shows under assigned events
   specialNote      String? // Optional note shown during checkout
   createdAt        DateTime @default(now())

@@ -6,10 +6,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
-	trustedOrigins: [
-		process.env.BETTER_AUTH_URL!,
-		process.env.NEXT_PUBLIC_APP_URL!,
-	].filter(Boolean),
+	trustedOrigins: [process.env.BETTER_AUTH_URL!, process.env.NEXT_PUBLIC_APP_URL!].filter(Boolean),
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),

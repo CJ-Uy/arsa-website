@@ -24,8 +24,19 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 import { toast } from "sonner";
-import { Package, Plus, Edit2, Trash2, Upload, X, RotateCw, GripVertical } from "lucide-react";
+import {
+	Package,
+	Plus,
+	Edit2,
+	Trash2,
+	Upload,
+	X,
+	RotateCw,
+	GripVertical,
+	Crop,
+} from "lucide-react";
 import { ProductImageCarousel } from "@/components/features/product-image-carousel";
+import { ImageCropEditor, type CropPosition } from "@/components/features/image-crop-editor";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -45,6 +56,7 @@ type Product = {
 	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
@@ -67,6 +79,7 @@ type ProductFormData = {
 	category: "merch" | "arsari-sari" | "other";
 	image: string;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition>;
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
@@ -93,12 +106,21 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 		category: "merch",
 		image: "",
 		imageUrls: [],
+		imageCropPositions: {},
 		stock: null,
 		isAvailable: true,
 		isPreOrder: false,
 		availableSizes: [],
 		specialNote: "",
+		isEventExclusive: false,
+		sizePricing: {},
+		assignedEvents: [],
 	});
+
+	// State for crop editor
+	const [cropEditorOpen, setCropEditorOpen] = useState(false);
+	const [cropEditorImageUrl, setCropEditorImageUrl] = useState<string>("");
+	const [cropEditorIndex, setCropEditorIndex] = useState<number>(0);
 
 	const resetForm = () => {
 		setFormData({
@@ -108,6 +130,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 			category: "merch",
 			image: "",
 			imageUrls: [],
+			imageCropPositions: {},
 			stock: null,
 			isAvailable: true,
 			isPreOrder: false,
@@ -130,6 +153,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 				category: product.category,
 				image: product.image || "",
 				imageUrls: product.imageUrls || [],
+				imageCropPositions: (product.imageCropPositions as Record<string, CropPosition>) || {},
 				stock: product.stock,
 				isAvailable: product.isAvailable,
 				isPreOrder: product.isPreOrder,
@@ -305,6 +329,30 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 		}
 	};
 
+	const handleOpenCropEditor = (index: number) => {
+		const url = formData.imageUrls[index];
+		setCropEditorImageUrl(url);
+		setCropEditorIndex(index);
+		setCropEditorOpen(true);
+	};
+
+	const handleSaveCropPosition = (position: CropPosition) => {
+		const url = cropEditorImageUrl;
+		setFormData((prev) => ({
+			...prev,
+			imageCropPositions: {
+				...prev.imageCropPositions,
+				[url]: position,
+			},
+		}));
+		setCropEditorOpen(false);
+		toast.success("Crop position saved");
+	};
+
+	const handleCancelCropEditor = () => {
+		setCropEditorOpen(false);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setLoading(true);
@@ -375,6 +423,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 											productName={product.name}
 											aspectRatio="square"
 											showThumbnails={false}
+											imageCropPositions={product.imageCropPositions}
 										/>
 									) : product.image ? (
 										<ProductImageCarousel
@@ -382,6 +431,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 											productName={product.name}
 											aspectRatio="square"
 											showThumbnails={false}
+											imageCropPositions={product.imageCropPositions}
 										/>
 									) : (
 										<div className="bg-muted flex aspect-square items-center justify-center rounded-lg">
@@ -682,11 +732,25 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 													src={url}
 													alt={`Product ${index + 1}`}
 													className="border-border h-24 w-24 rounded border-2 object-cover"
+													style={{
+														objectPosition: formData.imageCropPositions[url]
+															? `${formData.imageCropPositions[url].x}% ${formData.imageCropPositions[url].y}%`
+															: "center",
+													}}
 												/>
 												{/* Drag handle indicator */}
 												<div className="bg-background/80 absolute top-1 left-1 rounded p-0.5 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
 													<GripVertical className="h-3 w-3" />
 												</div>
+												{/* Crop button */}
+												<button
+													type="button"
+													onClick={() => handleOpenCropEditor(index)}
+													className="bg-background/80 hover:bg-background absolute top-1 right-7 rounded p-1 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+													title="Adjust crop position"
+												>
+													<Crop className="h-3 w-3" />
+												</button>
 												{/* Rotate button */}
 												<button
 													type="button"
@@ -706,6 +770,12 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 												>
 													<X className="h-3 w-3" />
 												</button>
+												{/* Crop indicator */}
+												{formData.imageCropPositions[url] && (
+													<div className="absolute bottom-0 left-0 rounded-tr bg-blue-500/90 px-1 py-0.5 text-[10px] text-white">
+														<Crop className="inline h-2.5 w-2.5" />
+													</div>
+												)}
 												{/* Main image badge */}
 												{index === 0 && (
 													<div className="bg-primary/90 text-primary-foreground absolute right-0 bottom-0 left-0 py-0.5 text-center text-xs font-medium">
@@ -852,6 +922,15 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/* Image Crop Editor Dialog */}
+			<ImageCropEditor
+				open={cropEditorOpen}
+				imageUrl={cropEditorImageUrl}
+				currentPosition={formData.imageCropPositions[cropEditorImageUrl]}
+				onSave={handleSaveCropPosition}
+				onCancel={handleCancelCropEditor}
+			/>
 		</div>
 	);
 }

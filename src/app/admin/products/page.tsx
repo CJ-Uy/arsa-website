@@ -9,6 +9,7 @@ type Product = {
 	category: "merch" | "arsari-sari" | "other";
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, { x: number; y: number }> | null;
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;

@@ -41,7 +41,8 @@ export type CheckoutFieldType =
 	| "phone" // Phone number
 	| "radio" // Radio button group
 	| "repeater" // Multiple rows table
-	| "message"; // Display-only informational message
+	| "message" // Display-only informational message
+	| "toggle"; // Toggle switch with custom on/off messages
 
 export type RepeaterColumn = {
 	id: string;
@@ -58,6 +59,9 @@ export type RepeaterColumn = {
 	minDate?: string;
 	maxDate?: string;
 	disabledDates?: string[];
+	// Date offset constraints (relative to today)
+	minDateOffset?: number; // Days from today (e.g., 1 = tomorrow, -1 = yesterday)
+	maxDateOffset?: number; // Days from today
 	// Time constraints (for type: "time")
 	minTime?: string;
 	maxTime?: string;
@@ -86,6 +90,9 @@ export type CheckoutField = {
 	minDate?: string; // ISO date string for minimum selectable date
 	maxDate?: string; // ISO date string for maximum selectable date
 	disabledDates?: string[]; // Array of ISO date strings to disable
+	// Date offset constraints (relative to today)
+	minDateOffset?: number; // Days from today (e.g., 1 = tomorrow)
+	maxDateOffset?: number; // Days from today
 	// Time field constraints
 	minTime?: string; // Time string for earliest selectable time (HH:MM format)
 	maxTime?: string; // Time string for latest selectable time (HH:MM format)
@@ -94,12 +101,18 @@ export type CheckoutField = {
 	showWhen?: FieldCondition;
 	// Message field content
 	messageContent?: string;
+	// Description for any field type
+	description?: string; // Optional description/help text shown below the field
 	// Repeater-specific fields
 	columns?: RepeaterColumn[];
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
-	description?: string; // Optional description for repeater fields
+	rowLabel?: string; // Custom row label prefix (e.g., "Attempt" for "Attempt #1")
+	autoSortByDateTime?: boolean; // Auto-sort rows by date and time columns
+	// Toggle field properties
+	toggleOffMessage?: string; // Message shown when toggle is off
+	toggleOnMessage?: string; // Message shown when toggle is on
 };
 
 export type CheckoutConfig = {

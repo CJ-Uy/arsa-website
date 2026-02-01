@@ -39,12 +39,18 @@ export type PackagePoolInput = {
 	productIds: string[];
 };
 
+export type CropPosition = {
+	x: number;
+	y: number;
+};
+
 export type PackageFormData = {
 	name: string;
 	description: string;
 	price: number;
 	image: string;
 	imageUrls: string[];
+	imageCropPositions?: Record<string, CropPosition>;
 	isAvailable: boolean;
 	specialNote: string;
 	items: PackageItemInput[];
@@ -111,6 +117,7 @@ export async function createPackage(data: PackageFormData) {
 				price: data.price,
 				image: data.image || null,
 				imageUrls: data.imageUrls,
+				imageCropPositions: data.imageCropPositions || {},
 				isAvailable: data.isAvailable,
 				specialNote: data.specialNote || null,
 				items: {
@@ -163,6 +170,7 @@ export async function updatePackage(id: string, data: PackageFormData) {
 				price: data.price,
 				image: data.image || null,
 				imageUrls: data.imageUrls,
+				imageCropPositions: data.imageCropPositions || {},
 				isAvailable: data.isAvailable,
 				specialNote: data.specialNote || null,
 				items: {

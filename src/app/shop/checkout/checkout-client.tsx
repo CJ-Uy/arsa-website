@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
 	Upload,
@@ -75,14 +75,20 @@ type User = {
 type RepeaterColumn = {
 	id: string;
 	label: string;
-	type: "text" | "date" | "time" | "select";
+	type: "text" | "textarea" | "number" | "date" | "time" | "select" | "checkbox";
 	placeholder?: string;
 	options?: string[];
 	width?: "sm" | "md" | "lg";
+	// Number constraints
+	min?: number;
+	max?: number;
+	step?: number;
 	// Date/Time constraints for date and time columns
 	minDate?: string;
 	maxDate?: string;
 	disabledDates?: string[];
+	minDateOffset?: number; // Days from today
+	maxDateOffset?: number; // Days from today
 	minTime?: string;
 	maxTime?: string;
 	blockedTimes?: string[];
@@ -105,7 +111,8 @@ type CheckoutFieldType =
 	| "phone"
 	| "radio"
 	| "repeater"
-	| "message";
+	| "message"
+	| "toggle";
 
 type CheckoutField = {
 	id: string;
@@ -123,17 +130,25 @@ type CheckoutField = {
 	minDate?: string;
 	maxDate?: string;
 	disabledDates?: string[];
+	minDateOffset?: number; // Days from today
+	maxDateOffset?: number; // Days from today
 	disabledTimeSlots?: { date: string; times: string[] }[];
 	// Conditional display
 	showWhen?: FieldCondition;
 	// Message content (for type: "message")
 	messageContent?: string;
+	// Toggle field properties
+	toggleOffMessage?: string; // Message shown when toggle is off
+	toggleOnMessage?: string; // Message shown when toggle is on
+	// Description for any field type
+	description?: string; // Help text shown below the field
 	// Repeater-specific fields
 	columns?: RepeaterColumn[];
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
-	description?: string; // Optional description text for repeaters
+	rowLabel?: string; // Custom row label prefix (e.g., "Attempt" for "Attempt #1")
+	autoSortByDateTime?: boolean; // Auto-sort rows by date and time columns
 };
 
 type PaymentOption = {
@@ -246,6 +261,104 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		return initial;
 	});
 
+	// Track if we've loaded from localStorage
+	const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
+
+	// localStorage key based on event ID
+	const storageKey = `checkout-form-${event?.id || "default"}`;
+
+	// Load saved form data from localStorage on mount
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		try {
+			const saved = localStorage.getItem(storageKey);
+			if (saved) {
+				const data = JSON.parse(saved);
+
+				// Only restore if saved within last 24 hours
+				if (data.savedAt && Date.now() - data.savedAt < 24 * 60 * 60 * 1000) {
+					// Restore form fields (prefer user data from server if it exists)
+					if (data.firstName && !user.firstName) setFirstName(data.firstName);
+					if (data.lastName && !user.lastName) setLastName(data.lastName);
+					if (data.studentId && !user.studentId) setStudentId(data.studentId);
+					if (data.notes) setNotes(data.notes);
+					if (data.selectedPaymentOption) setSelectedPaymentOption(data.selectedPaymentOption);
+
+					// Restore event-specific fields
+					if (data.eventFieldValues) {
+						setEventFieldValues(data.eventFieldValues);
+					}
+
+					// Restore repeater values (merge with defaults to handle new columns)
+					if (data.repeaterValues) {
+						setRepeaterValues((prev) => {
+							const merged = { ...prev };
+							for (const fieldId of Object.keys(data.repeaterValues)) {
+								if (merged[fieldId] !== undefined) {
+									merged[fieldId] = data.repeaterValues[fieldId];
+								}
+							}
+							return merged;
+						});
+					}
+
+					toast.info("Form data restored from your previous session");
+				} else {
+					// Data is too old, clear it
+					localStorage.removeItem(storageKey);
+				}
+			}
+		} catch (error) {
+			console.error("Error loading checkout form data:", error);
+		}
+
+		setHasLoadedFromStorage(true);
+	}, [storageKey, user.firstName, user.lastName, user.studentId]);
+
+	// Save form data to localStorage whenever it changes
+	const saveToLocalStorage = useCallback(() => {
+		if (typeof window === "undefined" || !hasLoadedFromStorage) return;
+
+		try {
+			const data = {
+				firstName,
+				lastName,
+				studentId,
+				notes,
+				selectedPaymentOption,
+				eventFieldValues,
+				repeaterValues,
+				savedAt: Date.now(),
+			};
+			localStorage.setItem(storageKey, JSON.stringify(data));
+		} catch (error) {
+			console.error("Error saving checkout form data:", error);
+		}
+	}, [
+		firstName,
+		lastName,
+		studentId,
+		notes,
+		selectedPaymentOption,
+		eventFieldValues,
+		repeaterValues,
+		storageKey,
+		hasLoadedFromStorage,
+	]);
+
+	// Debounce saving to localStorage
+	useEffect(() => {
+		const timer = setTimeout(saveToLocalStorage, 500);
+		return () => clearTimeout(timer);
+	}, [saveToLocalStorage]);
+
+	// Clear localStorage on successful order
+	const clearSavedFormData = useCallback(() => {
+		if (typeof window === "undefined") return;
+		localStorage.removeItem(storageKey);
+	}, [storageKey]);
+
 	// Calculate total including both products and packages
 	const total = cart.reduce((sum, item) => {
 		if (item.product) {
@@ -288,15 +401,91 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		});
 	};
 
+	// Helper function to compute effective date with offset
+	const computeEffectiveDate = (
+		baseDate: string | undefined,
+		offset: number | undefined,
+		mode: "min" | "max",
+	): Date | undefined => {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		let effectiveDate: Date | undefined;
+
+		// Calculate offset date if offset is defined
+		const offsetDate =
+			offset !== undefined ? new Date(today.getTime() + offset * 24 * 60 * 60 * 1000) : undefined;
+
+		// Parse base date if defined
+		const baseDateParsed = baseDate ? new Date(baseDate) : undefined;
+
+		if (mode === "min") {
+			// For min: take the later of base date and offset date
+			if (baseDateParsed && offsetDate) {
+				effectiveDate = baseDateParsed > offsetDate ? baseDateParsed : offsetDate;
+			} else {
+				effectiveDate = baseDateParsed || offsetDate;
+			}
+		} else {
+			// For max: take the earlier of base date and offset date
+			if (baseDateParsed && offsetDate) {
+				effectiveDate = baseDateParsed < offsetDate ? baseDateParsed : offsetDate;
+			} else {
+				effectiveDate = baseDateParsed || offsetDate;
+			}
+		}
+
+		return effectiveDate;
+	};
+
+	// Helper function to sort repeater rows by date and time columns
+	const sortRepeaterRows = (
+		rows: RepeaterRowData[],
+		columns: RepeaterColumn[],
+	): RepeaterRowData[] => {
+		// Find date and time columns
+		const dateColumn = columns.find((col) => col.type === "date");
+		const timeColumn = columns.find((col) => col.type === "time");
+
+		if (!dateColumn && !timeColumn) return rows;
+
+		return [...rows].sort((a, b) => {
+			// First compare by date if available
+			if (dateColumn) {
+				const dateA = a[dateColumn.id] || "";
+				const dateB = b[dateColumn.id] || "";
+				if (dateA !== dateB) {
+					return dateA.localeCompare(dateB);
+				}
+			}
+			// Then compare by time if available
+			if (timeColumn) {
+				const timeA = a[timeColumn.id] || "";
+				const timeB = b[timeColumn.id] || "";
+				return timeA.localeCompare(timeB);
+			}
+			return 0;
+		});
+	};
+
 	const updateRepeaterCell = (
 		fieldId: string,
 		rowIndex: number,
 		columnId: string,
 		value: string,
+		autoSort?: boolean,
+		columns?: RepeaterColumn[],
 	) => {
 		setRepeaterValues((prev) => {
 			const currentRows = [...(prev[fieldId] || [])];
 			currentRows[rowIndex] = { ...currentRows[rowIndex], [columnId]: value };
+
+			// Auto-sort if enabled and columns are provided
+			if (autoSort && columns) {
+				const sortedRows = sortRepeaterRows(currentRows, columns);
+				return { ...prev, [fieldId]: sortedRows };
+			}
+
 			return { ...prev, [fieldId]: currentRows };
 		});
 	};
@@ -312,6 +501,54 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 			return value.includes(currentValue as string);
 		}
 		return currentValue === value;
+	};
+
+	// Parse markdown links [text](url) and newlines into JSX elements
+	const parseMarkdownLinks = (text: string) => {
+		const parts: (string | JSX.Element)[] = [];
+		let keyCounter = 0;
+
+		// Split only by actual newline characters (from pressing Enter in textarea)
+		const lines = text.split(/\n/);
+
+		lines.forEach((line, lineIndex) => {
+			// Parse markdown links in this line
+			const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+			let lastIndex = 0;
+			let match;
+
+			while ((match = linkRegex.exec(line)) !== null) {
+				// Add text before the link
+				if (match.index > lastIndex) {
+					parts.push(line.slice(lastIndex, match.index));
+				}
+				// Add the link
+				parts.push(
+					<a
+						key={`link-${keyCounter++}`}
+						href={match[2]}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-primary hover:text-primary/80 inline underline"
+					>
+						{match[1]}
+					</a>,
+				);
+				lastIndex = match.index + match[0].length;
+			}
+
+			// Add remaining text after last link in this line
+			if (lastIndex < line.length) {
+				parts.push(line.slice(lastIndex));
+			}
+
+			// Add line break between lines (but not after the last line)
+			if (lineIndex < lines.length - 1) {
+				parts.push(<br key={`br-${keyCounter++}`} />);
+			}
+		});
+
+		return parts.length > 0 ? <span className="inline">{parts}</span> : text;
 	};
 
 	// Collect all unique special notes from cart items (only from products)
@@ -517,6 +754,9 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 				// Notify cart counter that cart is now empty
 				window.dispatchEvent(new Event("cartUpdated"));
 
+				// Clear saved form data from localStorage
+				clearSavedFormData();
+
 				const successMessage = checkoutConfig?.confirmationMessage || "Order placed successfully!";
 				toast.success(successMessage);
 				router.push(`/shop/orders/${result.orderId}`);
@@ -597,13 +837,15 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 									{event.name} Details
 								</CardTitle>
 								{checkoutConfig?.headerMessage && (
-									<CardDescription>{checkoutConfig.headerMessage}</CardDescription>
+									<CardDescription>
+										{parseMarkdownLinks(checkoutConfig.headerMessage)}
+									</CardDescription>
 								)}
 								{checkoutConfig?.termsMessage && (
 									<Alert className="mt-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
 										<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 										<AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-											{checkoutConfig.termsMessage}
+											{parseMarkdownLinks(checkoutConfig.termsMessage)}
 										</AlertDescription>
 									</Alert>
 								)}
@@ -633,7 +875,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 											{field.type === "message" && field.messageContent && (
 												<div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
 													<p className="text-sm text-blue-800 dark:text-blue-200">
-														{field.messageContent}
+														{parseMarkdownLinks(field.messageContent)}
 													</p>
 												</div>
 											)}
@@ -650,6 +892,11 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 														required={field.required}
 														className="mt-2"
 													/>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
 													{field.maxLength && (
 														<p className="text-muted-foreground text-right text-xs">
 															{((eventFieldValues[field.id] as string) || "").length} /{" "}
@@ -671,6 +918,11 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 														rows={3}
 														className="mt-2"
 													/>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
 													{field.maxLength && (
 														<p className="text-muted-foreground text-right text-xs">
 															{((eventFieldValues[field.id] as string) || "").length} /{" "}
@@ -681,38 +933,94 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 											)}
 
 											{field.type === "select" && field.options && (
-												<Select
-													value={(eventFieldValues[field.id] as string) || ""}
-													onValueChange={(value) => updateEventField(field.id, value)}
-												>
-													<SelectTrigger className="mt-2">
-														<SelectValue placeholder={field.placeholder || "Select an option"} />
-													</SelectTrigger>
-													<SelectContent>
-														{field.options.map((option) => (
-															<SelectItem key={option} value={option}>
-																{option}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+												<div className="space-y-1">
+													<Select
+														value={(eventFieldValues[field.id] as string) || ""}
+														onValueChange={(value) => updateEventField(field.id, value)}
+													>
+														<SelectTrigger className="mt-2">
+															<SelectValue placeholder={field.placeholder || "Select an option"} />
+														</SelectTrigger>
+														<SelectContent>
+															{field.options.map((option) => (
+																<SelectItem key={option} value={option}>
+																	{option}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
 											)}
 
 											{field.type === "checkbox" && (
-												<div className="mt-2 flex items-center gap-2">
-													<Checkbox
-														id={field.id}
-														checked={(eventFieldValues[field.id] as boolean) || false}
-														onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
-													/>
-													<Label htmlFor={field.id} className="cursor-pointer font-normal">
-														{field.placeholder || field.label}
-													</Label>
+												<div className="mt-2 space-y-1">
+													<div className="flex items-center gap-2">
+														<Checkbox
+															id={field.id}
+															checked={(eventFieldValues[field.id] as boolean) || false}
+															onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
+														/>
+														<Label htmlFor={field.id} className="cursor-pointer font-normal">
+															{field.placeholder || field.label}
+														</Label>
+													</div>
+													{field.description && (
+														<p className="text-muted-foreground ml-6 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
+											)}
+
+											{field.type === "toggle" && (
+												<div className="mt-2 space-y-1">
+													<div className="flex items-center gap-3">
+														<button
+															type="button"
+															role="switch"
+															aria-checked={(eventFieldValues[field.id] as boolean) || false}
+															onClick={() =>
+																updateEventField(field.id, !eventFieldValues[field.id])
+															}
+															className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
+																eventFieldValues[field.id]
+																	? "bg-primary"
+																	: "bg-gray-200 dark:bg-gray-700"
+															}`}
+														>
+															<span
+																className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-transform ${
+																	eventFieldValues[field.id] ? "translate-x-5" : "translate-x-0"
+																}`}
+															/>
+														</button>
+														<span
+															className={`text-sm ${
+																eventFieldValues[field.id]
+																	? "text-primary font-medium"
+																	: "text-muted-foreground"
+															}`}
+														>
+															{eventFieldValues[field.id]
+																? field.toggleOnMessage || "Enabled"
+																: field.toggleOffMessage || "Disabled"}
+														</span>
+													</div>
+													{field.description && (
+														<p className="text-muted-foreground text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
 												</div>
 											)}
 
 											{field.type === "date" && (
-												<div className="mt-2">
+												<div className="mt-2 space-y-1">
 													<DatePicker
 														value={
 															eventFieldValues[field.id]
@@ -728,19 +1036,32 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 															)
 														}
 														placeholder={field.placeholder || "Select date"}
-														minDate={field.minDate ? new Date(field.minDate) : undefined}
-														maxDate={field.maxDate ? new Date(field.maxDate) : undefined}
+														minDate={computeEffectiveDate(
+															field.minDate,
+															field.minDateOffset,
+															"min",
+														)}
+														maxDate={computeEffectiveDate(
+															field.maxDate,
+															field.maxDateOffset,
+															"max",
+														)}
 														disabledDates={
 															field.disabledDates
 																? field.disabledDates.map((d) => new Date(d))
 																: undefined
 														}
 													/>
+													{field.description && (
+														<p className="text-muted-foreground text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
 												</div>
 											)}
 
 											{field.type === "time" && (
-												<div className="mt-2">
+												<div className="mt-2 space-y-1">
 													<TimePicker
 														value={
 															eventFieldValues[field.id]
@@ -749,73 +1070,115 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 														}
 														onChange={(time) => updateEventField(field.id, time)}
 													/>
+													{field.description && (
+														<p className="text-muted-foreground text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
 												</div>
 											)}
 
 											{field.type === "number" && (
-												<Input
-													id={field.id}
-													type="number"
-													placeholder={field.placeholder}
-													value={(eventFieldValues[field.id] as string) || ""}
-													onChange={(e) => updateEventField(field.id, e.target.value)}
-													min={field.min}
-													max={field.max}
-													step={field.step}
-													required={field.required}
-													className="mt-2"
-												/>
+												<div className="space-y-1">
+													<Input
+														id={field.id}
+														type="number"
+														placeholder={field.placeholder}
+														value={(eventFieldValues[field.id] as string) || ""}
+														onChange={(e) => updateEventField(field.id, e.target.value)}
+														min={field.min}
+														max={field.max}
+														step={field.step}
+														required={field.required}
+														className="mt-2"
+													/>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
 											)}
 
 											{field.type === "email" && (
-												<Input
-													id={field.id}
-													type="email"
-													placeholder={field.placeholder || "email@example.com"}
-													value={(eventFieldValues[field.id] as string) || ""}
-													onChange={(e) => updateEventField(field.id, e.target.value)}
-													required={field.required}
-													className="mt-2"
-												/>
+												<div className="space-y-1">
+													<Input
+														id={field.id}
+														type="email"
+														placeholder={field.placeholder || "email@example.com"}
+														value={(eventFieldValues[field.id] as string) || ""}
+														onChange={(e) => updateEventField(field.id, e.target.value)}
+														required={field.required}
+														className="mt-2"
+													/>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
 											)}
 
 											{field.type === "phone" && (
-												<Input
-													id={field.id}
-													type="tel"
-													placeholder={field.placeholder || "+63 XXX XXX XXXX"}
-													value={(eventFieldValues[field.id] as string) || ""}
-													onChange={(e) => updateEventField(field.id, e.target.value)}
-													required={field.required}
-													className="mt-2"
-												/>
+												<div className="space-y-1">
+													<Input
+														id={field.id}
+														type="tel"
+														placeholder={field.placeholder || "+63 XXX XXX XXXX"}
+														value={(eventFieldValues[field.id] as string) || ""}
+														onChange={(e) => updateEventField(field.id, e.target.value)}
+														required={field.required}
+														className="mt-2"
+													/>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
 											)}
 
 											{field.type === "radio" && field.options && (
-												<RadioGroup
-													value={(eventFieldValues[field.id] as string) || ""}
-													onValueChange={(value) => updateEventField(field.id, value)}
-													className="mt-2 space-y-2"
-												>
-													{field.options.map((option) => (
-														<div key={option} className="flex items-center space-x-2">
-															<RadioGroupItem value={option} id={`${field.id}-${option}`} />
-															<Label
-																htmlFor={`${field.id}-${option}`}
-																className="cursor-pointer font-normal"
-															>
-																{option}
-															</Label>
-														</div>
-													))}
-												</RadioGroup>
+												<div className="space-y-1">
+													<RadioGroup
+														value={(eventFieldValues[field.id] as string) || ""}
+														onValueChange={(value) => updateEventField(field.id, value)}
+														className="mt-2 space-y-2"
+													>
+														{field.options.map((option) => (
+															<div key={option} className="flex items-center space-x-2">
+																<RadioGroupItem value={option} id={`${field.id}-${option}`} />
+																<Label
+																	htmlFor={`${field.id}-${option}`}
+																	className="cursor-pointer font-normal"
+																>
+																	{option}
+																</Label>
+															</div>
+														))}
+													</RadioGroup>
+													{field.description && (
+														<p className="text-muted-foreground mt-1 text-xs">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+												</div>
 											)}
 
 											{field.type === "repeater" && field.columns && (
 												<div className="mt-3 space-y-3">
 													{/* Description */}
 													{field.description && (
-														<p className="text-muted-foreground text-sm">{field.description}</p>
+														<p className="text-muted-foreground text-sm">
+															{parseMarkdownLinks(field.description)}
+														</p>
+													)}
+
+													{/* Auto-sort indicator */}
+													{field.autoSortByDateTime && (
+														<p className="text-muted-foreground text-xs italic">
+															Entries will be automatically sorted chronologically
+														</p>
 													)}
 
 													{/* Column headers for desktop */}
@@ -834,10 +1197,10 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 															key={rowIndex}
 															className="rounded-lg border bg-slate-50 p-3 md:flex md:items-center md:gap-2 md:bg-transparent md:p-0 dark:bg-slate-900 dark:md:bg-transparent"
 														>
-															{/* Mobile: Show row number */}
+															{/* Mobile: Show row number with custom label */}
 															<div className="mb-2 flex items-center justify-between md:hidden">
 																<span className="text-muted-foreground text-sm font-medium">
-																	Entry {rowIndex + 1}
+																	{field.rowLabel || "Entry"} #{rowIndex + 1}
 																</span>
 																<Button
 																	type="button"
@@ -871,6 +1234,8 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																					rowIndex,
 																					col.id,
 																					e.target.value,
+																					field.autoSortByDateTime,
+																					field.columns,
 																				)
 																			}
 																			placeholder={col.placeholder || col.label}
@@ -890,11 +1255,21 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																								timeZone: "Asia/Manila",
 																							})
 																						: "",
+																					field.autoSortByDateTime,
+																					field.columns,
 																				)
 																			}
 																			placeholder={col.placeholder || "Select date"}
-																			minDate={col.minDate ? new Date(col.minDate) : undefined}
-																			maxDate={col.maxDate ? new Date(col.maxDate) : undefined}
+																			minDate={computeEffectiveDate(
+																				col.minDate,
+																				col.minDateOffset,
+																				"min",
+																			)}
+																			maxDate={computeEffectiveDate(
+																				col.maxDate,
+																				col.maxDateOffset,
+																				"max",
+																			)}
 																			disabledDates={
 																				col.disabledDates?.map((d) => new Date(d)) || undefined
 																			}
@@ -905,7 +1280,14 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																		<TimePicker
 																			value={row[col.id] || ""}
 																			onChange={(time) =>
-																				updateRepeaterCell(field.id, rowIndex, col.id, time)
+																				updateRepeaterCell(
+																					field.id,
+																					rowIndex,
+																					col.id,
+																					time,
+																					field.autoSortByDateTime,
+																					field.columns,
+																				)
 																			}
 																			placeholder={col.placeholder || "Select time"}
 																			minTime={col.minTime}
@@ -917,7 +1299,14 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																		<Select
 																			value={row[col.id] || ""}
 																			onValueChange={(value) =>
-																				updateRepeaterCell(field.id, rowIndex, col.id, value)
+																				updateRepeaterCell(
+																					field.id,
+																					rowIndex,
+																					col.id,
+																					value,
+																					field.autoSortByDateTime,
+																					field.columns,
+																				)
 																			}
 																		>
 																			<SelectTrigger>
@@ -963,7 +1352,7 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 														className="w-full"
 													>
 														<Plus className="mr-2 h-4 w-4" />
-														Add Entry
+														Add {field.rowLabel || "Entry"}
 														{field.minRows && (
 															<span className="text-muted-foreground ml-2 text-xs">
 																(min: {field.minRows})
@@ -993,47 +1382,59 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 							{event?.checkoutConfig?.paymentOptions &&
 							event.checkoutConfig.paymentOptions.length > 0 ? (
 								<>
-									{/* Custom Payment Options */}
-									<div className="space-y-4">
-										{event.checkoutConfig.paymentOptions.map((option) => (
-											<Card
-												key={option.id}
-												className={`cursor-pointer transition-all ${
-													selectedPaymentOption === option.id
-														? "border-primary ring-primary ring-2 ring-offset-2"
-														: "hover:border-primary/50"
-												}`}
-												onClick={() => setSelectedPaymentOption(option.id)}
-											>
-												<CardHeader className="pb-3">
-													<div className="flex items-center gap-2">
-														<input
-															type="radio"
-															checked={selectedPaymentOption === option.id}
-															onChange={() => setSelectedPaymentOption(option.id)}
-															className="h-4 w-4"
-														/>
-														<CardTitle className="text-lg">{option.title}</CardTitle>
-													</div>
-												</CardHeader>
-												<CardContent className="space-y-3">
+									{/* Custom Payment Options - Radio buttons */}
+									<div className="space-y-2">
+										<p className="text-sm font-medium">Select Payment Method</p>
+										<RadioGroup
+											value={selectedPaymentOption || ""}
+											onValueChange={setSelectedPaymentOption}
+											className="space-y-2"
+										>
+											{event.checkoutConfig.paymentOptions.map((option) => (
+												<div
+													key={option.id}
+													className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors ${
+														selectedPaymentOption === option.id
+															? "border-primary bg-primary/5"
+															: "hover:border-primary/50"
+													}`}
+												>
+													<RadioGroupItem value={option.id} id={option.id} />
+													<Label htmlFor={option.id} className="flex-1 cursor-pointer font-medium">
+														{option.title}
+													</Label>
+												</div>
+											))}
+										</RadioGroup>
+									</div>
+
+									{/* Selected Payment Option Details */}
+									{selectedPaymentOption &&
+										(() => {
+											const selectedOption = event.checkoutConfig?.paymentOptions?.find(
+												(o) => o.id === selectedPaymentOption,
+											);
+											if (!selectedOption) return null;
+											return (
+												<div className="space-y-3 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
+													<p className="font-medium">{selectedOption.title}</p>
 													<p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-														{option.instructions}
+														{selectedOption.instructions}
 													</p>
-													{option.imageUrl && (
+													{selectedOption.imageUrl && (
 														<div className="rounded-lg border-2 bg-white p-3">
 															{/* eslint-disable-next-line @next/next/no-img-element */}
 															<img
-																src={option.imageUrl}
-																alt={`${option.title} QR Code`}
+																src={selectedOption.imageUrl}
+																alt={`${selectedOption.title} QR Code`}
 																className="w-full object-contain"
 															/>
 														</div>
 													)}
-												</CardContent>
-											</Card>
-										))}
-									</div>
+												</div>
+											);
+										})()}
+
 									<Alert>
 										<AlertCircle className="h-4 w-4" />
 										<AlertDescription>
@@ -1256,8 +1657,9 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 							</Button>
 
 							<p className="text-muted-foreground text-center text-xs">
-								{checkoutConfig?.termsMessage ||
-									"By placing an order, you agree to our terms and conditions"}
+								{checkoutConfig?.termsMessage
+									? parseMarkdownLinks(checkoutConfig.termsMessage)
+									: "By placing an order, you agree to our terms and conditions"}
 							</p>
 						</CardContent>
 					</Card>

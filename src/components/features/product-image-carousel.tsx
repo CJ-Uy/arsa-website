@@ -6,12 +6,18 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+export type CropPosition = {
+	x: number; // 0-100 percentage
+	y: number; // 0-100 percentage
+};
+
 interface ProductImageCarouselProps {
 	images: string[];
 	productName: string;
 	className?: string;
 	aspectRatio?: "square" | "portrait" | "landscape";
 	showThumbnails?: boolean;
+	imageCropPositions?: Record<string, CropPosition> | null;
 }
 
 export function ProductImageCarousel({
@@ -20,7 +26,15 @@ export function ProductImageCarousel({
 	className,
 	aspectRatio = "square",
 	showThumbnails = true,
+	imageCropPositions,
 }: ProductImageCarouselProps) {
+	// Helper to get crop position for an image
+	const getCropPosition = (imageUrl: string): string => {
+		if (imageCropPositions && imageCropPositions[imageUrl]) {
+			return `${imageCropPositions[imageUrl].x}% ${imageCropPositions[imageUrl].y}%`;
+		}
+		return "center";
+	};
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [touchStart, setTouchStart] = useState<number | null>(null);
 	const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -67,6 +81,9 @@ export function ProductImageCarousel({
 						"transition-all duration-300 select-none",
 						isZoomedOut ? "object-contain" : "object-cover",
 					)}
+					style={{
+						objectPosition: isZoomedOut ? "center" : getCropPosition(images[0]),
+					}}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					draggable={false}
 				/>
@@ -133,6 +150,9 @@ export function ProductImageCarousel({
 						"transition-all duration-300 select-none",
 						isZoomedOut ? "object-contain" : "object-cover",
 					)}
+					style={{
+						objectPosition: isZoomedOut ? "center" : getCropPosition(images[currentIndex]),
+					}}
 					sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 					priority={currentIndex === 0}
 					draggable={false}
@@ -192,6 +212,9 @@ export function ProductImageCarousel({
 									alt={`${productName} thumbnail ${index + 1}`}
 									fill
 									className="object-cover"
+									style={{
+										objectPosition: getCropPosition(image),
+									}}
 									sizes="64px"
 								/>
 							</button>

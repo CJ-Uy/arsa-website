@@ -4,9 +4,10 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, Package } from "lucide-react";
+import { CheckCircle, Clock, Package, Copy } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "./copy-button";
 
 export default async function OrderPage({ params }: { params: Promise<{ orderId: string }> }) {
 	const session = await auth.api.getSession({
@@ -28,6 +29,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 			orderItems: {
 				include: {
 					product: true,
+					package: true,
 				},
 			},
 		},
@@ -111,10 +113,12 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 							{order.orderItems.map((item) => (
 								<div
 									key={item.id}
-									className="flex flex-col gap-2 border-b pb-4 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+									className="flex flex-col gap-2 border-b pb-4 last:border-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between"
 								>
-									<div>
-										<p className="font-medium">{item.product.name}</p>
+									<div className="flex-1 space-y-1">
+										<p className="font-medium">
+											{item.product?.name || item.package?.name || "Item"}
+										</p>
 										<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
 											{item.size && (
 												<span className="flex items-center gap-1">
@@ -123,6 +127,22 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 											)}
 											<span>Quantity: {item.quantity}</span>
 										</div>
+										{item.purchaseCode && (
+											<div className="mt-2">
+												<p className="text-muted-foreground mb-1 text-xs">Purchase Code(s):</p>
+												<div className="flex flex-wrap gap-1">
+													{item.purchaseCode.split(",").map((code, idx) => (
+														<div
+															key={idx}
+															className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-mono text-xs dark:bg-slate-800"
+														>
+															{code.trim()}
+															<CopyButton text={code.trim()} />
+														</div>
+													))}
+												</div>
+											</div>
+										)}
 									</div>
 									<p className="font-semibold">₱{(item.price * item.quantity).toFixed(2)}</p>
 								</div>

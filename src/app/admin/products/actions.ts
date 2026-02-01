@@ -28,6 +28,11 @@ async function checkShopAdmin() {
 	return session;
 }
 
+const cropPositionSchema = z.object({
+	x: z.number().min(0).max(100),
+	y: z.number().min(0).max(100),
+});
+
 const productSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	description: z.string().min(1, "Description is required"),
@@ -35,6 +40,7 @@ const productSchema = z.object({
 	category: z.enum(["merch", "arsari-sari", "other"]),
 	image: z.string().optional(),
 	imageUrls: z.array(z.string()).default([]),
+	imageCropPositions: z.record(z.string(), cropPositionSchema).optional().default({}),
 	stock: z.number().int().min(0, "Stock cannot be negative").nullable(),
 	isAvailable: z.boolean(),
 	isPreOrder: z.boolean(),

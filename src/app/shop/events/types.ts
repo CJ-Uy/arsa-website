@@ -83,6 +83,11 @@ export type CheckoutConfig = {
 	paymentOptions?: PaymentOption[]; // Multiple payment methods
 };
 
+export type CropPosition = {
+	x: number;
+	y: number;
+};
+
 export type Product = {
 	id: string;
 	name: string;
@@ -90,6 +95,7 @@ export type Product = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	stock: number | null;
 	isAvailable: boolean;
 	isPreOrder: boolean;
@@ -123,6 +129,7 @@ export type Package = {
 	price: number;
 	image: string | null;
 	imageUrls: string[];
+	imageCropPositions: Record<string, CropPosition> | null;
 	isAvailable: boolean;
 	specialNote: string | null;
 	items: PackageItem[];

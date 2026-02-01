@@ -91,12 +91,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	ChartConfig,
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+	Line,
+	LineChart,
+	CartesianGrid,
+	XAxis,
+	YAxis,
+	Tooltip,
+	ResponsiveContainer,
+} from "recharts";
 
 type Product = {
 	id: string;
@@ -202,10 +204,24 @@ type FormEventCategory = {
 type RepeaterColumn = {
 	id: string;
 	label: string;
-	type: "text" | "date" | "time" | "select";
+	type: "text" | "textarea" | "number" | "date" | "time" | "select" | "checkbox";
 	placeholder?: string;
 	options?: string[];
 	width?: "sm" | "md" | "lg";
+	// Number constraints
+	min?: number;
+	max?: number;
+	step?: number;
+	// Date constraints
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	minDateOffset?: number; // Days from today
+	maxDateOffset?: number; // Days from today
+	// Time constraints
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
 };
 
 type FieldCondition = {
@@ -225,7 +241,8 @@ type CheckoutFieldType =
 	| "phone"
 	| "radio"
 	| "repeater"
-	| "message";
+	| "message"
+	| "toggle";
 
 type FormCheckoutField = {
 	id: string;
@@ -243,6 +260,8 @@ type FormCheckoutField = {
 	minDate?: string;
 	maxDate?: string;
 	disabledDates?: string[];
+	minDateOffset?: number; // Days from today
+	maxDateOffset?: number; // Days from today
 	// Time field constraints
 	minTime?: string;
 	maxTime?: string;
@@ -251,11 +270,18 @@ type FormCheckoutField = {
 	showWhen?: FieldCondition;
 	// Message content (for type: "message")
 	messageContent?: string;
+	// Description for any field type
+	description?: string; // Help text shown below the field
 	// Repeater-specific fields
 	columns?: RepeaterColumn[];
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
+	rowLabel?: string; // Custom row label prefix (e.g., "Attempt" for "Attempt #1")
+	autoSortByDateTime?: boolean; // Auto-sort rows by date and time columns
+	// Toggle field properties
+	toggleOffMessage?: string; // Message shown when toggle is off
+	toggleOnMessage?: string; // Message shown when toggle is on
 };
 
 // Field type definitions with icons and descriptions
@@ -321,6 +347,13 @@ const FIELD_TYPE_OPTIONS: {
 		value: "checkbox",
 		label: "Checkbox",
 		description: "Yes/No toggle or agreement",
+		icon: <CheckSquare className="h-4 w-4" />,
+		category: "selection",
+	},
+	{
+		value: "toggle",
+		label: "Toggle Switch",
+		description: "Toggle with custom on/off messages",
 		icon: <CheckSquare className="h-4 w-4" />,
 		category: "selection",
 	},
@@ -851,7 +884,7 @@ export function EventsManagement({
 								id: f.id,
 								label: f.label,
 								type: f.type,
-								required: f.type === "message" ? false : f.required, // Messages are never required
+								required: f.type === "message" || f.type === "toggle" ? false : f.required, // Messages and toggles handle required differently
 								placeholder: f.placeholder || undefined,
 								options: f.type === "select" || f.type === "radio" ? f.options : undefined,
 								maxLength: f.maxLength,
@@ -863,6 +896,8 @@ export function EventsManagement({
 								minDate: f.type === "date" ? f.minDate : undefined,
 								maxDate: f.type === "date" ? f.maxDate : undefined,
 								disabledDates: f.type === "date" ? f.disabledDates : undefined,
+								minDateOffset: f.type === "date" ? f.minDateOffset : undefined,
+								maxDateOffset: f.type === "date" ? f.maxDateOffset : undefined,
 								// Time field constraints
 								minTime: f.type === "time" ? f.minTime : undefined,
 								maxTime: f.type === "time" ? f.maxTime : undefined,
@@ -871,12 +906,18 @@ export function EventsManagement({
 								showWhen: f.showWhen || undefined,
 								// Message content
 								messageContent: f.type === "message" ? f.messageContent : undefined,
+								// Toggle field properties
+								toggleOffMessage: f.type === "toggle" ? f.toggleOffMessage : undefined,
+								toggleOnMessage: f.type === "toggle" ? f.toggleOnMessage : undefined,
+								// Description for any field type
+								description: f.description || undefined,
 								// Repeater-specific fields
 								columns: f.type === "repeater" ? f.columns : undefined,
 								minRows: f.type === "repeater" ? f.minRows : undefined,
 								maxRows: f.type === "repeater" ? f.maxRows : undefined,
 								defaultRows: f.type === "repeater" ? f.defaultRows : undefined,
-								description: f.type === "repeater" ? f.description : undefined,
+								rowLabel: f.type === "repeater" ? f.rowLabel : undefined,
+								autoSortByDateTime: f.type === "repeater" ? f.autoSortByDateTime : undefined,
 							})),
 							termsMessage: formData.checkoutTermsMessage || undefined,
 							confirmationMessage: formData.checkoutConfirmationMessage || undefined,
@@ -2258,6 +2299,36 @@ export function EventsManagement({
 																	</div>
 																)}
 
+																{/* Description field for input types */}
+																{(field.type === "text" ||
+																	field.type === "textarea" ||
+																	field.type === "number" ||
+																	field.type === "email" ||
+																	field.type === "phone" ||
+																	field.type === "date" ||
+																	field.type === "time" ||
+																	field.type === "select" ||
+																	field.type === "radio" ||
+																	field.type === "checkbox" ||
+																	field.type === "toggle") && (
+																	<div>
+																		<Label>Description (optional)</Label>
+																		<Textarea
+																			value={field.description || ""}
+																			onChange={(e) =>
+																				updateCheckoutField(index, {
+																					description: e.target.value || undefined,
+																				})
+																			}
+																			rows={2}
+																			placeholder="Add help text or instructions for this field..."
+																		/>
+																		<p className="text-muted-foreground mt-1 text-xs">
+																			Shown below the field to provide additional context
+																		</p>
+																	</div>
+																)}
+
 																{field.type === "message" && (
 																	<div>
 																		<Label>Message Content</Label>
@@ -2275,6 +2346,46 @@ export function EventsManagement({
 																			This message will be displayed to customers (no input
 																			required)
 																		</p>
+																	</div>
+																)}
+																{field.type === "toggle" && (
+																	<div className="space-y-4 rounded-lg border bg-purple-50 p-4 dark:bg-purple-950">
+																		<div className="flex items-center gap-2">
+																			<CheckSquare className="h-5 w-5" />
+																			<Label className="text-base font-semibold">
+																				Toggle Configuration
+																			</Label>
+																		</div>
+																		<div>
+																			<Label className="text-xs">Message When OFF</Label>
+																			<Input
+																				value={field.toggleOffMessage || ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						toggleOffMessage: e.target.value || undefined,
+																					})
+																				}
+																				placeholder="e.g., This delivery will NOT be sent anonymously"
+																			/>
+																			<p className="text-muted-foreground mt-1 text-xs">
+																				Shown when the toggle is in the OFF position
+																			</p>
+																		</div>
+																		<div>
+																			<Label className="text-xs">Message When ON</Label>
+																			<Input
+																				value={field.toggleOnMessage || ""}
+																				onChange={(e) =>
+																					updateCheckoutField(index, {
+																						toggleOnMessage: e.target.value || undefined,
+																					})
+																				}
+																				placeholder="e.g., This delivery WILL be sent anonymously"
+																			/>
+																			<p className="text-muted-foreground mt-1 text-xs">
+																				Shown when the toggle is in the ON position
+																			</p>
+																		</div>
 																	</div>
 																)}
 																{(field.type === "select" || field.type === "radio") && (
@@ -2439,6 +2550,48 @@ export function EventsManagement({
 																				/>
 																				<p className="text-muted-foreground mt-1 text-[10px]">
 																					Customers cannot select after this
+																				</p>
+																			</div>
+																		</div>
+
+																		{/* Date Offset Constraints */}
+																		<div className="grid grid-cols-2 gap-3">
+																			<div>
+																				<Label className="text-xs">Min Date Offset (days)</Label>
+																				<Input
+																					type="number"
+																					value={field.minDateOffset ?? ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							minDateOffset: e.target.value
+																								? parseInt(e.target.value)
+																								: undefined,
+																						})
+																					}
+																					placeholder="e.g., 1 = tomorrow"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Days from today. Effective min = max(min date, today +
+																					offset)
+																				</p>
+																			</div>
+																			<div>
+																				<Label className="text-xs">Max Date Offset (days)</Label>
+																				<Input
+																					type="number"
+																					value={field.maxDateOffset ?? ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							maxDateOffset: e.target.value
+																								? parseInt(e.target.value)
+																								: undefined,
+																						})
+																					}
+																					placeholder="e.g., 7 = week from today"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-[10px]">
+																					Days from today. Effective max = min(max date, today +
+																					offset)
 																				</p>
 																			</div>
 																		</div>
@@ -2707,6 +2860,47 @@ export function EventsManagement({
 																			</div>
 																		</div>
 
+																		{/* Row Label & Auto-Sort */}
+																		<div className="grid grid-cols-2 gap-3">
+																			<div>
+																				<Label className="text-xs">Row Label Prefix</Label>
+																				<Input
+																					value={field.rowLabel || ""}
+																					onChange={(e) =>
+																						updateCheckoutField(index, {
+																							rowLabel: e.target.value || undefined,
+																						})
+																					}
+																					placeholder="Entry (default)"
+																				/>
+																				<p className="text-muted-foreground mt-1 text-xs">
+																					Shown as &quot;{field.rowLabel || "Entry"} #1&quot;,
+																					&quot;{field.rowLabel || "Entry"} #2&quot;, etc.
+																				</p>
+																			</div>
+																			<div className="flex flex-col">
+																				<Label className="text-xs">Auto-Sort by Date/Time</Label>
+																				<div className="mt-2 flex items-center gap-2">
+																					<Switch
+																						checked={field.autoSortByDateTime || false}
+																						onCheckedChange={(checked) =>
+																							updateCheckoutField(index, {
+																								autoSortByDateTime: checked,
+																							})
+																						}
+																					/>
+																					<span className="text-muted-foreground text-xs">
+																						{field.autoSortByDateTime
+																							? "Rows sorted chronologically"
+																							: "Manual order"}
+																					</span>
+																				</div>
+																				<p className="text-muted-foreground mt-1 text-xs">
+																					Automatically sorts entries by Date and Time columns
+																				</p>
+																			</div>
+																		</div>
+
 																		{/* Columns */}
 																		<div className="space-y-3">
 																			<div className="flex items-center justify-between">
@@ -2882,6 +3076,59 @@ export function EventsManagement({
 																										/>
 																									</div>
 																								</div>
+																								{/* Date Offset Constraints */}
+																								<div className="grid grid-cols-2 gap-2">
+																									<div>
+																										<Label className="text-[9px]">
+																											Min Date Offset
+																										</Label>
+																										<Input
+																											type="number"
+																											className="h-7 text-xs"
+																											value={col.minDateOffset ?? ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													minDateOffset: e.target.value
+																														? parseInt(e.target.value)
+																														: undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																											placeholder="e.g., 1 = tomorrow"
+																										/>
+																									</div>
+																									<div>
+																										<Label className="text-[9px]">
+																											Max Date Offset
+																										</Label>
+																										<Input
+																											type="number"
+																											className="h-7 text-xs"
+																											value={col.maxDateOffset ?? ""}
+																											onChange={(e) => {
+																												const newCols = [...(field.columns || [])];
+																												newCols[colIndex] = {
+																													...newCols[colIndex],
+																													maxDateOffset: e.target.value
+																														? parseInt(e.target.value)
+																														: undefined,
+																												};
+																												updateCheckoutField(index, {
+																													columns: newCols,
+																												});
+																											}}
+																											placeholder="e.g., 7 = week from today"
+																										/>
+																									</div>
+																								</div>
+																								<p className="text-muted-foreground text-[8px]">
+																									Offset adds days to today. Effective date =
+																									max(min date, today + offset).
+																								</p>
 																								<div>
 																									<div className="mb-1 flex items-center justify-between">
 																										<Label className="text-[9px]">
@@ -3635,50 +3882,41 @@ export function EventsManagement({
 													</CardTitle>
 												</CardHeader>
 												<CardContent>
-													<ChartContainer
-														config={
-															{
-																clicks: {
-																	label: "Clicks",
-																	color: "hsl(var(--chart-1))",
-																},
-															} satisfies ChartConfig
-														}
-														className="h-[200px] w-full"
-													>
-														<LineChart
-															data={analyticsData.clicksData}
-															margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-														>
-															<CartesianGrid strokeDasharray="3 3" vertical={false} />
-															<XAxis
-																dataKey="label"
-																tickLine={false}
-																axisLine={false}
-																tickMargin={8}
-																fontSize={12}
-															/>
-															<YAxis
-																tickLine={false}
-																axisLine={false}
-																tickMargin={8}
-																fontSize={12}
-																allowDecimals={false}
-															/>
-															<ChartTooltip
-																cursor={false}
-																content={<ChartTooltipContent indicator="line" />}
-															/>
-															<Line
-																type="monotone"
-																dataKey="clicks"
-																stroke="var(--color-clicks)"
-																strokeWidth={2}
-																dot={{ r: 3, fill: "var(--color-clicks)" }}
-																activeDot={{ r: 5 }}
-															/>
-														</LineChart>
-													</ChartContainer>
+													<div className="h-[200px] w-full">
+														<ResponsiveContainer width="100%" height="100%">
+															<LineChart
+																data={analyticsData.clicksData}
+																margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+															>
+																<CartesianGrid strokeDasharray="3 3" vertical={false} />
+																<XAxis
+																	dataKey="label"
+																	tick={{ fontSize: 10 }}
+																	tickLine={false}
+																	axisLine={false}
+																	tickMargin={8}
+																	interval="preserveStartEnd"
+																/>
+																<YAxis
+																	tick={{ fontSize: 10 }}
+																	tickLine={false}
+																	axisLine={false}
+																	allowDecimals={false}
+																	width={35}
+																/>
+																<Tooltip formatter={(value: number) => [value, "Clicks"]} />
+																<Line
+																	type="monotone"
+																	dataKey="clicks"
+																	stroke="var(--primary)"
+																	strokeWidth={2}
+																	dot={{ r: 3, fill: "var(--primary)" }}
+																	activeDot={{ r: 5 }}
+																	connectNulls
+																/>
+															</LineChart>
+														</ResponsiveContainer>
+													</div>
 												</CardContent>
 											</Card>
 
@@ -3691,50 +3929,41 @@ export function EventsManagement({
 													</CardTitle>
 												</CardHeader>
 												<CardContent>
-													<ChartContainer
-														config={
-															{
-																orders: {
-																	label: "Orders",
-																	color: "hsl(var(--chart-2))",
-																},
-															} satisfies ChartConfig
-														}
-														className="h-[200px] w-full"
-													>
-														<LineChart
-															data={analyticsData.purchasesData}
-															margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-														>
-															<CartesianGrid strokeDasharray="3 3" vertical={false} />
-															<XAxis
-																dataKey="label"
-																tickLine={false}
-																axisLine={false}
-																tickMargin={8}
-																fontSize={12}
-															/>
-															<YAxis
-																tickLine={false}
-																axisLine={false}
-																tickMargin={8}
-																fontSize={12}
-																allowDecimals={false}
-															/>
-															<ChartTooltip
-																cursor={false}
-																content={<ChartTooltipContent indicator="line" />}
-															/>
-															<Line
-																type="monotone"
-																dataKey="orders"
-																stroke="var(--color-orders)"
-																strokeWidth={2}
-																dot={{ r: 3, fill: "var(--color-orders)" }}
-																activeDot={{ r: 5 }}
-															/>
-														</LineChart>
-													</ChartContainer>
+													<div className="h-[200px] w-full">
+														<ResponsiveContainer width="100%" height="100%">
+															<LineChart
+																data={analyticsData.purchasesData}
+																margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+															>
+																<CartesianGrid strokeDasharray="3 3" vertical={false} />
+																<XAxis
+																	dataKey="label"
+																	tick={{ fontSize: 10 }}
+																	tickLine={false}
+																	axisLine={false}
+																	tickMargin={8}
+																	interval="preserveStartEnd"
+																/>
+																<YAxis
+																	tick={{ fontSize: 10 }}
+																	tickLine={false}
+																	axisLine={false}
+																	allowDecimals={false}
+																	width={35}
+																/>
+																<Tooltip formatter={(value: number) => [value, "Orders"]} />
+																<Line
+																	type="monotone"
+																	dataKey="orders"
+																	stroke="var(--chart-2)"
+																	strokeWidth={2}
+																	dot={{ r: 3, fill: "var(--chart-2)" }}
+																	activeDot={{ r: 5 }}
+																	connectNulls
+																/>
+															</LineChart>
+														</ResponsiveContainer>
+													</div>
 												</CardContent>
 											</Card>
 										</>
