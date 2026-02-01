@@ -2,6 +2,11 @@ import { getProducts, getPackages, getActiveEvents } from "./actions";
 import { ShopClient } from "./shop-client";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Flower Fest 2026",
+};
 
 // Cache for 5 minutes for remote DB - products don't change that often
 export const revalidate = 300; // 5 minutes
