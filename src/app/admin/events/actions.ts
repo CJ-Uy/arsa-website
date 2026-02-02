@@ -612,10 +612,12 @@ export async function getEventAnalytics(
 			period,
 			label: isHourly
 				? new Date(period + ":00:00Z").toLocaleTimeString("en-US", {
+						timeZone: "Asia/Manila",
 						hour: "numeric",
 						hour12: true,
 					})
 				: new Date(period + "T00:00:00Z").toLocaleDateString("en-US", {
+						timeZone: "Asia/Manila",
 						month: "short",
 						day: "numeric",
 					}),
@@ -626,10 +628,12 @@ export async function getEventAnalytics(
 			period,
 			label: isHourly
 				? new Date(period + ":00:00Z").toLocaleTimeString("en-US", {
+						timeZone: "Asia/Manila",
 						hour: "numeric",
 						hour12: true,
 					})
 				: new Date(period + "T00:00:00Z").toLocaleDateString("en-US", {
+						timeZone: "Asia/Manila",
 						month: "short",
 						day: "numeric",
 					}),
