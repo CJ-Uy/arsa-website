@@ -307,6 +307,40 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 	// Collect all event-specific columns by parsing checkout configs
 	const eventColumnsMap = new Map<string, number>(); // Map of field label to max count for repeaters
 
+	// First, iterate through all unique event checkout configs to ensure columns exist
+	// even if no orders have data for them (e.g., all orders chose "Pick Up")
+	const processedEventIds = new Set<string>();
+	orders.forEach((order) => {
+		if (order.event?.checkoutConfig && !processedEventIds.has(order.event.id)) {
+			processedEventIds.add(order.event.id);
+			const fieldMap = parseCheckoutConfig(order.event.checkoutConfig);
+
+			// Initialize columns from the checkout config definition
+			fieldMap.forEach((fieldDef, fieldLabel) => {
+				if (fieldDef.type === "repeater") {
+					// Check if this repeater field contains both 'date' and 'time' columns,
+					// which suggests it's a delivery details repeater.
+					const hasDateColumn = fieldDef.columns?.some((col) => col.type === "date");
+					const hasTimeColumn = fieldDef.columns?.some((col) => col.type === "time");
+
+					if (hasDateColumn && hasTimeColumn) {
+						// Ensure there are always at least 5 slots for delivery details
+						const currentMax = eventColumnsMap.get(fieldLabel) || 0;
+						eventColumnsMap.set(fieldLabel, Math.max(currentMax, 5));
+					} else if (!eventColumnsMap.has(fieldLabel)) {
+						eventColumnsMap.set(fieldLabel, 0);
+					}
+				} else if (fieldDef.type !== "message") {
+					// For simple fields, just track that it exists
+					if (!eventColumnsMap.has(fieldLabel)) {
+						eventColumnsMap.set(fieldLabel, 0);
+					}
+				}
+			});
+		}
+	});
+
+	// Then, update counts based on actual order data
 	orders.forEach((order) => {
 		if (order.eventData && order.event?.checkoutConfig) {
 			const fieldMap = parseCheckoutConfig(order.event.checkoutConfig);
