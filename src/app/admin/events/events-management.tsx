@@ -967,7 +967,7 @@ export function EventsManagement({
 				endDate: formData.endDate,
 				componentPath: formData.componentPath,
 				themeConfig: formData.themeConfig,
-				checkoutConfig,
+				checkoutConfig: checkoutConfig ? JSON.stringify(checkoutConfig) : null,
 				products: formData.eventProducts.filter((p) => p.productId || p.packageId),
 				categories: formData.eventCategories.filter((c) => c.name.trim()),
 				minDeliveryDate: formData.minDeliveryDate || undefined,

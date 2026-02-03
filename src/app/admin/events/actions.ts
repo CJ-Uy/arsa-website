@@ -171,7 +171,7 @@ export type EventFormData = {
 	endDate: string;
 	componentPath: string;
 	themeConfig: ThemeConfig | null;
-	checkoutConfig: CheckoutConfig | null;
+	checkoutConfig: string | null; // JSON-serialized CheckoutConfig (pre-serialized on client to avoid RSC Flight issues with deeply nested objects)
 	products: EventProductInput[];
 	categories: EventCategoryInput[];
 	// Delivery control
@@ -278,6 +278,9 @@ export async function createEvent(data: EventFormData) {
 			return { success: false, message: "An event with this slug already exists" };
 		}
 
+		// Parse pre-serialized checkoutConfig (serialized on client to avoid RSC Flight issues)
+		const parsedCheckoutConfig = data.checkoutConfig ? JSON.parse(data.checkoutConfig) : null;
+
 		// Use transaction to create event with categories, then products
 		const event = await prisma.$transaction(async (tx) => {
 			// Create event with categories first
@@ -298,8 +301,8 @@ export async function createEvent(data: EventFormData) {
 					themeConfig: data.themeConfig
 						? (data.themeConfig as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
-					checkoutConfig: data.checkoutConfig
-						? (data.checkoutConfig as Prisma.InputJsonValue)
+					checkoutConfig: parsedCheckoutConfig
+						? (parsedCheckoutConfig as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
 					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
 					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,
@@ -378,6 +381,9 @@ export async function updateEvent(id: string, data: EventFormData) {
 			return { success: false, message: "An event with this slug already exists" };
 		}
 
+		// Parse pre-serialized checkoutConfig (serialized on client to avoid RSC Flight issues)
+		const parsedCheckoutConfig = data.checkoutConfig ? JSON.parse(data.checkoutConfig) : null;
+
 		// Use transaction to update event, categories, and products
 		const event = await prisma.$transaction(async (tx) => {
 			// Delete existing products and categories (will be recreated)
@@ -403,8 +409,8 @@ export async function updateEvent(id: string, data: EventFormData) {
 					themeConfig: data.themeConfig
 						? (data.themeConfig as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
-					checkoutConfig: data.checkoutConfig
-						? (data.checkoutConfig as Prisma.InputJsonValue)
+					checkoutConfig: parsedCheckoutConfig
+						? (parsedCheckoutConfig as Prisma.InputJsonValue)
 						: Prisma.JsonNull,
 					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
 					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,

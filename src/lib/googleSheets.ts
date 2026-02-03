@@ -412,7 +412,7 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 		}
 	});
 
-	const orderedColumns = [...baseColumns, ...eventColumns];
+	const orderedColumns = [...baseColumns, ...eventColumns, "Payment Method"];
 
 	// Convert orders to rows
 	const dataRows = orders.flatMap((order) =>
@@ -462,6 +462,8 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 				"Delivery Time": order.deliveryTimeSlot || "N/A",
 				Event: order.event?.name || "N/A",
 				"Receipt URL": order.receiptImageUrl || "",
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				"Payment Method": (order.eventData as any)?.paymentMethod || "GCash",
 			};
 
 			// Add event-specific custom field data to all rows for complete info per item

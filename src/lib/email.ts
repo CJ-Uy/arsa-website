@@ -18,6 +18,14 @@ type OrderItem = {
 	purchaseCode: string | null;
 };
 
+type RepeaterRowData = Record<string, string>;
+
+type EventData = {
+	eventName?: string;
+	fields?: Record<string, string | boolean | RepeaterRowData[]>;
+	paymentMethod?: string; // The selected payment option title
+};
+
 type OrderEmailData = {
 	orderId: string;
 	customerName: string;
@@ -26,6 +34,7 @@ type OrderEmailData = {
 	totalAmount: number;
 	eventName?: string;
 	orderDate: Date;
+	eventData?: EventData; // Checkout field responses including claiming method, delivery details, payment
 };
 
 // Get email settings from database
@@ -95,26 +104,44 @@ function createTransporter() {
 	});
 }
 
-// Generate order confirmation email HTML
+// Generate order confirmation email HTML with burgundy FlowerFest theme
 function generateOrderConfirmationHtml(data: OrderEmailData): string {
+	// FlowerFest Color Palette - matching the actual theme
+	const colors = {
+		darkRed: "#7A1520", // Brighter burgundy for main backgrounds (flower fest palette)
+		burgundy: "#AA1A1A", // Burgundy red (flower fest accent)
+		red: "#AA1A1A", // Accent red
+		lightRed: "#c42020",
+		cream: "#F2ECE0",
+		pastelOrange: "#D9C3A9",
+		pastelRed: "#D3B3AD",
+		gold: "#D6A134",
+	};
+
 	const itemsHtml = data.items
 		.map(
 			(item) => `
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-          <div style="font-weight: 500;">${item.name}</div>
-          ${item.size ? `<div style="font-size: 14px; color: #6b7280;">Size: ${item.size}</div>` : ""}
+        <td style="padding: 14px 12px; border-bottom: 1px solid ${colors.pastelRed};">
+          <div style="font-weight: 600; color: ${colors.burgundy};">${item.name}</div>
+          ${item.size ? `<div style="font-size: 13px; color: #6b5c52; margin-top: 2px;">Size: ${item.size}</div>` : ""}
           ${
 						item.purchaseCode
-							? `<div style="font-size: 12px; margin-top: 4px;">
-              <span style="color: #6b7280;">Code: </span>
-              <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${item.purchaseCode}</code>
+							? `<div style="margin-top: 6px;">
+              <span style="font-size: 11px; color: #6b5c52;">Purchase Code${item.purchaseCode.includes(",") ? "s" : ""}: </span>
+              ${item.purchaseCode
+								.split(",")
+								.map(
+									(code) =>
+										`<code style="background: ${colors.darkRed}; color: ${colors.cream}; padding: 3px 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; font-weight: 600; display: inline-block; margin: 2px 2px 2px 0;">${code.trim()}</code>`,
+								)
+								.join("")}
             </div>`
 							: ""
 					}
         </td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">&#8369;${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding: 14px 12px; border-bottom: 1px solid ${colors.pastelRed}; text-align: center; color: ${colors.burgundy};">${item.quantity}</td>
+        <td style="padding: 14px 12px; border-bottom: 1px solid ${colors.pastelRed}; text-align: right; color: ${colors.burgundy}; font-weight: 500;">&#8369;${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
     `,
 		)
@@ -126,7 +153,112 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 		day: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
+		timeZone: "Asia/Manila",
 	});
+
+	// Extract claiming method and delivery/pickup details from eventData
+	const fields = data.eventData?.fields || {};
+	const claimingMethod = fields["Claiming Method"] as string | undefined;
+	const paymentMethod = data.eventData?.paymentMethod;
+
+	// Build claiming/delivery details section
+	let claimingDetailsHtml = "";
+
+	if (claimingMethod || paymentMethod) {
+		let detailsContent = "";
+
+		// Add claiming method
+		if (claimingMethod) {
+			detailsContent += `
+        <tr>
+          <td style="padding: 8px 0; color: #6b5c52; font-size: 14px; vertical-align: top;">Claiming Method:</td>
+          <td style="padding: 8px 0; text-align: right; color: ${colors.burgundy}; font-size: 14px; font-weight: 600;">${claimingMethod}</td>
+        </tr>`;
+
+			// If Pick Up, show pickup date in a table and add a note
+			if (
+				claimingMethod.toLowerCase().includes("pick up") ||
+				claimingMethod.toLowerCase().includes("pickup")
+			) {
+				const pickupDate = fields["Pick Up Date"] as string | undefined;
+				if (pickupDate) {
+					detailsContent += `
+        <tr>
+          <td colspan="2" style="padding: 12px 0 4px 0;">
+            <div style="font-size: 13px; color: #6b5c52; margin-bottom: 8px;">Pick Up Details:</div>
+            <table style="width: 100%; border-collapse: collapse; background: ${colors.cream}; border-radius: 8px; overflow: hidden;">
+              <thead>
+                <tr style="background: ${colors.pastelRed};">
+                  <th style="padding: 8px 10px; text-align: left; font-size: 12px; color: ${colors.burgundy};">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy};">${pickupDate}</td>
+                </tr>
+              </tbody>
+            </table>
+						<p style="font-size: 12px; color: #6b5c52; margin-top: 8px;">You can claim your order at Gonz Slot 2 on the specified pickup date.</p>
+          </td>
+        </tr>`;
+				}
+			}
+
+			// If Delivery, show delivery details table
+			if (claimingMethod.toLowerCase().includes("delivery")) {
+				const deliveryDetails = fields["Delivery Details"] as RepeaterRowData[] | undefined;
+				if (deliveryDetails && Array.isArray(deliveryDetails) && deliveryDetails.length > 0) {
+					detailsContent += `
+        <tr>
+          <td colspan="2" style="padding: 12px 0 4px 0;">
+            <div style="font-size: 13px; color: #6b5c52; margin-bottom: 8px;">Delivery Details:</div>
+            <table style="width: 100%; border-collapse: collapse; background: ${colors.cream}; border-radius: 8px; overflow: hidden;">
+              <thead>
+                <tr style="background: ${colors.pastelRed};">
+                  <th style="padding: 8px 10px; text-align: left; font-size: 12px; color: ${colors.burgundy};">Date</th>
+                  <th style="padding: 8px 10px; text-align: left; font-size: 12px; color: ${colors.burgundy};">Time</th>
+                  <th style="padding: 8px 10px; text-align: left; font-size: 12px; color: ${colors.burgundy};">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${deliveryDetails
+									.map(
+										(row) => `
+                <tr>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[0] || "N/A"}</td>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[1] || "N/A"}</td>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[2] || "N/A"}</td>
+                </tr>`,
+									)
+									.join("")}
+              </tbody>
+            </table>
+          </td>
+        </tr>`;
+				}
+			}
+		}
+
+		// Add payment method
+		if (paymentMethod) {
+			detailsContent += `
+        <tr>
+          <td style="padding: 8px 0; color: #6b5c52; font-size: 14px; vertical-align: top;">Payment Method:</td>
+          <td style="padding: 8px 0; text-align: right; color: ${colors.burgundy}; font-size: 14px; font-weight: 600;">${paymentMethod}</td>
+        </tr>`;
+		}
+
+		if (detailsContent) {
+			claimingDetailsHtml = `
+    <!-- Claiming & Payment Details -->
+    <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; color: ${colors.burgundy}; border-bottom: 2px solid ${colors.red}; padding-bottom: 8px;">Claiming & Payment</h2>
+      <table style="width: 100%;">
+        ${detailsContent}
+      </table>
+    </div>`;
+		}
+	}
 
 	return `
 <!DOCTYPE html>
@@ -136,62 +268,94 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Confirmation</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: ${colors.burgundy}; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
 
-  <div style="text-align: center; margin-bottom: 32px;">
-    <h1 style="color: #1f2937; margin: 0; font-size: 24px;">Order Confirmation</h1>
-    ${data.eventName ? `<p style="color: #6b7280; margin: 8px 0 0 0;">${data.eventName}</p>` : ""}
+  <!-- Header Banner -->
+  <div style="background: linear-gradient(135deg, ${colors.darkRed} 0%, ${colors.burgundy} 50%, ${colors.darkRed} 100%); padding: 32px 20px; text-align: center;">
+    <h1 style="color: ${colors.cream}; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.5px;">Order Confirmed!</h1>
+    ${data.eventName ? `<p style="color: ${colors.pastelOrange}; margin: 8px 0 0 0; font-size: 16px;">${data.eventName}</p>` : ""}
   </div>
 
-  <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: center;">
-    <div style="color: #16a34a; font-size: 20px; margin-bottom: 4px;">&#10003;</div>
-    <p style="margin: 0; color: #166534; font-weight: 500;">Thank you for your order, ${data.customerName}!</p>
-    <p style="margin: 4px 0 0 0; color: #166534; font-size: 14px;">We've received your order and will process it shortly.</p>
-  </div>
+  <!-- Main Content -->
+  <div style="background: ${colors.cream}; padding: 32px 24px;">
 
-  <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-    <h2 style="margin: 0 0 12px 0; font-size: 16px; color: #374151;">Order Details</h2>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-      <span style="color: #6b7280;">Order ID:</span>
-      <span style="font-family: monospace; font-size: 14px;">${data.orderId}</span>
+    <!-- Thank You Message -->
+    <div style="background: linear-gradient(135deg, rgba(170, 26, 26, 0.08) 0%, rgba(64, 12, 18, 0.05) 100%); border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; text-align: center;">
+      <!-- Checkmark using table for email compatibility -->
+      <table style="margin: 0 auto 12px auto;">
+        <tr>
+          <td style="width: 48px; height: 48px; background: ${colors.red}; border-radius: 50%; text-align: center; vertical-align: middle;">
+            <span style="color: ${colors.cream}; font-size: 24px; line-height: 48px;">✓</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0; color: ${colors.burgundy}; font-weight: 600; font-size: 18px;">Thank you for your order, ${data.customerName}!</p>
+      <p style="margin: 8px 0 0 0; color: #5a3a3a; font-size: 14px;">We've received your order and will process it shortly.</p>
     </div>
-    <div style="display: flex; justify-content: space-between;">
-      <span style="color: #6b7280;">Order Date:</span>
-      <span>${formattedDate}</span>
+
+    <!-- Order Details Card -->
+    <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; color: ${colors.burgundy}; border-bottom: 2px solid ${colors.red}; padding-bottom: 8px;">Order Details</h2>
+      <table style="width: 100%;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b5c52; font-size: 14px;">Order ID:</td>
+          <td style="padding: 6px 0; text-align: right;">
+            <code style="background: ${colors.darkRed}; color: ${colors.cream}; padding: 4px 10px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; font-weight: 600;">${data.orderId}</code>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b5c52; font-size: 14px;">Order Date:</td>
+          <td style="padding: 6px 0; text-align: right; color: ${colors.burgundy}; font-size: 14px;">${formattedDate}</td>
+        </tr>
+      </table>
     </div>
+
+    ${claimingDetailsHtml}
+
+    <!-- Items Table -->
+    <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; overflow: hidden; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: linear-gradient(135deg, ${colors.darkRed} 0%, ${colors.burgundy} 100%);">
+            <th style="padding: 14px 12px; text-align: left; font-weight: 600; color: ${colors.cream}; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Item</th>
+            <th style="padding: 14px 12px; text-align: center; font-weight: 600; color: ${colors.cream}; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Qty</th>
+            <th style="padding: 14px 12px; text-align: right; font-weight: 600; color: ${colors.cream}; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+        <tfoot>
+          <tr style="background: rgba(170, 26, 26, 0.05);">
+            <td colspan="2" style="padding: 16px 12px; text-align: right; font-weight: 700; font-size: 16px; color: ${colors.burgundy};">Total:</td>
+            <td style="padding: 16px 12px; text-align: right; font-weight: 700; font-size: 18px; color: ${colors.red};">&#8369;${data.totalAmount.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Important Notice -->
+    <div style="background: linear-gradient(135deg, rgba(214, 161, 52, 0.15) 0%, rgba(214, 161, 52, 0.08) 100%); border: 1px solid ${colors.gold}; border-left: 4px solid ${colors.gold}; border-radius: 8px; padding: 16px; margin-bottom: 28px;">
+      <p style="margin: 0; color: ${colors.burgundy}; font-size: 13px; line-height: 1.6;">
+        <strong style="color: #8B6914;">📌 Important:</strong> Items with separate delivery details should be ordered individually and separately in their own transactions.
+      </p>
+    </div>
+
+    <!-- Help Section -->
+    <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
+      <h3 style="margin: 0 0 12px 0; font-size: 15px; color: ${colors.burgundy};">Need Help?</h3>
+      <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
+        Contact the <a href="https://www.facebook.com/ARSAFlowerFest" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">FlowerFest Help Desk</a><br>
+        or email us at <a href="mailto:arsa.flowerfest@gmail.com" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">arsa.flowerfest@gmail.com</a>
+      </p>
+    </div>
+
   </div>
 
-  <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
-    <thead>
-      <tr style="background: #f3f4f6;">
-        <th style="padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Item</th>
-        <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Qty</th>
-        <th style="padding: 12px; text-align: right; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Price</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${itemsHtml}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="2" style="padding: 16px 12px; text-align: right; font-weight: 600; font-size: 18px;">Total:</td>
-        <td style="padding: 16px 12px; text-align: right; font-weight: 600; font-size: 18px;">&#8369;${data.totalAmount.toFixed(2)}</td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-    <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af;">What happens next?</h3>
-    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
-      <li>Our team will verify your payment</li>
-      <li>You'll receive updates if there are any issues</li>
-      <li>Your order will be processed and prepared</li>
-    </ul>
-  </div>
-
-  <div style="text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; padding-top: 24px;">
-    <p style="margin: 0;">If you have any questions, please contact us.</p>
-    <p style="margin: 8px 0 0 0; font-size: 12px;">This is an automated email. Please do not reply directly.</p>
+  <!-- Footer -->
+  <div style="background: linear-gradient(135deg, ${colors.darkRed} 0%, ${colors.burgundy} 100%); padding: 20px; text-align: center;">
+    <p style="margin: 0; color: ${colors.pastelOrange}; font-size: 12px;">This is an automated email.</p>
+    <p style="margin: 8px 0 0 0; color: ${colors.pastelRed}; font-size: 11px;">© ARSA - Ateneo Resident Students Association</p>
   </div>
 
 </body>
@@ -203,10 +367,13 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 function generateOrderConfirmationText(data: OrderEmailData): string {
 	const itemsList = data.items
 		.map((item) => {
-			let line = `- ${item.name}`;
+			let line = `• ${item.name}`;
 			if (item.size) line += ` (Size: ${item.size})`;
 			line += ` x${item.quantity} - ₱${(item.price * item.quantity).toFixed(2)}`;
-			if (item.purchaseCode) line += `\n  Code: ${item.purchaseCode}`;
+			if (item.purchaseCode) {
+				const codes = item.purchaseCode.split(",").map((c) => c.trim());
+				line += `\n  Purchase Code${codes.length > 1 ? "s" : ""}: ${codes.join("\n  ")}`;
+			}
 			return line;
 		})
 		.join("\n");
@@ -217,31 +384,103 @@ function generateOrderConfirmationText(data: OrderEmailData): string {
 		day: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
+		timeZone: "Asia/Manila",
 	});
 
+	// Extract claiming method and delivery/pickup details from eventData
+	const fields = data.eventData?.fields || {};
+	const claimingMethod = fields["Claiming Method"] as string | undefined;
+	const paymentMethod = data.eventData?.paymentMethod;
+
+	// Build claiming/delivery details section
+	let claimingDetailsText = "";
+	if (claimingMethod || paymentMethod) {
+		claimingDetailsText = `
+───────────────────────────────────────
+CLAIMING & PAYMENT
+───────────────────────────────────────`;
+
+		if (claimingMethod) {
+			claimingDetailsText += `
+Claiming Method: ${claimingMethod}`;
+
+			// If Pick Up, show pickup date and add a note
+			if (
+				claimingMethod.toLowerCase().includes("pick up") ||
+				claimingMethod.toLowerCase().includes("pickup")
+			) {
+				const pickupDate = fields["Pick Up Date"] as string | undefined;
+				if (pickupDate) {
+					claimingDetailsText += `
+
+Pick Up Details:
+  Date: ${pickupDate}
+  (You can claim your order at Gonz Slot 2 on the specified pickup date.)`;
+				}
+			}
+
+			// If Delivery, show delivery details
+			if (claimingMethod.toLowerCase().includes("delivery")) {
+				const deliveryDetails = fields["Delivery Details"] as RepeaterRowData[] | undefined;
+				if (deliveryDetails && Array.isArray(deliveryDetails) && deliveryDetails.length > 0) {
+					claimingDetailsText += `
+
+Delivery Details:`;
+					deliveryDetails.forEach((row, index) => {
+						const values = Object.values(row);
+						claimingDetailsText += `
+  ${index + 1}. Date: ${values[0] || "N/A"} | Time: ${values[1] || "N/A"} | Location: ${values[2] || "N/A"}`;
+					});
+				}
+			}
+		}
+
+		if (paymentMethod) {
+			claimingDetailsText += `
+Payment Method: ${paymentMethod}`;
+		}
+	}
+
 	return `
-ORDER CONFIRMATION
-${data.eventName ? `\n${data.eventName}\n` : ""}
+═══════════════════════════════════════
+       ORDER CONFIRMED!
+${data.eventName ? `       ${data.eventName}\n` : ""}═══════════════════════════════════════
+
 Thank you for your order, ${data.customerName}!
 We've received your order and will process it shortly.
 
+───────────────────────────────────────
 ORDER DETAILS
--------------
+───────────────────────────────────────
 Order ID: ${data.orderId}
 Order Date: ${formattedDate}
+${claimingDetailsText}
 
-ITEMS
------
+───────────────────────────────────────
+YOUR ITEMS
+───────────────────────────────────────
 ${itemsList}
 
+───────────────────────────────────────
 TOTAL: ₱${data.totalAmount.toFixed(2)}
+───────────────────────────────────────
 
-WHAT HAPPENS NEXT?
-- Our team will verify your payment
-- You'll receive updates if there are any issues
-- Your order will be processed and prepared
+📌 IMPORTANT:
+Items with separate delivery details should be ordered
+individually and separately in their own transactions.
 
-If you have any questions, please contact us.
+───────────────────────────────────────
+NEED HELP?
+───────────────────────────────────────
+Contact the FlowerFest Help Desk:
+https://www.facebook.com/ARSAFlowerFest
+
+Or email us at:
+arsa.flowerfest@gmail.com
+
+═══════════════════════════════════════
+This is an automated email.
+© ARSA - Ateneo Resident Students Association
   `.trim();
 }
 

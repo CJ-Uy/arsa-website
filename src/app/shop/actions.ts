@@ -589,6 +589,11 @@ export async function createOrder(
 				totalAmount,
 				eventName,
 				orderDate: new Date(),
+				eventData: {
+					eventName,
+					paymentMethod: eventData?.paymentMethod || "GCash",
+					fields: eventData?.fields,
+				},
 			});
 		} catch (emailError) {
 			// Log error but don't fail the order

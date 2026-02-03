@@ -822,9 +822,15 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 			const { url: receiptUrl } = await uploadResponse.json();
 
 			// Build event data if present (only include visible fields, skip message fields)
+			// Also include the selected payment method title for order records and email
+			const selectedPaymentOptionTitle = selectedPaymentOption
+				? event?.checkoutConfig?.paymentOptions?.find((o) => o.id === selectedPaymentOption)?.title
+				: undefined;
+
 			const eventData = event
 				? {
 						eventName: event.name,
+						paymentMethod: selectedPaymentOptionTitle, // Store the payment method title
 						fields: additionalFields.reduce(
 							(acc, field) => {
 								// Skip message fields and hidden fields

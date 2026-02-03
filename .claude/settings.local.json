@@ -18,7 +18,9 @@
 			"Bash(grep:*)",
 			"Bash(xargs:*)",
 			"Bash(npm view:*)",
-			"Bash(findstr:*)"
+			"Bash(findstr:*)",
+			"Bash(node -e:*)",
+			"Bash(node:*)"
 		],
 		"deny": [],
 		"ask": []
