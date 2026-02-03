@@ -356,6 +356,7 @@ export async function sendOrderConfirmationEmailAction(orderId: string) {
 			totalAmount: order.totalAmount,
 			eventName: order.event?.name,
 			orderDate: order.createdAt,
+			eventData: order.eventData as any, // Pass eventData here
 		});
 
 		return result;

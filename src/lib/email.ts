@@ -180,7 +180,7 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 				claimingMethod.toLowerCase().includes("pick up") ||
 				claimingMethod.toLowerCase().includes("pickup")
 			) {
-				const pickupDate = fields["Pick Up Date"] as string | undefined;
+				const pickupDate = fields["Date of Pick Up"] as string | undefined;
 				if (pickupDate) {
 					detailsContent += `
         <tr>
@@ -409,7 +409,7 @@ Claiming Method: ${claimingMethod}`;
 				claimingMethod.toLowerCase().includes("pick up") ||
 				claimingMethod.toLowerCase().includes("pickup")
 			) {
-				const pickupDate = fields["Pick Up Date"] as string | undefined;
+				const pickupDate = fields["Date of Pick Up"] as string | undefined;
 				if (pickupDate) {
 					claimingDetailsText += `
 
