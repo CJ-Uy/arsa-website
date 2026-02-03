@@ -453,19 +453,19 @@ function ordersToRows(orders: Awaited<ReturnType<typeof getOrdersForSync>>) {
 				"Item Total": item.price * item.quantity,
 				"Order Total": index === 0 ? order.totalAmount : "",
 				"Order Status": order.status,
-				"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "Needs Manual Checking" : "",
+				// Copy GCash ref and claiming details to all rows for complete info per item
+				"GCash Ref No": order.gcashReferenceNumber || "Needs Manual Checking",
 				Notes: order.notes || "",
-				"Delivery Date":
-					index === 0 && order.deliveryDate
-						? new Date(order.deliveryDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
-						: "",
-				"Delivery Time": index === 0 ? order.deliveryTimeSlot || "N/A" : "",
-				Event: index === 0 ? order.event?.name || "N/A" : "",
-				"Receipt URL": index === 0 ? order.receiptImageUrl || "" : "",
+				"Delivery Date": order.deliveryDate
+					? new Date(order.deliveryDate).toLocaleDateString("en-US", { timeZone: "Asia/Manila" })
+					: "",
+				"Delivery Time": order.deliveryTimeSlot || "N/A",
+				Event: order.event?.name || "N/A",
+				"Receipt URL": order.receiptImageUrl || "",
 			};
 
-			// Add event-specific custom field data (only on first item)
-			if (index === 0 && order.eventData && order.event?.checkoutConfig) {
+			// Add event-specific custom field data to all rows for complete info per item
+			if (order.eventData && order.event?.checkoutConfig) {
 				const fieldMap = parseCheckoutConfig(order.event.checkoutConfig);
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const eventDataWrapper = order.eventData as any;

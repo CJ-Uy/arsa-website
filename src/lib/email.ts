@@ -332,3 +332,52 @@ export async function sendTestEmail(
 		};
 	}
 }
+
+// Send a custom email
+export async function sendCustomEmail(
+	to: string,
+	subject: string,
+	body: string,
+): Promise<{ success: boolean; message?: string }> {
+	try {
+		const settings = await getEmailSettings();
+
+		if (!settings) {
+			return { success: false, message: "Email settings not configured" };
+		}
+
+		const transporter = createTransporter();
+		if (!transporter) {
+			return { success: false, message: "SMTP credentials not configured in environment" };
+		}
+
+		// Convert plain text body to simple HTML (preserve line breaks)
+		const htmlBody = `
+			<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
+				${body
+					.split("\n")
+					.map((line) => (line.trim() ? `<p style="margin: 0 0 16px 0;">${line}</p>` : "<br>"))
+					.join("")}
+				<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+				<p style="color: #6b7280; font-size: 14px; margin: 0;">Sent from ${settings.fromName}</p>
+			</div>
+		`;
+
+		await transporter.sendMail({
+			from: `"${settings.fromName}" <${settings.fromAddress}>`,
+			to,
+			replyTo: settings.replyTo || settings.fromAddress,
+			subject,
+			text: body,
+			html: htmlBody,
+		});
+
+		return { success: true, message: "Email sent successfully" };
+	} catch (error) {
+		console.error("Failed to send custom email:", error);
+		return {
+			success: false,
+			message: error instanceof Error ? error.message : "Failed to send email",
+		};
+	}
+}

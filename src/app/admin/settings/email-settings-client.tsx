@@ -7,9 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Send, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2, Mail, Send, CheckCircle, AlertCircle, Info, PenLine } from "lucide-react";
 import { toast } from "sonner";
-import { saveEmailSettings, sendTestEmail, type EmailSettings } from "@/lib/email";
+import { saveEmailSettings, sendTestEmail, sendCustomEmail, type EmailSettings } from "@/lib/email";
 
 type EmailSettingsClientProps = {
 	initialSettings: EmailSettings | null;
@@ -28,6 +37,11 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 	const [saving, setSaving] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [testEmail, setTestEmail] = useState(userEmail);
+	const [showComposeModal, setShowComposeModal] = useState(false);
+	const [composeTo, setComposeTo] = useState("");
+	const [composeSubject, setComposeSubject] = useState("");
+	const [composeBody, setComposeBody] = useState("");
+	const [sending, setSending] = useState(false);
 
 	const handleSave = async () => {
 		if (settings.enabled && !settings.fromAddress) {
@@ -73,6 +87,39 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 			toast.error("Failed to send test email");
 		} finally {
 			setTesting(false);
+		}
+	};
+
+	const handleSendCustomEmail = async () => {
+		if (!composeTo) {
+			toast.error("Please enter a recipient email address");
+			return;
+		}
+		if (!composeSubject) {
+			toast.error("Please enter a subject");
+			return;
+		}
+		if (!composeBody) {
+			toast.error("Please enter a message");
+			return;
+		}
+
+		setSending(true);
+		try {
+			const result = await sendCustomEmail(composeTo, composeSubject, composeBody);
+			if (result.success) {
+				toast.success("Email sent successfully!");
+				setShowComposeModal(false);
+				setComposeTo("");
+				setComposeSubject("");
+				setComposeBody("");
+			} else {
+				toast.error(result.message || "Failed to send email");
+			}
+		} catch (error) {
+			toast.error("Failed to send email");
+		} finally {
+			setSending(false);
 		}
 	};
 
@@ -238,6 +285,93 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Compose Email Section */}
+			{settings.enabled && settings.fromAddress && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<PenLine className="h-5 w-5" />
+							Compose Email
+						</CardTitle>
+						<CardDescription>Send a custom email using your configured settings</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button onClick={() => setShowComposeModal(true)} variant="outline">
+							<PenLine className="mr-2 h-4 w-4" />
+							Compose New Email
+						</Button>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Compose Email Modal */}
+			<Dialog open={showComposeModal} onOpenChange={setShowComposeModal}>
+				<DialogContent className="sm:max-w-[600px]">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<Mail className="h-5 w-5" />
+							Compose Email
+						</DialogTitle>
+						<DialogDescription>
+							Send an email from {settings.fromName} &lt;{settings.fromAddress}&gt;
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						<div className="space-y-2">
+							<Label htmlFor="compose-to">To *</Label>
+							<Input
+								id="compose-to"
+								type="email"
+								placeholder="recipient@example.com"
+								value={composeTo}
+								onChange={(e) => setComposeTo(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="compose-subject">Subject *</Label>
+							<Input
+								id="compose-subject"
+								type="text"
+								placeholder="Email subject"
+								value={composeSubject}
+								onChange={(e) => setComposeSubject(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="compose-body">Message *</Label>
+							<Textarea
+								id="compose-body"
+								placeholder="Type your message here..."
+								value={composeBody}
+								onChange={(e) => setComposeBody(e.target.value)}
+								rows={8}
+							/>
+							<p className="text-muted-foreground text-xs">
+								Plain text. Line breaks will be preserved.
+							</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setShowComposeModal(false)} disabled={sending}>
+							Cancel
+						</Button>
+						<Button onClick={handleSendCustomEmail} disabled={sending}>
+							{sending ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Sending...
+								</>
+							) : (
+								<>
+									<Send className="mr-2 h-4 w-4" />
+									Send Email
+								</>
+							)}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Setup Instructions */}
 			<Card>

@@ -19,7 +19,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateOrderStatus, deleteOrder } from "./actions";
+import { updateOrderStatus, deleteOrder, sendOrderConfirmationEmailAction } from "./actions";
 import { ClientBatchOcr } from "./ClientBatchOcr";
 import { InvoiceUpload } from "./InvoiceUpload";
 import { ManualVerificationDashboard } from "./ManualVerificationDashboard";
@@ -35,6 +35,8 @@ import {
 	AlertTriangle,
 	FileSpreadsheet,
 	RefreshCw,
+	Mail,
+	Loader2,
 } from "lucide-react";
 import {
 	AlertDialog,
@@ -88,6 +90,7 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 	const [statusFilter, setStatusFilter] = useState<string>("all");
 	const [showExportDialog, setShowExportDialog] = useState(false);
 	const [showSyncDialog, setShowSyncDialog] = useState(false);
+	const [sendingEmailOrderId, setSendingEmailOrderId] = useState<string | null>(null);
 
 	// Detect duplicate GCash reference numbers
 	const duplicateRefNumbers = new Set<string>();
@@ -128,6 +131,22 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 			setOrderToDelete(null);
 		} else {
 			toast.error(result.message || "Failed to delete order");
+		}
+	};
+
+	const handleSendConfirmationEmail = async (orderId: string) => {
+		setSendingEmailOrderId(orderId);
+		try {
+			const result = await sendOrderConfirmationEmailAction(orderId);
+			if (result.success) {
+				toast.success("Confirmation email sent successfully");
+			} else {
+				toast.error(result.message || "Failed to send email");
+			}
+		} catch (error) {
+			toast.error("An error occurred while sending email");
+		} finally {
+			setSendingEmailOrderId(null);
 		}
 	};
 
@@ -326,6 +345,19 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 												<Button
 													variant="outline"
 													size="icon"
+													onClick={() => handleSendConfirmationEmail(order.id)}
+													disabled={sendingEmailOrderId === order.id}
+													title="Send confirmation email"
+												>
+													{sendingEmailOrderId === order.id ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Mail className="h-4 w-4" />
+													)}
+												</Button>
+												<Button
+													variant="outline"
+													size="icon"
 													onClick={() => {
 														setOrderToDelete(order.id);
 														setShowDeleteDialog(true);
@@ -429,6 +461,30 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 											/>
 										</div>
 									)}
+
+									{/* Send Confirmation Email Button */}
+									<div className="border-t pt-4">
+										<Button
+											onClick={() => handleSendConfirmationEmail(selectedOrder.id)}
+											disabled={sendingEmailOrderId === selectedOrder.id}
+											className="w-full"
+										>
+											{sendingEmailOrderId === selectedOrder.id ? (
+												<>
+													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+													Sending Email...
+												</>
+											) : (
+												<>
+													<Mail className="mr-2 h-4 w-4" />
+													Send Confirmation Email
+												</>
+											)}
+										</Button>
+										<p className="text-muted-foreground mt-2 text-center text-xs">
+											This will send a confirmation email to {selectedOrder.user.email}
+										</p>
+									</div>
 								</div>
 							)}
 						</DialogContent>

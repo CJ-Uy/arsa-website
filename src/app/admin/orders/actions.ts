@@ -197,21 +197,18 @@ export async function exportOrdersData(eventId?: string) {
 					// Only show order total on first item
 					"Order Total": index === 0 ? order.totalAmount : "",
 					"Order Status": order.status,
-					// Only show GCash ref on first item
-					"GCash Ref No": index === 0 ? order.gcashReferenceNumber || "N/A" : "",
+					// Copy GCash ref and claiming details to all rows for complete info per item
+					"GCash Ref No": order.gcashReferenceNumber || "N/A",
 					Notes: order.notes || "",
-					// Delivery scheduling (only on first item)
-					"Delivery Date": index === 0 ? order.deliveryDate || "N/A" : "",
-					"Delivery Time": index === 0 ? order.deliveryTimeSlot || "N/A" : "",
-					// Event info (only on first item)
-					Event: index === 0 ? order.event?.name || "N/A" : "",
-					// Only show receipt URL on first item
-					"Receipt URL": index === 0 ? order.receiptImageUrl || "" : "",
+					"Delivery Date": order.deliveryDate || "N/A",
+					"Delivery Time": order.deliveryTimeSlot || "N/A",
+					Event: order.event?.name || "N/A",
+					"Receipt URL": order.receiptImageUrl || "",
 				};
 
-				// Add event-specific custom field data (only on first item)
+				// Add event-specific custom field data to all rows for complete info per item
 				// Parse checkout config to properly expand repeater fields
-				if (index === 0 && order.eventData && order.event?.checkoutConfig) {
+				if (order.eventData && order.event?.checkoutConfig) {
 					const fieldMap = parseCheckoutConfig(order.event.checkoutConfig);
 					const eventDataWrapper = order.eventData as any;
 					const eventData = eventDataWrapper.fields || eventDataWrapper; // Handle both .fields and direct structure
@@ -282,5 +279,88 @@ export async function getEventsForExport() {
 		return { success: true, data: events };
 	} catch (error: any) {
 		return { success: false, message: error.message || "Failed to fetch events" };
+	}
+}
+
+// Send confirmation email for an existing order (manual trigger)
+export async function sendOrderConfirmationEmailAction(orderId: string) {
+	try {
+		await checkShopAdmin();
+
+		// Import the email function
+		const { sendOrderConfirmationEmail } = await import("@/lib/email");
+
+		// Fetch order with all necessary data
+		const order = await prisma.order.findUnique({
+			where: { id: orderId },
+			include: {
+				user: {
+					select: {
+						name: true,
+						email: true,
+						firstName: true,
+						lastName: true,
+					},
+				},
+				event: {
+					select: {
+						name: true,
+					},
+				},
+				orderItems: {
+					include: {
+						product: {
+							select: {
+								name: true,
+							},
+						},
+						package: {
+							select: {
+								name: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (!order) {
+			return { success: false, message: "Order not found" };
+		}
+
+		if (!order.user.email) {
+			return { success: false, message: "Customer email not available" };
+		}
+
+		// Format order items for email
+		const items = order.orderItems.map((item) => ({
+			name: item.product?.name || item.package?.name || "Unknown Item",
+			size: item.size,
+			quantity: item.quantity,
+			price: item.price,
+			purchaseCode: item.purchaseCode,
+		}));
+
+		// Determine customer name
+		const customerName =
+			order.user.firstName && order.user.lastName
+				? `${order.user.firstName} ${order.user.lastName}`
+				: order.user.name || "Valued Customer";
+
+		// Send the email
+		const result = await sendOrderConfirmationEmail({
+			orderId: order.id,
+			customerName,
+			customerEmail: order.user.email,
+			items,
+			totalAmount: order.totalAmount,
+			eventName: order.event?.name,
+			orderDate: order.createdAt,
+		});
+
+		return result;
+	} catch (error: any) {
+		console.error("Error sending confirmation email:", error);
+		return { success: false, message: error.message || "Failed to send confirmation email" };
 	}
 }
