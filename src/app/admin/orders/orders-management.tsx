@@ -37,6 +37,7 @@ import {
 	RefreshCw,
 	Mail,
 	Loader2,
+	Pencil,
 } from "lucide-react";
 import {
 	AlertDialog,
@@ -49,6 +50,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EditEventDataDialog } from "./EditEventDataDialog";
 
 type Order = {
 	id: string;
@@ -75,6 +77,7 @@ type Order = {
 			description: string;
 		};
 	}>;
+	eventData: any | null;
 };
 
 type OrdersManagementProps = {
@@ -91,6 +94,7 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 	const [showExportDialog, setShowExportDialog] = useState(false);
 	const [showSyncDialog, setShowSyncDialog] = useState(false);
 	const [sendingEmailOrderId, setSendingEmailOrderId] = useState<string | null>(null);
+	const [showEditEventDataDialog, setShowEditEventDataDialog] = useState(false);
 
 	// Detect duplicate GCash reference numbers
 	const duplicateRefNumbers = new Set<string>();
@@ -148,6 +152,13 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 		} finally {
 			setSendingEmailOrderId(null);
 		}
+	};
+
+	const handleEventDataSave = (updatedEventData: Record<string, any> | null) => {
+		if (!selectedOrder) return;
+		const updatedOrder = { ...selectedOrder, eventData: updatedEventData };
+		setSelectedOrder(updatedOrder);
+		setOrders(orders.map((o) => (o.id === selectedOrder.id ? updatedOrder : o)));
 	};
 
 	const getStatusBadge = (status: string) => {
@@ -375,13 +386,13 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 
 					{/* Order Details Dialog */}
 					<Dialog open={showDialog} onOpenChange={setShowDialog}>
-						<DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+						<DialogContent className="max-h-[90vh] w-full max-w-5xl overflow-y-auto sm:max-w-5xl">
 							<DialogHeader>
 								<DialogTitle>Order Details</DialogTitle>
 								<DialogDescription>Order #{selectedOrder?.id.slice(0, 8)}</DialogDescription>
 							</DialogHeader>
 							{selectedOrder && (
-								<div className="space-y-6">
+								<div className="space-y-6 overflow-hidden">
 									<div>
 										<h3 className="mb-2 font-semibold">Customer Information</h3>
 										<p className="text-sm">Name: {selectedOrder.user.name || "N/A"}</p>
@@ -457,10 +468,35 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 											<img
 												src={`/api/receipts/${selectedOrder.receiptImageUrl.split("/").pop()}`}
 												alt="Receipt"
-												className="max-w-full rounded-lg border"
+												className="h-auto w-full rounded-lg border sm:w-1/2"
 											/>
 										</div>
 									)}
+
+									<div>
+										<div className="flex items-center justify-between">
+											<h3 className="font-semibold">Event Data</h3>
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setShowEditEventDataDialog(true)}
+											>
+												<Pencil className="mr-1.5 h-3.5 w-3.5" />
+												Edit
+											</Button>
+										</div>
+										{selectedOrder.eventData && Object.keys(selectedOrder.eventData).length > 0 ? (
+											<div className="mt-2 max-w-full overflow-x-auto rounded-md bg-gray-100 dark:bg-gray-800">
+												<pre className="p-4 text-sm">
+													<code>{JSON.stringify(selectedOrder.eventData, null, 2)}</code>
+												</pre>
+											</div>
+										) : (
+											<p className="text-muted-foreground mt-2 text-sm">
+												No event data. Click Edit to add entries.
+											</p>
+										)}
+									</div>
 
 									{/* Send Confirmation Email Button */}
 									<div className="border-t pt-4">
@@ -518,6 +554,17 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 					<ManualVerificationDashboard />
 				</TabsContent>
 			</Tabs>
+
+			{/* Edit Event Data Dialog */}
+			{selectedOrder && (
+				<EditEventDataDialog
+					open={showEditEventDataDialog}
+					onOpenChange={setShowEditEventDataDialog}
+					orderId={selectedOrder.id}
+					initialEventData={selectedOrder.eventData}
+					onSave={handleEventDataSave}
+				/>
+			)}
 
 			{/* Export and Sync Dialogs */}
 			<ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} />

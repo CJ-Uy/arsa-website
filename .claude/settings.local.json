@@ -20,7 +20,8 @@
 			"Bash(npm view:*)",
 			"Bash(findstr:*)",
 			"Bash(node -e:*)",
-			"Bash(node:*)"
+			"Bash(node:*)",
+			"Bash(python3 -c:*)"
 		],
 		"deny": [],
 		"ask": []

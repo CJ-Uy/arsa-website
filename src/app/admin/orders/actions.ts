@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { z } from "zod"; // Add this import
 
 async function checkShopAdmin() {
 	const session = await auth.api.getSession({
@@ -24,6 +25,68 @@ async function checkShopAdmin() {
 	}
 
 	return session;
+}
+
+const updateEventDataSchema = z.object({
+	orderId: z.string().min(1, "Order ID is required"),
+	eventData: z
+		.string()
+		.transform((str, ctx) => {
+			if (str.trim() === "") return null; // Treat empty string as null
+			try {
+				const parsed = JSON.parse(str);
+				if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message: "Event data must be a valid JSON object or null",
+					});
+					return z.NEVER;
+				}
+				return parsed;
+			} catch (e) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "Invalid JSON format for event data",
+				});
+				return z.NEVER;
+			}
+		})
+		.nullable(),
+});
+
+export async function updateEventData(formData: FormData) {
+	try {
+		await checkShopAdmin();
+
+		const rawEventData = formData.get("eventData");
+
+		// Validate raw input string (can be empty string, which our transform handles as null)
+		const validatedFields = updateEventDataSchema.safeParse({
+			orderId: formData.get("orderId"),
+			eventData: rawEventData === null ? "" : String(rawEventData), // Convert null to empty string for consistent parsing
+		});
+
+		if (!validatedFields.success) {
+			const errors = validatedFields.error.flatten().fieldErrors;
+			return {
+				success: false,
+				message: errors.eventData?.join(", ") || errors.orderId?.join(", ") || "Invalid input",
+			};
+		}
+
+		const { orderId, eventData } = validatedFields.data;
+
+		await prisma.order.update({
+			where: { id: orderId },
+			data: { eventData },
+		});
+
+		revalidatePath("/admin/orders");
+		return { success: true };
+	} catch (error: any) {
+		console.error("Error updating event data:", error);
+		return { success: false, message: error.message || "Failed to update event data" };
+	}
 }
 
 /**
