@@ -346,7 +346,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: ${colors.burgundy};">Need Help?</h3>
       <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
         Contact the <a href="https://www.facebook.com/ARSAFlowerFest" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">FlowerFest Help Desk</a><br>
-        or email us at <a href="mailto:arsa.flowerfest@gmail.com" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">arsa.flowerfest@gmail.com</a>
       </p>
     </div>
 
@@ -474,9 +473,6 @@ NEED HELP?
 ───────────────────────────────────────
 Contact the FlowerFest Help Desk:
 https://www.facebook.com/ARSAFlowerFest
-
-Or email us at:
-arsa.flowerfest@gmail.com
 
 ═══════════════════════════════════════
 This is an automated email.

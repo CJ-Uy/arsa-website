@@ -833,14 +833,6 @@ export function ShopClient({
 										href="https://www.facebook.com/ARSAFlowerFest"
 									>
 										FlowerFest Help Desk
-									</a>{" "}
-									or email{" "}
-									<a
-										className="text-[#165B95] underline"
-										target="_blank"
-										href="mailto:arsa.flowerfest@gmail.com?subject='ARSA Shop Sign-in Issue'"
-									>
-										arsa.flowerfest@gmail.com
 									</a>
 								</p>
 							</div>
