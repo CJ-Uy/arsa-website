@@ -28,6 +28,46 @@ async function verifyEventsAdminAccess() {
 	return { authorized: true, userId: session.user.id };
 }
 
+/**
+ * Update daily stock settings for a specific EventProduct
+ * This allows immediate saving from the daily stock dialog
+ */
+export async function updateEventProductDailyStock(
+	eventProductId: string,
+	dailyStockConfig: {
+		hasDailyStockLimit: boolean;
+		defaultMaxOrdersPerDay?: number;
+		dailyStockOverrides?: Record<string, number | null>;
+		dailyStockNote?: string;
+	},
+) {
+	try {
+		const auth = await verifyEventsAdminAccess();
+		if (!auth.authorized) {
+			return { success: false, message: auth.message };
+		}
+
+		// Update the EventProduct
+		await prisma.eventProduct.update({
+			where: { id: eventProductId },
+			data: {
+				hasDailyStockLimit: dailyStockConfig.hasDailyStockLimit,
+				defaultMaxOrdersPerDay: dailyStockConfig.defaultMaxOrdersPerDay,
+				dailyStockOverrides: dailyStockConfig.dailyStockOverrides as Prisma.JsonValue,
+				dailyStockNote: dailyStockConfig.dailyStockNote,
+			},
+		});
+
+		// Clear cache
+		cache.delete("events");
+
+		return { success: true, message: "Daily stock settings updated successfully" };
+	} catch (error) {
+		console.error("Error updating event product daily stock:", error);
+		return { success: false, message: "Failed to update daily stock settings" };
+	}
+}
+
 // Types for event data
 export type CheckoutFieldType =
 	| "text" // Single line text input
@@ -142,6 +182,9 @@ export type EventProductInput = {
 	eventPrice?: number;
 	productCode?: string;
 	categoryId?: string;
+	hasDailyStockLimit?: boolean;
+	defaultMaxOrdersPerDay?: number;
+	dailyStockOverrides?: Record<string, number | null>;
 };
 
 export type EventCategoryInput = {
@@ -345,6 +388,9 @@ export async function createEvent(data: EventFormData) {
 							eventPrice: p.eventPrice || null,
 							productCode: p.productCode || null,
 							categoryId: resolvedCategoryId,
+							hasDailyStockLimit: p.hasDailyStockLimit || false,
+							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay || null,
+							dailyStockOverrides: p.dailyStockOverrides || null,
 						};
 					}),
 				});
@@ -462,6 +508,9 @@ export async function updateEvent(id: string, data: EventFormData) {
 							eventPrice: p.eventPrice || null,
 							productCode: p.productCode || null,
 							categoryId: resolvedCategoryId,
+							hasDailyStockLimit: p.hasDailyStockLimit || false,
+							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay || null,
+							dailyStockOverrides: p.dailyStockOverrides || null,
 						};
 					}),
 				});

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getCart } from "../actions";
 import { CheckoutClient } from "./checkout-client";
+import { getCartDailyStockInfo, getAvailableDatesForCart } from "./daily-stock-actions";
 
 // Import types from the shared types file
 import type { CheckoutConfig } from "../events/types";
@@ -86,10 +87,37 @@ export default async function CheckoutPage() {
 		}
 	}
 
+	// Fetch daily stock data server-side
+	let dailyStockInfo = { hasLimitedItems: false, items: [] };
+	let availableDates: Array<{ date: string; remaining: number }> = [];
+
+	if (eventForCheckout) {
+		dailyStockInfo = await getCartDailyStockInfo(session.user.id, eventForCheckout.id);
+
+		// Get available dates for the next 90 days
+		if (dailyStockInfo.hasLimitedItems) {
+			const startDate = new Date();
+			const endDate = new Date();
+			endDate.setDate(endDate.getDate() + 90);
+			availableDates = await getAvailableDatesForCart(
+				session.user.id,
+				eventForCheckout.id,
+				startDate,
+				endDate,
+			);
+		}
+	}
+
 	return (
 		<div className="container mx-auto max-w-4xl px-4 py-10">
 			<h1 className="mb-8 text-4xl font-bold">Checkout</h1>
-			<CheckoutClient cart={cart} user={user} event={eventForCheckout} />
+			<CheckoutClient
+				cart={cart}
+				user={user}
+				event={eventForCheckout}
+				dailyStockInfo={dailyStockInfo}
+				availableDates={availableDates}
+			/>
 		</div>
 	);
 }

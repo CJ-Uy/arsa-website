@@ -62,6 +62,7 @@ type Product = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string | null;
+	dailyStockNote: string | null;
 	isEventExclusive: boolean;
 	sizePricing: Record<string, number> | null;
 	eventProducts: Array<{
@@ -90,6 +91,7 @@ type ProductFormData = {
 	isPreOrder: boolean;
 	availableSizes: string[];
 	specialNote: string;
+	dailyStockNote: string;
 	isEventExclusive: boolean;
 	sizePricing: Record<string, number>;
 	assignedEvents: Array<{
@@ -122,6 +124,7 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 		isPreOrder: false,
 		availableSizes: [],
 		specialNote: "",
+		dailyStockNote: "",
 		isEventExclusive: false,
 		sizePricing: {},
 		assignedEvents: [],
@@ -169,8 +172,9 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 				isPreOrder: product.isPreOrder,
 				availableSizes: product.availableSizes,
 				specialNote: product.specialNote || "",
+				dailyStockNote: product.dailyStockNote || "",
 				isEventExclusive: product.isEventExclusive,
-				sizePricing: product.sizePricing || {},
+				sizePricing: product.sizePricing || "",
 				assignedEvents: product.eventProducts || [],
 			});
 		} else {
@@ -645,6 +649,20 @@ export function ProductsManagement({ initialProducts, availableEvents }: Product
 							/>
 							<p className="text-muted-foreground mt-1 text-xs">
 								If set, this warning appears above the Special Instructions field during checkout
+							</p>
+						</div>
+
+						<div>
+							<Label htmlFor="dailyStockNote">Daily Stock Limit Note (Optional)</Label>
+							<Textarea
+								id="dailyStockNote"
+								value={formData.dailyStockNote}
+								onChange={(e) => setFormData({ ...formData, dailyStockNote: e.target.value })}
+								rows={2}
+								placeholder="e.g., Cookies have limited availability per day. Some delivery dates may not be available."
+							/>
+							<p className="text-muted-foreground mt-1 text-xs">
+								Shown at checkout when this product has daily stock limits enabled in an event
 							</p>
 						</div>
 

@@ -556,10 +556,17 @@ export async function sendOrderConfirmationEmail(
 			// Use Resend API
 			const resend = createResendClient();
 			if (!resend) {
-				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
-					orderId: data.orderId,
-					errorMessage: "Resend API key not configured",
-				});
+				await logEmail(
+					settings.provider,
+					data.customerEmail,
+					subject,
+					"order_confirmation",
+					"failed",
+					{
+						orderId: data.orderId,
+						errorMessage: "Resend API key not configured",
+					},
+				);
 				return { success: false, message: "Resend API key not configured" };
 			}
 
@@ -573,10 +580,17 @@ export async function sendOrderConfirmationEmail(
 			});
 
 			if (result.error) {
-				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
-					orderId: data.orderId,
-					errorMessage: result.error.message,
-				});
+				await logEmail(
+					settings.provider,
+					data.customerEmail,
+					subject,
+					"order_confirmation",
+					"failed",
+					{
+						orderId: data.orderId,
+						errorMessage: result.error.message,
+					},
+				);
 				return { success: false, message: result.error.message };
 			}
 
@@ -585,10 +599,17 @@ export async function sendOrderConfirmationEmail(
 			// Use SMTP
 			const transporter = createTransporter();
 			if (!transporter) {
-				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
-					orderId: data.orderId,
-					errorMessage: "SMTP not configured",
-				});
+				await logEmail(
+					settings.provider,
+					data.customerEmail,
+					subject,
+					"order_confirmation",
+					"failed",
+					{
+						orderId: data.orderId,
+						errorMessage: "SMTP not configured",
+					},
+				);
 				return { success: false, message: "SMTP not configured" };
 			}
 
@@ -619,10 +640,17 @@ export async function sendOrderConfirmationEmail(
 		// Log failed attempt
 		const settings = await getEmailSettings();
 		if (settings) {
-			await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
-				orderId: data.orderId,
-				errorMessage,
-			});
+			await logEmail(
+				settings.provider,
+				data.customerEmail,
+				subject,
+				"order_confirmation",
+				"failed",
+				{
+					orderId: data.orderId,
+					errorMessage,
+				},
+			);
 		}
 
 		return { success: false, message: errorMessage };
@@ -634,7 +662,8 @@ export async function sendTestEmail(
 	toEmail: string,
 ): Promise<{ success: boolean; message?: string }> {
 	const subject = "Test Email - ARSA Shop";
-	const text = "This is a test email from ARSA Shop. If you received this, your email configuration is working correctly!";
+	const text =
+		"This is a test email from ARSA Shop. If you received this, your email configuration is working correctly!";
 	const html = `
 		<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
 			<h2 style="color: #16a34a;">Email Configuration Test</h2>

@@ -11,6 +11,7 @@ import {
 	Gift,
 	CalendarHeart,
 	Megaphone,
+	Mail,
 	Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const iconMap = {
 	packages: Gift,
 	events: CalendarHeart,
 	banner: Megaphone,
+	email: Mail,
 	settings: Settings,
 } as const;
 

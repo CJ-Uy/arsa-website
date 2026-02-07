@@ -126,6 +126,7 @@ model Product {
   availableSizes   String[] @default([]) // Array of sizes: ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
   sizePricing      Json? // Optional size-specific pricing: { "S": 100, "M": 150, "L": 200 }
   specialNote      String? // Optional special note/warning shown during checkout
+  dailyStockNote   String? // Note shown at checkout when product has daily stock limits (e.g., "Limited cookie availability per day")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -367,6 +368,12 @@ model EventProduct {
   eventPrice  Float? // Override price for this event (optional)
   productCode String? // Custom code like "LLY" for purchase code generation
   categoryId  String? // Optional category assignment
+
+  // Daily Stock Limits (for products with limited availability per day)
+  hasDailyStockLimit      Boolean @default(false) // Enable daily stock limiting
+  defaultMaxOrdersPerDay  Int? // Default max orders per day (e.g., 50)
+  dailyStockOverrides     Json? // Per-date overrides: { "2026-02-14": 100, "2026-02-15": null (blocked) }
+  dailyStockNote          String? // Custom note displayed in checkout about stock limits
 
   event    ShopEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   product  Product?        @relation(fields: [productId], references: [id])

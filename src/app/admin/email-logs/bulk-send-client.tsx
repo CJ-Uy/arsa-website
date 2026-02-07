@@ -160,8 +160,8 @@ export function BulkSendClient() {
 				<Info className="h-4 w-4" />
 				<AlertDescription>
 					<strong>Bulk Email Sender:</strong> This tool finds all orders that haven't received
-					confirmation emails and lets you send them in bulk. Perfect for retroactively sending emails
-					or recovering from email outages.
+					confirmation emails and lets you send them in bulk. Perfect for retroactively sending
+					emails or recovering from email outages.
 				</AlertDescription>
 			</Alert>
 
@@ -186,10 +186,7 @@ export function BulkSendClient() {
 								Refresh
 							</Button>
 							{orders.length > 0 && (
-								<Button
-									onClick={handleSendEmails}
-									disabled={selectedOrders.size === 0 || sending}
-								>
+								<Button onClick={handleSendEmails} disabled={selectedOrders.size === 0 || sending}>
 									{sending ? (
 										<>
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -257,9 +254,7 @@ export function BulkSendClient() {
 														disabled={sending}
 													/>
 												</TableCell>
-												<TableCell className="font-mono text-xs">
-													{order.id.slice(0, 8)}
-												</TableCell>
+												<TableCell className="font-mono text-xs">{order.id.slice(0, 8)}</TableCell>
 												<TableCell className="font-medium">{order.customerName}</TableCell>
 												<TableCell className="text-xs">{order.customerEmail}</TableCell>
 												<TableCell>{formatCurrency(order.totalAmount)}</TableCell>

@@ -87,7 +87,9 @@ export function EmailLogsClient({ initialStats }: EmailLogsClientProps) {
 	// Filters
 	const [recipientFilter, setRecipientFilter] = useState("");
 	const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "failed">("all");
-	const [emailTypeFilter, setEmailTypeFilter] = useState<"all" | "order_confirmation" | "test" | "custom">("all");
+	const [emailTypeFilter, setEmailTypeFilter] = useState<
+		"all" | "order_confirmation" | "test" | "custom"
+	>("all");
 
 	// Manual log modal
 	const [showManualLogModal, setShowManualLogModal] = useState(false);
@@ -383,11 +385,7 @@ export function EmailLogsClient({ initialStats }: EmailLogsClientProps) {
 											</TableCell>
 											<TableCell className="text-xs">{formatDate(log.sentAt)}</TableCell>
 											<TableCell className="text-right">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => handleDelete(log.id)}
-												>
+												<Button variant="ghost" size="sm" onClick={() => handleDelete(log.id)}>
 													<Trash2 className="h-4 w-4" />
 												</Button>
 											</TableCell>
@@ -471,9 +469,7 @@ export function EmailLogsClient({ initialStats }: EmailLogsClientProps) {
 								type="email"
 								placeholder="customer@example.com"
 								value={manualLogForm.recipient}
-								onChange={(e) =>
-									setManualLogForm({ ...manualLogForm, recipient: e.target.value })
-								}
+								onChange={(e) => setManualLogForm({ ...manualLogForm, recipient: e.target.value })}
 							/>
 						</div>
 
@@ -515,7 +511,11 @@ export function EmailLogsClient({ initialStats }: EmailLogsClientProps) {
 						</div>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowManualLogModal(false)} disabled={submitting}>
+						<Button
+							variant="outline"
+							onClick={() => setShowManualLogModal(false)}
+							disabled={submitting}
+						>
 							Cancel
 						</Button>
 						<Button onClick={handleManualLogSubmit} disabled={submitting}>

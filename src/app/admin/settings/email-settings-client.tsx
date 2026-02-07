@@ -7,7 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Dialog,
@@ -180,9 +186,7 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 										<SelectItem value="resend">Resend API</SelectItem>
 									</SelectContent>
 								</Select>
-								<p className="text-muted-foreground text-xs">
-									Choose your email delivery method
-								</p>
+								<p className="text-muted-foreground text-xs">Choose your email delivery method</p>
 							</div>
 
 							{/* Provider-specific Configuration Notice */}
@@ -204,8 +208,8 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 												address
 											</li>
 											<li>
-												<code className="bg-muted rounded px-1">SMTP_PASSWORD</code> - Your
-												Google App Password
+												<code className="bg-muted rounded px-1">SMTP_PASSWORD</code> - Your Google
+												App Password
 											</li>
 										</ul>
 									</AlertDescription>
@@ -218,8 +222,8 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 										the following environment variable on your server:
 										<ul className="mt-2 list-inside list-disc space-y-1 text-sm">
 											<li>
-												<code className="bg-muted rounded px-1">RESEND_API_KEY</code> - Your
-												Resend API key from{" "}
+												<code className="bg-muted rounded px-1">RESEND_API_KEY</code> - Your Resend
+												API key from{" "}
 												<a
 													href="https://resend.com/api-keys"
 													target="_blank"
@@ -241,9 +245,7 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 									id="from-address"
 									type="email"
 									placeholder={
-										settings.provider === "smtp"
-											? "shop@example.com"
-											: "onboarding@resend.dev"
+										settings.provider === "smtp" ? "shop@example.com" : "onboarding@resend.dev"
 									}
 									value={settings.fromAddress}
 									onChange={(e) => setSettings({ ...settings, fromAddress: e.target.value })}
@@ -437,7 +439,9 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 			{/* Setup Instructions */}
 			<Card>
 				<CardHeader>
-					<CardTitle>{settings.provider === "smtp" ? "Google SMTP" : "Resend API"} Setup Instructions</CardTitle>
+					<CardTitle>
+						{settings.provider === "smtp" ? "Google SMTP" : "Resend API"} Setup Instructions
+					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{settings.provider === "smtp" ? (

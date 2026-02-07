@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { parseGcashReceiptClient } from "@/lib/gcashReaders/readReceipt.client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
+import { validateCartForDeliveryDate } from "./daily-stock-actions";
 
 // Type for repeater row data
 type RepeaterRowData = Record<string, string>;
@@ -179,9 +180,20 @@ type CheckoutClientProps = {
 	cart: CartItem[];
 	user: User;
 	event?: EventInfo;
+	dailyStockInfo: {
+		hasLimitedItems: boolean;
+		items: Array<{ name: string; note: string | null }>;
+	};
+	availableDates: Array<{ date: string; remaining: number }>;
 };
 
-export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
+export function CheckoutClient({
+	cart,
+	user,
+	event,
+	dailyStockInfo: initialDailyStockInfo,
+	availableDates,
+}: CheckoutClientProps) {
 	const router = useRouter();
 	const [firstName, setFirstName] = useState(user.firstName || "");
 	const [lastName, setLastName] = useState(user.lastName || "");
@@ -193,6 +205,31 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
 	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
 	const [selectedPaymentOption, setSelectedPaymentOption] = useState<string | null>(null);
+
+	// Daily stock limit states - initialized from server-provided data
+	const dailyStockInfo = initialDailyStockInfo;
+
+	// Build map of date -> remaining stock from server data
+	const dateStockMap = new Map<string, number | null>();
+	availableDates.forEach((dateInfo) => {
+		dateStockMap.set(dateInfo.date, dateInfo.remaining);
+	});
+
+	// Build list of blocked dates (all dates not in available list within next 90 days)
+	const blockedDates: string[] = [];
+	if (dailyStockInfo.hasLimitedItems) {
+		const startDate = new Date();
+		const endDate = new Date();
+		endDate.setDate(endDate.getDate() + 90);
+		const currentDate = new Date(startDate);
+		while (currentDate <= endDate) {
+			const dateString = currentDate.toISOString().split("T")[0];
+			if (!dateStockMap.has(dateString)) {
+				blockedDates.push(dateString);
+			}
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+	}
 
 	// Helper to get correct product price based on size
 	const getProductPrice = (item: CartItem) => {
@@ -803,6 +840,32 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 		setLoading(true);
 
 		try {
+			// Validate daily stock for delivery/pickup date if applicable
+			if (dailyStockInfo.hasLimitedItems && event?.id) {
+				// Find delivery or pickup date field
+				const dateField = additionalFields.find((f) => {
+					if (f.type !== "date") return false;
+					const fieldText = `${f.id} ${f.label}`.toLowerCase();
+					return (
+						fieldText.includes("delivery") ||
+						fieldText.includes("pickup") ||
+						fieldText.includes("pick up")
+					);
+				});
+
+				if (dateField && eventFieldValues[dateField.id]) {
+					const dateString = eventFieldValues[dateField.id] as string;
+					const date = new Date(dateString);
+
+					const validation = await validateCartForDeliveryDate(user.id, event.id, date);
+					if (!validation.valid) {
+						toast.error(validation.errors[0] || "Some items are not available for this date");
+						setLoading(false);
+						return;
+					}
+				}
+			}
+
 			// Upload receipt to MinIO
 			const formData = new FormData();
 			formData.append("file", receiptFile);
@@ -1155,17 +1218,60 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 															field.maxDateOffset,
 															"max",
 														)}
-														disabledDates={
-															field.disabledDates
-																? field.disabledDates.map((d) => new Date(d))
-																: undefined
-														}
+														disabledDates={(() => {
+															// Combine field config disabled dates with daily stock blocked dates
+															const configDisabled =
+																field.disabledDates?.map((d) => new Date(d)) || [];
+															const fieldText = `${field.id} ${field.label}`.toLowerCase();
+															const isDateField =
+																fieldText.includes("delivery") ||
+																fieldText.includes("pickup") ||
+																fieldText.includes("pick up");
+
+															if (isDateField && dailyStockInfo.hasLimitedItems) {
+																// Convert date strings to Date objects in local timezone (not UTC)
+																const stockBlocked = blockedDates.map((dateStr) => {
+																	const [year, month, day] = dateStr.split("-").map(Number);
+																	return new Date(year, month - 1, day); // Months are 0-indexed
+																});
+																return [...configDisabled, ...stockBlocked];
+															}
+															return configDisabled.length > 0 ? configDisabled : undefined;
+														})()}
 													/>
 													{field.description && (
 														<p className="text-muted-foreground text-xs">
 															{parseMarkdownLinks(field.description)}
 														</p>
 													)}
+													{/* Show remaining stock for delivery/pickup date fields */}
+													{(() => {
+														const fieldText = `${field.id} ${field.label}`.toLowerCase();
+														const isDateField =
+															fieldText.includes("delivery") ||
+															fieldText.includes("pickup") ||
+															fieldText.includes("pick up");
+														if (
+															isDateField &&
+															dailyStockInfo.hasLimitedItems &&
+															eventFieldValues[field.id]
+														) {
+															const dateString = (eventFieldValues[field.id] as string).split(
+																"T",
+															)[0];
+															const remaining = dateStockMap.get(dateString);
+															if (remaining !== null && remaining !== undefined) {
+																return (
+																	<p className="text-muted-foreground text-xs">
+																		{remaining > 0
+																			? `${remaining} slot${remaining !== 1 ? "s" : ""} remaining for this date`
+																			: "No slots available for this date"}
+																	</p>
+																);
+															}
+														}
+														return null;
+													})()}
 												</div>
 											)}
 
@@ -1379,9 +1485,33 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 																				col.maxDateOffset,
 																				"max",
 																			)}
-																			disabledDates={
-																				col.disabledDates?.map((d) => new Date(d)) || undefined
-																			}
+																			disabledDates={(() => {
+																				// Combine field config disabled dates with daily stock blocked dates
+																				const configDisabled =
+																					col.disabledDates?.map((d) => new Date(d)) || [];
+																				const colText = `${col.id} ${col.label}`.toLowerCase();
+																				const fieldText =
+																					`${field.id} ${field.label}`.toLowerCase();
+																				const combinedText = `${fieldText} ${colText}`;
+																				const isDateField =
+																					combinedText.includes("delivery") ||
+																					combinedText.includes("pickup") ||
+																					combinedText.includes("pick up");
+
+																				if (isDateField && dailyStockInfo.hasLimitedItems) {
+																					// Convert date strings to Date objects in local timezone (not UTC)
+																					const stockBlocked = blockedDates.map((dateStr) => {
+																						const [year, month, day] = dateStr
+																							.split("-")
+																							.map(Number);
+																						return new Date(year, month - 1, day); // Months are 0-indexed
+																					});
+																					return [...configDisabled, ...stockBlocked];
+																				}
+																				return configDisabled.length > 0
+																					? configDisabled
+																					: undefined;
+																			})()}
 																		/>
 																	)}
 
@@ -1488,6 +1618,23 @@ export function CheckoutClient({ cart, user, event }: CheckoutClientProps) {
 								})}
 							</CardContent>
 						</Card>
+					)}
+
+					{/* Daily Stock Warning */}
+					{dailyStockInfo.hasLimitedItems && (
+						<Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+							<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+							<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+								<strong>Limited Daily Stock:</strong>
+								{dailyStockInfo.items.map((item, index) => (
+									<div key={index} className="mt-2">
+										<strong>{item.name}</strong>
+									</div>
+								))}
+								Some items in your cart have limited availability per day. Some dates may be
+								unavailable.
+							</AlertDescription>
+						</Alert>
 					)}
 
 					<Card>

@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { cache, cacheKeys, withCache } from "@/lib/cache";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { validateDailyStockForCart } from "@/lib/daily-stock";
 
 // Get current session
 async function getSession() {
@@ -411,6 +412,47 @@ export async function createOrder(
 
 		if (cartItems.length === 0) {
 			return { success: false, message: "Cart is empty" };
+		}
+
+		// Validate daily stock for delivery date if applicable
+		if (eventId && eventData) {
+			// Find delivery date in event data fields
+			const fields = eventData.fields as Record<string, any> | undefined;
+			if (fields) {
+				// Look for delivery date field
+				const deliveryDateEntry = Object.entries(fields).find(([key]) =>
+					key.toLowerCase().includes("delivery date"),
+				);
+
+				if (deliveryDateEntry) {
+					const deliveryDateString = deliveryDateEntry[1] as string;
+					if (deliveryDateString) {
+						const deliveryDate = new Date(deliveryDateString);
+
+						// Build cart items for validation
+						const cartItemsForValidation = cartItems.map((item) => ({
+							productId: item.productId || undefined,
+							packageId: item.packageId || undefined,
+							quantity: item.quantity,
+						}));
+
+						const validation = await validateDailyStockForCart(
+							cartItemsForValidation,
+							deliveryDate,
+							eventId,
+						);
+
+						if (!validation.valid) {
+							return {
+								success: false,
+								message:
+									validation.errors.join(", ") ||
+									"Some items are not available for the selected delivery date",
+							};
+						}
+					}
+				}
+			}
 		}
 
 		// Helper to get correct product price

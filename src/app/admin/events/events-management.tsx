@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimePicker } from "@/components/ui/time-picker";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DailyStockDialog } from "@/components/features/daily-stock-dialog";
 import {
 	createEvent,
 	updateEvent,
@@ -33,6 +34,7 @@ import {
 	addEventAdmin,
 	removeEventAdmin,
 	getEventAnalytics,
+	updateEventProductDailyStock,
 	type EventFormData,
 	type CheckoutField,
 	type CheckoutConfig,
@@ -52,6 +54,7 @@ import {
 	Star,
 	ShoppingBag,
 	Package,
+	Package2,
 	Sparkles,
 	Users,
 	UserPlus,
@@ -192,6 +195,9 @@ type FormEventProduct = {
 	eventPrice?: number;
 	productCode?: string;
 	categoryId?: string;
+	hasDailyStockLimit?: boolean;
+	defaultMaxOrdersPerDay?: number;
+	dailyStockOverrides?: Record<string, number | null>;
 };
 
 type FormEventCategory = {
@@ -510,6 +516,10 @@ export function EventsManagement({
 	} | null>(null);
 	const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
+	// Daily stock dialog state
+	const [dailyStockDialogOpen, setDailyStockDialogOpen] = useState(false);
+	const [dailyStockProductIndex, setDailyStockProductIndex] = useState<number | null>(null);
+
 	const [formData, setFormData] = useState<FormData>({
 		name: "",
 		slug: "",
@@ -650,6 +660,10 @@ export function EventsManagement({
 					eventPrice: p.eventPrice || undefined,
 					productCode: p.productCode || undefined,
 					categoryId: p.categoryId || undefined,
+					hasDailyStockLimit: p.hasDailyStockLimit || false,
+					defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay || undefined,
+					dailyStockOverrides:
+						(p.dailyStockOverrides as Record<string, number | null>) || undefined,
 				})),
 				eventCategories: (event.categories || []).map((c) => ({
 					id: c.id,
@@ -808,6 +822,45 @@ export function EventsManagement({
 			...prev,
 			eventProducts: prev.eventProducts.filter((_, i) => i !== index),
 		}));
+	};
+
+	// Daily Stock Management
+	const openDailyStockDialog = (index: number) => {
+		setDailyStockProductIndex(index);
+		setDailyStockDialogOpen(true);
+	};
+
+	const saveDailyStockConfig = async (config: {
+		hasDailyStockLimit: boolean;
+		defaultMaxOrdersPerDay?: number;
+		dailyStockOverrides?: Record<string, number | null>;
+		dailyStockNote?: string;
+	}) => {
+		if (dailyStockProductIndex !== null) {
+			const eventProduct = formData.eventProducts[dailyStockProductIndex];
+
+			// If this is an existing event product (has an ID), save to database immediately
+			if (eventProduct.id) {
+				const result = await updateEventProductDailyStock(eventProduct.id, config);
+				if (result.success) {
+					toast.success(result.message);
+				} else {
+					toast.error(result.message);
+					return; // Don't update local state if save failed
+				}
+			}
+
+			// Update local state (for both existing and new products)
+			const updatedProducts = [...formData.eventProducts];
+			updatedProducts[dailyStockProductIndex] = {
+				...updatedProducts[dailyStockProductIndex],
+				hasDailyStockLimit: config.hasDailyStockLimit,
+				defaultMaxOrdersPerDay: config.defaultMaxOrdersPerDay,
+				dailyStockOverrides: config.dailyStockOverrides,
+				dailyStockNote: config.dailyStockNote,
+			};
+			setFormData({ ...formData, eventProducts: updatedProducts });
+		}
 	};
 
 	// Event Categories Management
@@ -1688,6 +1741,15 @@ export function EventsManagement({
 														className="w-28"
 													/>
 												</div>
+												<Button
+													type="button"
+													variant="outline"
+													size="icon"
+													onClick={() => openDailyStockDialog(index)}
+													title="Configure daily stock limits"
+												>
+													<Package2 className="h-4 w-4" />
+												</Button>
 												<Button
 													type="button"
 													variant="ghost"
@@ -4163,6 +4225,33 @@ export function EventsManagement({
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			{/* Daily Stock Dialog */}
+			{dailyStockProductIndex !== null && (
+				<DailyStockDialog
+					open={dailyStockDialogOpen}
+					onOpenChange={setDailyStockDialogOpen}
+					productName={
+						formData.eventProducts[dailyStockProductIndex]?.productId
+							? availableProducts.find(
+									(p) => p.id === formData.eventProducts[dailyStockProductIndex]?.productId,
+								)?.name || "Product"
+							: availablePackages.find(
+									(p) => p.id === formData.eventProducts[dailyStockProductIndex]?.packageId,
+								)?.name || "Package"
+					}
+					config={{
+						hasDailyStockLimit:
+							formData.eventProducts[dailyStockProductIndex]?.hasDailyStockLimit || false,
+						defaultMaxOrdersPerDay:
+							formData.eventProducts[dailyStockProductIndex]?.defaultMaxOrdersPerDay,
+						dailyStockOverrides:
+							formData.eventProducts[dailyStockProductIndex]?.dailyStockOverrides || {},
+						dailyStockNote: formData.eventProducts[dailyStockProductIndex]?.dailyStockNote,
+					}}
+					onSave={saveDailyStockConfig}
+				/>
+			)}
 		</div>
 	);
 }
