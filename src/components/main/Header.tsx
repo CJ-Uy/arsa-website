@@ -166,12 +166,20 @@ export function Header() {
 										<>
 											<DropdownMenuSeparator />
 											{userRoles.isShopAdmin && (
-												<DropdownMenuItem asChild>
-													<Link href="/admin" className="cursor-pointer">
-														<Settings className="mr-2 h-4 w-4" />
-														Shop Admin
-													</Link>
-												</DropdownMenuItem>
+												<>
+													<DropdownMenuItem asChild>
+														<Link href="/admin" className="cursor-pointer">
+															<Settings className="mr-2 h-4 w-4" />
+															Shop Admin
+														</Link>
+													</DropdownMenuItem>
+													<DropdownMenuItem asChild>
+														<Link href="/admin/email-logs" className="cursor-pointer">
+															<Mail className="mr-2 h-4 w-4" />
+															Email Logs
+														</Link>
+													</DropdownMenuItem>
+												</>
 											)}
 											{(userRoles.isEventsAdmin || userRoles.isShopAdmin) && (
 												<DropdownMenuItem asChild>

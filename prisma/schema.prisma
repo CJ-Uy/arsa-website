@@ -417,3 +417,24 @@ model ShopSettings {
 
   @@index([key])
 }
+
+// Email Log - Tracks all confirmation emails sent
+model EmailLog {
+  id            String   @id @default(uuid())
+  provider      String // "smtp" or "resend"
+  recipient     String // Email address of recipient
+  subject       String
+  emailType     String // "order_confirmation", "test", "custom"
+  orderId       String? // Optional order ID for order confirmation emails
+  userId        String? // Optional user ID
+  status        String // "sent", "failed"
+  errorMessage  String? // Error message if failed
+  providerId    String? // Message ID from email provider (for tracking)
+  sentAt        DateTime @default(now())
+
+  @@index([recipient])
+  @@index([orderId])
+  @@index([sentAt])
+  @@index([status])
+  @@index([emailType])
+}

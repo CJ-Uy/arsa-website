@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Dialog,
@@ -18,7 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Mail, Send, CheckCircle, AlertCircle, Info, PenLine } from "lucide-react";
 import { toast } from "sonner";
-import { saveEmailSettings, sendTestEmail, sendCustomEmail, type EmailSettings } from "@/lib/email";
+import {
+	saveEmailSettings,
+	sendTestEmail,
+	sendCustomEmail,
+	type EmailSettings,
+	type EmailProvider,
+} from "@/lib/email";
 
 type EmailSettingsClientProps = {
 	initialSettings: EmailSettings | null;
@@ -29,6 +36,7 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 	const [settings, setSettings] = useState<EmailSettings>(
 		initialSettings || {
 			enabled: false,
+			provider: "smtp",
 			fromAddress: "",
 			fromName: "ARSA Shop",
 			replyTo: "",
@@ -155,29 +163,76 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 
 					{settings.enabled && (
 						<>
-							{/* SMTP Configuration Notice */}
-							<Alert>
-								<Info className="h-4 w-4" />
-								<AlertDescription>
-									<strong>SMTP Configuration Required:</strong> Make sure you have set up the
-									following environment variables on your server:
-									<ul className="mt-2 list-inside list-disc space-y-1 text-sm">
-										<li>
-											<code className="bg-muted rounded px-1">SMTP_HOST</code> - smtp.gmail.com
-										</li>
-										<li>
-											<code className="bg-muted rounded px-1">SMTP_PORT</code> - 587
-										</li>
-										<li>
-											<code className="bg-muted rounded px-1">SMTP_USER</code> - Your Gmail address
-										</li>
-										<li>
-											<code className="bg-muted rounded px-1">SMTP_PASSWORD</code> - Your Google App
-											Password
-										</li>
-									</ul>
-								</AlertDescription>
-							</Alert>
+							{/* Email Provider Selection */}
+							<div className="space-y-2">
+								<Label htmlFor="email-provider">Email Provider *</Label>
+								<Select
+									value={settings.provider}
+									onValueChange={(value: EmailProvider) =>
+										setSettings({ ...settings, provider: value })
+									}
+								>
+									<SelectTrigger id="email-provider">
+										<SelectValue placeholder="Select provider" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="smtp">SMTP (Gmail, Outlook, etc.)</SelectItem>
+										<SelectItem value="resend">Resend API</SelectItem>
+									</SelectContent>
+								</Select>
+								<p className="text-muted-foreground text-xs">
+									Choose your email delivery method
+								</p>
+							</div>
+
+							{/* Provider-specific Configuration Notice */}
+							{settings.provider === "smtp" ? (
+								<Alert>
+									<Info className="h-4 w-4" />
+									<AlertDescription>
+										<strong>SMTP Configuration Required:</strong> Make sure you have set up the
+										following environment variables on your server:
+										<ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+											<li>
+												<code className="bg-muted rounded px-1">SMTP_HOST</code> - smtp.gmail.com
+											</li>
+											<li>
+												<code className="bg-muted rounded px-1">SMTP_PORT</code> - 587
+											</li>
+											<li>
+												<code className="bg-muted rounded px-1">SMTP_USER</code> - Your Gmail
+												address
+											</li>
+											<li>
+												<code className="bg-muted rounded px-1">SMTP_PASSWORD</code> - Your
+												Google App Password
+											</li>
+										</ul>
+									</AlertDescription>
+								</Alert>
+							) : (
+								<Alert>
+									<Info className="h-4 w-4" />
+									<AlertDescription>
+										<strong>Resend API Configuration Required:</strong> Make sure you have set up
+										the following environment variable on your server:
+										<ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+											<li>
+												<code className="bg-muted rounded px-1">RESEND_API_KEY</code> - Your
+												Resend API key from{" "}
+												<a
+													href="https://resend.com/api-keys"
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-primary underline"
+												>
+													resend.com/api-keys
+												</a>
+											</li>
+										</ul>
+									</AlertDescription>
+								</Alert>
+							)}
 
 							{/* From Address */}
 							<div className="space-y-2">
@@ -185,12 +240,18 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 								<Input
 									id="from-address"
 									type="email"
-									placeholder="shop@example.com"
+									placeholder={
+										settings.provider === "smtp"
+											? "shop@example.com"
+											: "onboarding@resend.dev"
+									}
 									value={settings.fromAddress}
 									onChange={(e) => setSettings({ ...settings, fromAddress: e.target.value })}
 								/>
 								<p className="text-muted-foreground text-xs">
-									This should match your SMTP_USER email address
+									{settings.provider === "smtp"
+										? "This should match your SMTP_USER email address"
+										: "Use a verified domain email (e.g., shop@yourdomain.com) or onboarding@resend.dev for testing"}
 								</p>
 							</div>
 
@@ -376,70 +437,153 @@ export function EmailSettingsClient({ initialSettings, userEmail }: EmailSetting
 			{/* Setup Instructions */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Google SMTP Setup Instructions</CardTitle>
+					<CardTitle>{settings.provider === "smtp" ? "Google SMTP" : "Resend API"} Setup Instructions</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					<div className="space-y-3 text-sm">
-						<div className="flex gap-3">
-							<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-								1
-							</span>
-							<div>
-								<p className="font-medium">Enable 2-Step Verification</p>
-								<p className="text-muted-foreground">
-									Go to your Google Account → Security → 2-Step Verification and enable it
-								</p>
-							</div>
-						</div>
-						<div className="flex gap-3">
-							<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-								2
-							</span>
-							<div>
-								<p className="font-medium">Create an App Password</p>
-								<p className="text-muted-foreground">
-									Go to Google Account → Security → App passwords → Create a new app password for
-									"Mail"
-								</p>
-							</div>
-						</div>
-						<div className="flex gap-3">
-							<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-								3
-							</span>
-							<div>
-								<p className="font-medium">Add Environment Variables</p>
-								<p className="text-muted-foreground">
-									Add the following to your server's environment:
-								</p>
-								<pre className="bg-muted mt-2 overflow-x-auto rounded p-3 text-xs">
-									{`SMTP_HOST=smtp.gmail.com
+					{settings.provider === "smtp" ? (
+						<>
+							<div className="space-y-3 text-sm">
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										1
+									</span>
+									<div>
+										<p className="font-medium">Enable 2-Step Verification</p>
+										<p className="text-muted-foreground">
+											Go to your Google Account → Security → 2-Step Verification and enable it
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										2
+									</span>
+									<div>
+										<p className="font-medium">Create an App Password</p>
+										<p className="text-muted-foreground">
+											Go to Google Account → Security → App passwords → Create a new app password
+											for "Mail"
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										3
+									</span>
+									<div>
+										<p className="font-medium">Add Environment Variables</p>
+										<p className="text-muted-foreground">
+											Add the following to your server's environment:
+										</p>
+										<pre className="bg-muted mt-2 overflow-x-auto rounded p-3 text-xs">
+											{`SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-16-char-app-password`}
-								</pre>
+										</pre>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										4
+									</span>
+									<div>
+										<p className="font-medium">Configure Settings Above</p>
+										<p className="text-muted-foreground">
+											Enter your email address above and save the settings, then send a test email
+										</p>
+									</div>
+								</div>
 							</div>
-						</div>
-						<div className="flex gap-3">
-							<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
-								4
-							</span>
-							<div>
-								<p className="font-medium">Configure Settings Above</p>
-								<p className="text-muted-foreground">
-									Enter your email address above and save the settings, then send a test email
-								</p>
-							</div>
-						</div>
-					</div>
 
-					<Alert className="mt-4">
-						<AlertCircle className="h-4 w-4" />
-						<AlertDescription>
-							<strong>Important:</strong> Use a Google App Password, not your regular Google
-							password. App Passwords are 16 characters with no spaces.
-						</AlertDescription>
-					</Alert>
+							<Alert className="mt-4">
+								<AlertCircle className="h-4 w-4" />
+								<AlertDescription>
+									<strong>Important:</strong> Use a Google App Password, not your regular Google
+									password. App Passwords are 16 characters with no spaces.
+								</AlertDescription>
+							</Alert>
+						</>
+					) : (
+						<>
+							<div className="space-y-3 text-sm">
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										1
+									</span>
+									<div>
+										<p className="font-medium">Sign up for Resend</p>
+										<p className="text-muted-foreground">
+											Create a free account at{" "}
+											<a
+												href="https://resend.com/signup"
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-primary underline"
+											>
+												resend.com/signup
+											</a>
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										2
+									</span>
+									<div>
+										<p className="font-medium">Generate an API Key</p>
+										<p className="text-muted-foreground">
+											Go to{" "}
+											<a
+												href="https://resend.com/api-keys"
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-primary underline"
+											>
+												API Keys
+											</a>{" "}
+											→ Create API Key → Choose "Sending access" permissions
+										</p>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										3
+									</span>
+									<div>
+										<p className="font-medium">Add Environment Variable</p>
+										<p className="text-muted-foreground">
+											Add the API key to your server's environment:
+										</p>
+										<pre className="bg-muted mt-2 overflow-x-auto rounded p-3 text-xs">
+											{`RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx`}
+										</pre>
+									</div>
+								</div>
+								<div className="flex gap-3">
+									<span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium">
+										4
+									</span>
+									<div>
+										<p className="font-medium">(Optional) Verify Your Domain</p>
+										<p className="text-muted-foreground">
+											For production use, verify your domain in Resend to send from your own email
+											address. For testing, you can use onboarding@resend.dev
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<Alert className="mt-4">
+								<AlertCircle className="h-4 w-4" />
+								<AlertDescription>
+									<strong>Pro Tip:</strong> Resend offers 100 free emails per day on the free tier,
+									with excellent deliverability. It's easier to set up than SMTP and includes
+									tracking and analytics.
+								</AlertDescription>
+							</Alert>
+						</>
+					)}
 				</CardContent>
 			</Card>
 		</div>

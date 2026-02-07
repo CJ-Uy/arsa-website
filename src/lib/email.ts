@@ -1,10 +1,14 @@
 "use server";
 
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { prisma } from "./prisma";
+
+export type EmailProvider = "smtp" | "resend";
 
 export type EmailSettings = {
 	enabled: boolean;
+	provider: EmailProvider; // "smtp" or "resend"
 	fromAddress: string;
 	fromName: string;
 	replyTo?: string;
@@ -81,7 +85,7 @@ export async function saveEmailSettings(
 	}
 }
 
-// Create nodemailer transporter
+// Create nodemailer transporter for SMTP
 function createTransporter() {
 	const host = process.env.SMTP_HOST || "smtp.gmail.com";
 	const port = parseInt(process.env.SMTP_PORT || "587");
@@ -102,6 +106,52 @@ function createTransporter() {
 			pass,
 		},
 	});
+}
+
+// Create Resend client
+function createResendClient() {
+	const apiKey = process.env.RESEND_API_KEY;
+
+	if (!apiKey) {
+		console.error("Resend API key not configured");
+		return null;
+	}
+
+	return new Resend(apiKey);
+}
+
+// Log email to database
+async function logEmail(
+	provider: EmailProvider,
+	recipient: string,
+	subject: string,
+	emailType: string,
+	status: "sent" | "failed",
+	options?: {
+		orderId?: string;
+		userId?: string;
+		errorMessage?: string;
+		providerId?: string;
+	},
+) {
+	try {
+		await prisma.emailLog.create({
+			data: {
+				provider,
+				recipient,
+				subject,
+				emailType,
+				status,
+				orderId: options?.orderId,
+				userId: options?.userId,
+				errorMessage: options?.errorMessage,
+				providerId: options?.providerId,
+			},
+		});
+	} catch (error) {
+		console.error("Failed to log email:", error);
+		// Don't throw - logging failure shouldn't block email sending
+	}
 }
 
 // Generate order confirmation email HTML with burgundy FlowerFest theme
@@ -484,6 +534,8 @@ This is an automated email.
 export async function sendOrderConfirmationEmail(
 	data: OrderEmailData,
 ): Promise<{ success: boolean; message?: string }> {
+	const subject = `Order Confirmation - ${data.orderId.slice(0, 8)}${data.eventName ? ` (${data.eventName})` : ""}`;
+
 	try {
 		// Get email settings
 		const settings = await getEmailSettings();
@@ -493,37 +545,87 @@ export async function sendOrderConfirmationEmail(
 			return { success: true, message: "Email notifications disabled" };
 		}
 
-		// Create transporter
-		const transporter = createTransporter();
-		if (!transporter) {
-			console.error("Failed to create email transporter - SMTP not configured");
-			return { success: false, message: "SMTP not configured" };
-		}
-
 		// Generate email content
 		const html = generateOrderConfirmationHtml(data);
 		const text = generateOrderConfirmationText(data);
 
-		// Send email
-		const mailOptions = {
-			from: `"${settings.fromName}" <${settings.fromAddress}>`,
-			to: data.customerEmail,
-			replyTo: settings.replyTo || settings.fromAddress,
-			subject: `Order Confirmation - ${data.orderId.slice(0, 8)}${data.eventName ? ` (${data.eventName})` : ""}`,
-			text,
-			html,
-		};
+		let providerId: string | undefined;
 
-		await transporter.sendMail(mailOptions);
+		// Send via selected provider
+		if (settings.provider === "resend") {
+			// Use Resend API
+			const resend = createResendClient();
+			if (!resend) {
+				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
+					orderId: data.orderId,
+					errorMessage: "Resend API key not configured",
+				});
+				return { success: false, message: "Resend API key not configured" };
+			}
 
-		console.log(`Order confirmation email sent to ${data.customerEmail}`);
+			const result = await resend.emails.send({
+				from: `${settings.fromName} <${settings.fromAddress}>`,
+				to: data.customerEmail,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text,
+				html,
+			});
+
+			if (result.error) {
+				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
+					orderId: data.orderId,
+					errorMessage: result.error.message,
+				});
+				return { success: false, message: result.error.message };
+			}
+
+			providerId = result.data?.id;
+		} else {
+			// Use SMTP
+			const transporter = createTransporter();
+			if (!transporter) {
+				await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
+					orderId: data.orderId,
+					errorMessage: "SMTP not configured",
+				});
+				return { success: false, message: "SMTP not configured" };
+			}
+
+			const info = await transporter.sendMail({
+				from: `"${settings.fromName}" <${settings.fromAddress}>`,
+				to: data.customerEmail,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text,
+				html,
+			});
+
+			providerId = info.messageId;
+		}
+
+		// Log successful send
+		await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "sent", {
+			orderId: data.orderId,
+			providerId,
+		});
+
+		console.log(`Order confirmation email sent to ${data.customerEmail} via ${settings.provider}`);
 		return { success: true };
 	} catch (error) {
 		console.error("Failed to send order confirmation email:", error);
-		return {
-			success: false,
-			message: error instanceof Error ? error.message : "Failed to send email",
-		};
+		const errorMessage = error instanceof Error ? error.message : "Failed to send email";
+
+		// Log failed attempt
+		const settings = await getEmailSettings();
+		if (settings) {
+			await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "failed", {
+				orderId: data.orderId,
+				errorMessage,
+			});
+		}
+
+		return { success: false, message: errorMessage };
 	}
 }
 
@@ -531,6 +633,16 @@ export async function sendOrderConfirmationEmail(
 export async function sendTestEmail(
 	toEmail: string,
 ): Promise<{ success: boolean; message?: string }> {
+	const subject = "Test Email - ARSA Shop";
+	const text = "This is a test email from ARSA Shop. If you received this, your email configuration is working correctly!";
+	const html = `
+		<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
+			<h2 style="color: #16a34a;">Email Configuration Test</h2>
+			<p>This is a test email from ARSA Shop.</p>
+			<p style="color: #16a34a; font-weight: bold;">If you received this, your email configuration is working correctly!</p>
+		</div>
+	`;
+
 	try {
 		const settings = await getEmailSettings();
 
@@ -538,33 +650,75 @@ export async function sendTestEmail(
 			return { success: false, message: "Email settings not configured" };
 		}
 
-		const transporter = createTransporter();
-		if (!transporter) {
-			return { success: false, message: "SMTP credentials not configured in environment" };
+		let providerId: string | undefined;
+
+		// Send via selected provider
+		if (settings.provider === "resend") {
+			const resend = createResendClient();
+			if (!resend) {
+				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
+					errorMessage: "Resend API key not configured",
+				});
+				return { success: false, message: "Resend API key not configured in environment" };
+			}
+
+			const result = await resend.emails.send({
+				from: `${settings.fromName} <${settings.fromAddress}>`,
+				to: toEmail,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text,
+				html,
+			});
+
+			if (result.error) {
+				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
+					errorMessage: result.error.message,
+				});
+				return { success: false, message: result.error.message };
+			}
+
+			providerId = result.data?.id;
+		} else {
+			const transporter = createTransporter();
+			if (!transporter) {
+				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
+					errorMessage: "SMTP credentials not configured",
+				});
+				return { success: false, message: "SMTP credentials not configured in environment" };
+			}
+
+			const info = await transporter.sendMail({
+				from: `"${settings.fromName}" <${settings.fromAddress}>`,
+				to: toEmail,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text,
+				html,
+			});
+
+			providerId = info.messageId;
 		}
 
-		await transporter.sendMail({
-			from: `"${settings.fromName}" <${settings.fromAddress}>`,
-			to: toEmail,
-			replyTo: settings.replyTo || settings.fromAddress,
-			subject: "Test Email - ARSA Shop",
-			text: "This is a test email from ARSA Shop. If you received this, your email configuration is working correctly!",
-			html: `
-        <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #16a34a;">Email Configuration Test</h2>
-          <p>This is a test email from ARSA Shop.</p>
-          <p style="color: #16a34a; font-weight: bold;">If you received this, your email configuration is working correctly!</p>
-        </div>
-      `,
+		// Log successful send
+		await logEmail(settings.provider, toEmail, subject, "test", "sent", {
+			providerId,
 		});
 
 		return { success: true, message: "Test email sent successfully" };
 	} catch (error) {
 		console.error("Failed to send test email:", error);
-		return {
-			success: false,
-			message: error instanceof Error ? error.message : "Failed to send test email",
-		};
+		const errorMessage = error instanceof Error ? error.message : "Failed to send test email";
+
+		// Log failed attempt
+		const settings = await getEmailSettings();
+		if (settings) {
+			await logEmail(settings.provider, toEmail, subject, "test", "failed", {
+				errorMessage,
+			});
+		}
+
+		return { success: false, message: errorMessage };
 	}
 }
 
@@ -581,11 +735,6 @@ export async function sendCustomEmail(
 			return { success: false, message: "Email settings not configured" };
 		}
 
-		const transporter = createTransporter();
-		if (!transporter) {
-			return { success: false, message: "SMTP credentials not configured in environment" };
-		}
-
 		// Convert plain text body to simple HTML (preserve line breaks)
 		const htmlBody = `
 			<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -598,21 +747,74 @@ export async function sendCustomEmail(
 			</div>
 		`;
 
-		await transporter.sendMail({
-			from: `"${settings.fromName}" <${settings.fromAddress}>`,
-			to,
-			replyTo: settings.replyTo || settings.fromAddress,
-			subject,
-			text: body,
-			html: htmlBody,
+		let providerId: string | undefined;
+
+		// Send via selected provider
+		if (settings.provider === "resend") {
+			const resend = createResendClient();
+			if (!resend) {
+				await logEmail(settings.provider, to, subject, "custom", "failed", {
+					errorMessage: "Resend API key not configured",
+				});
+				return { success: false, message: "Resend API key not configured in environment" };
+			}
+
+			const result = await resend.emails.send({
+				from: `${settings.fromName} <${settings.fromAddress}>`,
+				to,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text: body,
+				html: htmlBody,
+			});
+
+			if (result.error) {
+				await logEmail(settings.provider, to, subject, "custom", "failed", {
+					errorMessage: result.error.message,
+				});
+				return { success: false, message: result.error.message };
+			}
+
+			providerId = result.data?.id;
+		} else {
+			const transporter = createTransporter();
+			if (!transporter) {
+				await logEmail(settings.provider, to, subject, "custom", "failed", {
+					errorMessage: "SMTP credentials not configured",
+				});
+				return { success: false, message: "SMTP credentials not configured in environment" };
+			}
+
+			const info = await transporter.sendMail({
+				from: `"${settings.fromName}" <${settings.fromAddress}>`,
+				to,
+				replyTo: settings.replyTo || settings.fromAddress,
+				subject,
+				text: body,
+				html: htmlBody,
+			});
+
+			providerId = info.messageId;
+		}
+
+		// Log successful send
+		await logEmail(settings.provider, to, subject, "custom", "sent", {
+			providerId,
 		});
 
 		return { success: true, message: "Email sent successfully" };
 	} catch (error) {
 		console.error("Failed to send custom email:", error);
-		return {
-			success: false,
-			message: error instanceof Error ? error.message : "Failed to send email",
-		};
+		const errorMessage = error instanceof Error ? error.message : "Failed to send email";
+
+		// Log failed attempt
+		const settings = await getEmailSettings();
+		if (settings) {
+			await logEmail(settings.provider, to, subject, "custom", "failed", {
+				errorMessage,
+			});
+		}
+
+		return { success: false, message: errorMessage };
 	}
 }
