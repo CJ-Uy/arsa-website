@@ -21,7 +21,8 @@
 			"Bash(findstr:*)",
 			"Bash(node -e:*)",
 			"Bash(node:*)",
-			"Bash(python3 -c:*)"
+			"Bash(python3 -c:*)",
+			"Bash(npx prisma:*)"
 		],
 		"deny": [],
 		"ask": []

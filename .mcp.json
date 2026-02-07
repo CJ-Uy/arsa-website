@@ -1,0 +1,37 @@
+{
+	"mcpServers": {
+		"prisma": {
+			"command": "npx",
+			"args": ["-y", "prisma", "mcp"]
+		},
+		"postgres": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-postgres",
+				"postgres://postgres:u7xCGCp4wQ1f4n2thx7k4H1GcDrbqaGvviwLZZViNuutcGBZNO9IhDVI4CBdQFA1@localhost:31337/postgres"
+			]
+		},
+		"filesystem": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-filesystem",
+				"c:\\Users\\charl\\Documents\\GitHub\\arsa-website"
+			]
+		},
+		"memory": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-memory"]
+		},
+		"git": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-git",
+				"--repository",
+				"c:\\Users\\charl\\Documents\\GitHub\\arsa-website"
+			]
+		}
+	}
+}
