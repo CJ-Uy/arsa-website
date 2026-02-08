@@ -289,6 +289,41 @@ export function CheckoutClient({
 
 	const cutoffWarning = checkCutoffWarning();
 
+	// Calculate dates blocked due to cutoff time
+	const getCutoffBlockedDates = (): Date[] => {
+		const cutoffConfig = event?.checkoutConfig;
+		if (!cutoffConfig?.cutoffTime) return [];
+
+		const now = new Date();
+		const [hours, minutes] = cutoffConfig.cutoffTime.split(":").map(Number);
+		const cutoffToday = new Date(now);
+		cutoffToday.setHours(hours, minutes, 0, 0);
+
+		if (now > cutoffToday) {
+			// Past cutoff - block dates before earliest available delivery date
+			const daysOffset = cutoffConfig.cutoffDaysOffset || 2;
+			const earliestDeliveryDate = new Date(now);
+			earliestDeliveryDate.setDate(earliestDeliveryDate.getDate() + daysOffset);
+			earliestDeliveryDate.setHours(0, 0, 0, 0);
+
+			// Block all dates from today up to (but not including) the earliest delivery date
+			const blocked: Date[] = [];
+			const currentDate = new Date(now);
+			currentDate.setHours(0, 0, 0, 0);
+
+			while (currentDate < earliestDeliveryDate) {
+				blocked.push(new Date(currentDate));
+				currentDate.setDate(currentDate.getDate() + 1);
+			}
+
+			return blocked;
+		}
+
+		return [];
+	};
+
+	const cutoffBlockedDates = getCutoffBlockedDates();
+
 	// Event-specific field values
 	const [eventFieldValues, setEventFieldValues] = useState<Record<string, string | boolean>>({});
 
@@ -1228,7 +1263,7 @@ export function CheckoutClient({
 															"max",
 														)}
 														disabledDates={(() => {
-															// Combine field config disabled dates with daily stock blocked dates
+															// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
 															const configDisabled =
 																field.disabledDates?.map((d) => new Date(d)) || [];
 															const fieldText = `${field.id} ${field.label}`.toLowerCase();
@@ -1237,13 +1272,22 @@ export function CheckoutClient({
 																fieldText.includes("pickup") ||
 																fieldText.includes("pick up");
 
-															if (isDateField && dailyStockInfo.hasLimitedItems) {
-																// Convert date strings to Date objects in local timezone (not UTC)
-																const stockBlocked = blockedDates.map((dateStr) => {
-																	const [year, month, day] = dateStr.split("-").map(Number);
-																	return new Date(year, month - 1, day); // Months are 0-indexed
-																});
-																return [...configDisabled, ...stockBlocked];
+															if (isDateField) {
+																const allBlocked = [...configDisabled];
+
+																// Add daily stock blocked dates
+																if (dailyStockInfo.hasLimitedItems) {
+																	const stockBlocked = blockedDates.map((dateStr) => {
+																		const [year, month, day] = dateStr.split("-").map(Number);
+																		return new Date(year, month - 1, day);
+																	});
+																	allBlocked.push(...stockBlocked);
+																}
+
+																// Add cutoff blocked dates
+																allBlocked.push(...cutoffBlockedDates);
+
+																return allBlocked.length > 0 ? allBlocked : undefined;
 															}
 															return configDisabled.length > 0 ? configDisabled : undefined;
 														})()}
@@ -1511,7 +1555,7 @@ export function CheckoutClient({
 																				"max",
 																			)}
 																			disabledDates={(() => {
-																				// Combine field config disabled dates with daily stock blocked dates
+																				// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
 																				const configDisabled =
 																					col.disabledDates?.map((d) => new Date(d)) || [];
 																				const colText = `${col.id} ${col.label}`.toLowerCase();
@@ -1523,15 +1567,24 @@ export function CheckoutClient({
 																					combinedText.includes("pickup") ||
 																					combinedText.includes("pick up");
 
-																				if (isDateField && dailyStockInfo.hasLimitedItems) {
-																					// Convert date strings to Date objects in local timezone (not UTC)
-																					const stockBlocked = blockedDates.map((dateStr) => {
-																						const [year, month, day] = dateStr
-																							.split("-")
-																							.map(Number);
-																						return new Date(year, month - 1, day); // Months are 0-indexed
-																					});
-																					return [...configDisabled, ...stockBlocked];
+																				if (isDateField) {
+																					const allBlocked = [...configDisabled];
+
+																					// Add daily stock blocked dates
+																					if (dailyStockInfo.hasLimitedItems) {
+																						const stockBlocked = blockedDates.map((dateStr) => {
+																							const [year, month, day] = dateStr
+																								.split("-")
+																								.map(Number);
+																							return new Date(year, month - 1, day);
+																						});
+																						allBlocked.push(...stockBlocked);
+																					}
+
+																					// Add cutoff blocked dates
+																					allBlocked.push(...cutoffBlockedDates);
+
+																					return allBlocked.length > 0 ? allBlocked : undefined;
 																				}
 																				return configDisabled.length > 0
 																					? configDisabled
