@@ -184,7 +184,11 @@ type CheckoutClientProps = {
 		hasLimitedItems: boolean;
 		items: Array<{ name: string; note: string | null }>;
 	};
-	availableDates: Array<{ date: string; remaining: number }>;
+	availableDates: Array<{
+		date: string;
+		remaining: number;
+		productStocks: Array<{ productName: string; remaining: number; limit: number }>;
+	}>;
 };
 
 export function CheckoutClient({
@@ -211,8 +215,13 @@ export function CheckoutClient({
 
 	// Build map of date -> remaining stock from server data
 	const dateStockMap = new Map<string, number | null>();
+	const dateProductStocksMap = new Map<
+		string,
+		Array<{ productName: string; remaining: number; limit: number }>
+	>();
 	availableDates.forEach((dateInfo) => {
 		dateStockMap.set(dateInfo.date, dateInfo.remaining);
+		dateProductStocksMap.set(dateInfo.date, dateInfo.productStocks);
 	});
 
 	// Build list of blocked dates (all dates not in available list within next 90 days)
@@ -1259,14 +1268,30 @@ export function CheckoutClient({
 															const dateString = (eventFieldValues[field.id] as string).split(
 																"T",
 															)[0];
-															const remaining = dateStockMap.get(dateString);
-															if (remaining !== null && remaining !== undefined) {
+															const productStocks = dateProductStocksMap.get(dateString);
+															if (productStocks && productStocks.length > 0) {
 																return (
-																	<p className="text-muted-foreground text-xs">
-																		{remaining > 0
-																			? `${remaining} slot${remaining !== 1 ? "s" : ""} remaining for this date`
-																			: "No slots available for this date"}
-																	</p>
+																	<div className="text-muted-foreground mt-2 space-y-1 text-xs">
+																		<p className="font-medium">
+																			Stock availability for {dateString}:
+																		</p>
+																		{productStocks.map((stock, idx) => (
+																			<p key={idx}>
+																				•{" "}
+																				{stock.remaining > 0 ? (
+																					<>
+																						<span className="font-medium">{stock.remaining}</span>{" "}
+																						slot{stock.remaining !== 1 ? "s" : ""} remaining for{" "}
+																						<span className="font-medium">{stock.productName}</span>
+																					</>
+																				) : (
+																					<span className="text-destructive font-medium">
+																						Sold out for {stock.productName}
+																					</span>
+																				)}
+																			</p>
+																		))}
+																	</div>
 																);
 															}
 														}
@@ -1591,6 +1616,73 @@ export function CheckoutClient({
 															</Button>
 														</div>
 													))}
+
+													{/* Stock availability for earliest date in repeater */}
+													{(() => {
+														// Find delivery/pickup date columns
+														const dateColumns = field.columns?.filter((col) => {
+															const colText = `${col.id} ${col.label}`.toLowerCase();
+															const fieldText = `${field.id} ${field.label}`.toLowerCase();
+															const combinedText = `${fieldText} ${colText}`;
+															return (
+																col.type === "date" &&
+																(combinedText.includes("delivery") ||
+																	combinedText.includes("pickup") ||
+																	combinedText.includes("pick up"))
+															);
+														});
+
+														if (
+															!dateColumns ||
+															dateColumns.length === 0 ||
+															!dailyStockInfo.hasLimitedItems
+														) {
+															return null;
+														}
+
+														// Collect all dates from all rows for delivery/pickup columns
+														const allDates: string[] = [];
+														const rows = repeaterValues[field.id] || [];
+														rows.forEach((row) => {
+															dateColumns.forEach((col) => {
+																if (row[col.id]) {
+																	allDates.push(row[col.id].split("T")[0]);
+																}
+															});
+														});
+
+														// Find the earliest date
+														if (allDates.length === 0) return null;
+														const earliestDate = allDates.sort()[0];
+
+														// Get stock info for earliest date
+														const productStocks = dateProductStocksMap.get(earliestDate);
+														if (!productStocks || productStocks.length === 0) return null;
+
+														return (
+															<div className="text-muted-foreground mb-3 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-800 dark:bg-amber-950">
+																<p className="font-medium text-amber-800 dark:text-amber-200">
+																	Stock availability for {earliestDate}:
+																</p>
+																{productStocks.map((stock, idx) => (
+																	<p key={idx} className="text-amber-700 dark:text-amber-300">
+																		•{" "}
+																		{stock.remaining > 0 ? (
+																			<>
+																				<span className="font-medium">{stock.remaining}</span> slot
+																				{stock.remaining !== 1 ? "s" : ""} remaining -{" "}
+																				{stock.productName}
+																			</>
+																		) : (
+																			<span className="text-destructive font-medium">
+																				Sold out - {stock.productName}
+																			</span>
+																		)}
+																	</p>
+																))}
+															</div>
+														);
+													})()}
 
 													{/* Add row button */}
 													<Button

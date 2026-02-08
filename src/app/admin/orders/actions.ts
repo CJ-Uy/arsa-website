@@ -172,6 +172,22 @@ export async function deleteOrder(orderId: string) {
 	}
 }
 
+export async function toggleConfirmationEmailSent(orderId: string, sent: boolean) {
+	try {
+		await checkShopAdmin();
+
+		await prisma.order.update({
+			where: { id: orderId },
+			data: { confirmationEmailSent: sent },
+		});
+
+		revalidatePath("/admin/orders");
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, message: error.message || "Failed to update email status" };
+	}
+}
+
 export async function exportOrdersData(eventId?: string) {
 	try {
 		await checkShopAdmin();
@@ -421,6 +437,15 @@ export async function sendOrderConfirmationEmailAction(orderId: string) {
 			orderDate: order.createdAt,
 			eventData: order.eventData as any, // Pass eventData here
 		});
+
+		// If email was sent successfully, mark confirmationEmailSent as true
+		if (result.success) {
+			await prisma.order.update({
+				where: { id: orderId },
+				data: { confirmationEmailSent: true },
+			});
+			revalidatePath("/admin/orders");
+		}
 
 		return result;
 	} catch (error: any) {

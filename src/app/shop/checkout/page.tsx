@@ -89,7 +89,11 @@ export default async function CheckoutPage() {
 
 	// Fetch daily stock data server-side
 	let dailyStockInfo = { hasLimitedItems: false, items: [] };
-	let availableDates: Array<{ date: string; remaining: number }> = [];
+	let availableDates: Array<{
+		date: string;
+		remaining: number;
+		productStocks: Array<{ productName: string; remaining: number; limit: number }>;
+	}> = [];
 
 	if (eventForCheckout) {
 		dailyStockInfo = await getCartDailyStockInfo(session.user.id, eventForCheckout.id);

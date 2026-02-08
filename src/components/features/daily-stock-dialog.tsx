@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -40,6 +40,13 @@ export function DailyStockDialog({
 	onSave,
 }: DailyStockDialogProps) {
 	const [localConfig, setLocalConfig] = useState<DailyStockConfig>(config);
+
+	// Sync local state with config prop when dialog opens or config changes
+	useEffect(() => {
+		if (open) {
+			setLocalConfig(config);
+		}
+	}, [open, config]);
 
 	const handleSave = () => {
 		onSave(localConfig);

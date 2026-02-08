@@ -48,14 +48,20 @@ export async function getCartDailyStockInfo(userId: string, eventId?: string) {
 
 /**
  * Get available dates with remaining stock for a date range
- * Returns dates that are not blocked and their remaining slots
+ * Returns dates that are not blocked and their remaining slots per product
  */
 export async function getAvailableDatesForCart(
 	userId: string,
 	eventId: string,
 	startDate: Date,
 	endDate: Date,
-) {
+): Promise<
+	Array<{
+		date: string;
+		remaining: number;
+		productStocks: Array<{ productName: string; remaining: number; limit: number }>;
+	}>
+> {
 	try {
 		// Get cart items
 		const cartItems = await prisma.cartItem.findMany({
@@ -99,15 +105,10 @@ export async function getAvailableDatesForCart(
 		const orderCountsByDateAndProduct = new Map<string, Map<string, number>>();
 
 		for (const eventProduct of eventProducts) {
-			// Query all orders for this product within the date range
-			const orders = await prisma.order.groupBy({
-				by: ["deliveryDate"],
+			// Get all orders for this product in this event (extract dates from eventData)
+			const ordersForProduct = await prisma.order.findMany({
 				where: {
 					eventId,
-					deliveryDate: {
-						gte: startDate,
-						lte: endDate,
-					},
 					status: {
 						notIn: ["cancelled"],
 					},
@@ -117,29 +118,106 @@ export async function getAvailableDatesForCart(
 							: { packageId: eventProduct.packageId },
 					},
 				},
-				_count: {
+				select: {
 					id: true,
+					eventData: true,
 				},
 			});
 
-			// Store counts by date
+			// Extract dates from eventData and count per date
 			const countsByDate = new Map<string, number>();
-			for (const order of orders) {
-				if (order.deliveryDate) {
-					const dateString = order.deliveryDate.toISOString().split("T")[0];
-					countsByDate.set(dateString, order._count.id);
+
+			for (const order of ordersForProduct) {
+				try {
+					const eventData = order.eventData as any;
+					if (!eventData?.fields) continue;
+
+					const fields = eventData.fields;
+					let deliveryDate: string | null = null;
+
+					// Look for delivery/pickup fields
+					for (const [fieldName, fieldValue] of Object.entries(fields)) {
+						const lowerFieldName = fieldName.toLowerCase();
+						const isDeliveryField =
+							lowerFieldName.includes("delivery") || lowerFieldName.includes("pickup");
+
+						if (!isDeliveryField) continue;
+
+						// Check if it's a repeater field (array)
+						if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+							// IMPORTANT: Use first row only for stock counting
+							// Multiple rows = multiple delivery times, but stock is taken on the FIRST delivery date
+							const firstRow = fieldValue[0];
+							if (typeof firstRow === "object" && firstRow !== null) {
+								// Find the date column
+								for (const colValue of Object.values(firstRow)) {
+									if (typeof colValue === "string" && colValue.includes("-")) {
+										const parsedDate = new Date(colValue);
+										if (!isNaN(parsedDate.getTime())) {
+											deliveryDate = colValue.split("T")[0]; // YYYY-MM-DD
+											break;
+										}
+									}
+								}
+							}
+						} else if (typeof fieldValue === "string" && lowerFieldName.includes("date")) {
+							// Simple field
+							const parsedDate = new Date(fieldValue);
+							if (!isNaN(parsedDate.getTime())) {
+								deliveryDate = fieldValue.split("T")[0];
+							}
+						}
+
+						if (deliveryDate) break;
+					}
+
+					// Count this order for the date
+					if (deliveryDate) {
+						// Check if date is in range
+						const orderDate = new Date(deliveryDate);
+						if (orderDate >= startDate && orderDate <= endDate) {
+							const currentCount = countsByDate.get(deliveryDate) || 0;
+							countsByDate.set(deliveryDate, currentCount + 1);
+						}
+					}
+				} catch (error) {
+					console.error(`Error parsing order ${order.id} for daily stock:`, error);
 				}
 			}
+
 			orderCountsByDateAndProduct.set(eventProduct.id, countsByDate);
 		}
 
-		// Build a map of dates to minimum remaining stock across all limited items
-		const dateStockMap = new Map<string, number | null>();
+		// Build a map of dates with per-product stock information
+		const dateStockMap = new Map<
+			string,
+			{
+				minStock: number | null;
+				productStocks: Array<{ productName: string; remaining: number; limit: number }>;
+			}
+		>();
 		const currentDate = new Date(startDate);
+
+		// Get product names for display
+		const productNames = new Map<string, string>();
+		for (const eventProduct of eventProducts) {
+			const name = await prisma.eventProduct.findUnique({
+				where: { id: eventProduct.id },
+				select: {
+					product: { select: { name: true } },
+					package: { select: { name: true } },
+				},
+			});
+			productNames.set(
+				eventProduct.id,
+				name?.product?.name || name?.package?.name || "Unknown Product",
+			);
+		}
 
 		while (currentDate <= endDate) {
 			const dateString = currentDate.toISOString().split("T")[0];
 			let minStock: number | null = null;
+			const productStocks: Array<{ productName: string; remaining: number; limit: number }> = [];
 
 			for (const eventProduct of eventProducts) {
 				// Get limit for this date
@@ -168,26 +246,34 @@ export async function getAvailableDatesForCart(
 				const orderCount = orderCountsByDateAndProduct.get(eventProduct.id)?.get(dateString) || 0;
 				const remaining = Math.max(0, limit - orderCount);
 
+				// Add to product stocks array
+				productStocks.push({
+					productName: productNames.get(eventProduct.id) || "Unknown",
+					remaining,
+					limit,
+				});
+
 				// If no stock remaining, mark as sold out
 				if (remaining === 0) {
 					minStock = 0;
-					break;
+					// Don't break - continue to collect all product stocks
+				} else {
+					// Track minimum stock across all products
+					minStock = minStock === null ? remaining : Math.min(minStock, remaining);
 				}
-
-				// Track minimum stock across all products
-				minStock = minStock === null ? remaining : Math.min(minStock, remaining);
 			}
 
-			dateStockMap.set(dateString, minStock);
+			dateStockMap.set(dateString, { minStock, productStocks });
 			currentDate.setDate(currentDate.getDate() + 1);
 		}
 
 		// Convert to array of available dates
 		const availableDates = Array.from(dateStockMap.entries())
-			.filter(([_, stock]) => stock !== -1 && stock !== 0 && stock !== null) // Filter out blocked and sold out
-			.map(([dateString, stock]) => ({
+			.filter(([_, data]) => data.minStock !== -1 && data.minStock !== 0 && data.minStock !== null) // Filter out blocked and sold out
+			.map(([dateString, data]) => ({
 				date: dateString,
-				remaining: stock,
+				remaining: data.minStock!,
+				productStocks: data.productStocks,
 			}));
 
 		return availableDates;

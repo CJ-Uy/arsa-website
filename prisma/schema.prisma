@@ -232,6 +232,9 @@ model Order {
   deliveryTimeSlot     String? // e.g., "Morning (9 AM - 12 PM)", "Afternoon (2 PM - 5 PM)"
   deliveryNotes        String? // Special delivery instructions
 
+  // Email Tracking
+  confirmationEmailSent Boolean @default(false) // Track if confirmation email has been sent
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

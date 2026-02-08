@@ -11,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -19,7 +20,12 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateOrderStatus, deleteOrder, sendOrderConfirmationEmailAction } from "./actions";
+import {
+	updateOrderStatus,
+	deleteOrder,
+	sendOrderConfirmationEmailAction,
+	toggleConfirmationEmailSent,
+} from "./actions";
 import { ClientBatchOcr } from "./ClientBatchOcr";
 import { InvoiceUpload } from "./InvoiceUpload";
 import { ManualVerificationDashboard } from "./ManualVerificationDashboard";
@@ -61,6 +67,7 @@ type Order = {
 	gcashReferenceNumber: string | null;
 	notes: string | null;
 	createdAt: Date;
+	confirmationEmailSent: boolean;
 	user: {
 		id: string;
 		name: string | null;
@@ -144,6 +151,12 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 			const result = await sendOrderConfirmationEmailAction(orderId);
 			if (result.success) {
 				toast.success("Confirmation email sent successfully");
+				// Update local state to mark email as sent
+				setOrders(
+					orders.map((order) =>
+						order.id === orderId ? { ...order, confirmationEmailSent: true } : order,
+					),
+				);
 			} else {
 				toast.error(result.message || "Failed to send email");
 			}
@@ -151,6 +164,20 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 			toast.error("An error occurred while sending email");
 		} finally {
 			setSendingEmailOrderId(null);
+		}
+	};
+
+	const handleToggleEmailSent = async (orderId: string, checked: boolean) => {
+		const result = await toggleConfirmationEmailSent(orderId, checked);
+		if (result.success) {
+			setOrders(
+				orders.map((order) =>
+					order.id === orderId ? { ...order, confirmationEmailSent: checked } : order,
+				),
+			);
+			toast.success(checked ? "Marked as sent" : "Marked as not sent");
+		} else {
+			toast.error(result.message || "Failed to update status");
 		}
 	};
 
@@ -304,6 +331,21 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 																Duplicate Payment
 															</Badge>
 														)}
+												</div>
+												<div className="flex items-center gap-2 pt-1">
+													<Checkbox
+														id={`email-sent-${order.id}`}
+														checked={order.confirmationEmailSent}
+														onCheckedChange={(checked) =>
+															handleToggleEmailSent(order.id, checked === true)
+														}
+													/>
+													<label
+														htmlFor={`email-sent-${order.id}`}
+														className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+													>
+														Confirmation email sent
+													</label>
 												</div>
 												<div className="text-muted-foreground text-sm">
 													<p>Customer: {order.user.name || order.user.email}</p>
