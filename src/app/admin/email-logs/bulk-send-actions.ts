@@ -3,35 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { sendOrderConfirmationEmail, getEmailSettings } from "@/lib/email";
 
-// Get orders that don't have confirmation emails logged
+// Get orders that don't have confirmation emails sent (based on confirmationEmailSent field)
 export async function getOrdersWithoutEmails(options?: { limit?: number; offset?: number }) {
 	try {
-		// Find all orders that don't have a corresponding email log
+		// Find all orders where confirmationEmailSent = false (regardless of status)
 		const orders = await prisma.order.findMany({
 			where: {
-				// Only get orders that are confirmed or completed (likely had emails sent)
-				status: {
-					in: ["confirmed", "completed", "paid"],
-				},
-				// Orders without email logs
-				NOT: {
-					orderItems: {
-						some: {
-							order: {
-								id: {
-									in: await prisma.emailLog
-										.findMany({
-											where: { emailType: "order_confirmation" },
-											select: { orderId: true },
-										})
-										.then((logs) =>
-											logs.map((log) => log.orderId).filter((id): id is string => id !== null),
-										),
-								},
-							},
-						},
-					},
-				},
+				// Orders where confirmation email has not been sent
+				confirmationEmailSent: false,
 			},
 			include: {
 				user: {
@@ -69,30 +48,10 @@ export async function getOrdersWithoutEmails(options?: { limit?: number; offset?
 			skip: options?.offset || 0,
 		});
 
-		// Count total orders without emails
+		// Count total orders without confirmation emails sent
 		const total = await prisma.order.count({
 			where: {
-				status: {
-					in: ["confirmed", "completed", "paid"],
-				},
-				NOT: {
-					orderItems: {
-						some: {
-							order: {
-								id: {
-									in: await prisma.emailLog
-										.findMany({
-											where: { emailType: "order_confirmation" },
-											select: { orderId: true },
-										})
-										.then((logs) =>
-											logs.map((log) => log.orderId).filter((id): id is string => id !== null),
-										),
-								},
-							},
-						},
-					},
-				},
+				confirmationEmailSent: false,
 			},
 		});
 
@@ -201,6 +160,14 @@ export async function sendBulkConfirmationEmails(orderIds: string[]) {
 				};
 
 				const result = await sendOrderConfirmationEmail(emailData);
+
+				// If email was sent successfully, mark confirmationEmailSent as true
+				if (result.success) {
+					await prisma.order.update({
+						where: { id: order.id },
+						data: { confirmationEmailSent: true },
+					});
+				}
 
 				results.push({
 					orderId: order.id,

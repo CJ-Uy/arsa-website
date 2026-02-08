@@ -159,9 +159,9 @@ export function BulkSendClient() {
 			<Alert>
 				<Info className="h-4 w-4" />
 				<AlertDescription>
-					<strong>Bulk Email Sender:</strong> This tool finds all orders that haven't received
-					confirmation emails and lets you send them in bulk. Perfect for retroactively sending
-					emails or recovering from email outages.
+					<strong>Bulk Email Sender:</strong> This tool finds all orders where the "Confirmation
+					email sent" checkbox is unchecked. You can manually check/uncheck orders in the Orders
+					dashboard, then use this tool to send emails in bulk.
 				</AlertDescription>
 			</Alert>
 
