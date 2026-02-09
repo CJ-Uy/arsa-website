@@ -623,7 +623,7 @@ export async function createOrder(
 			const customerName =
 				firstName && lastName ? `${firstName} ${lastName}` : session.user.name || "Customer";
 
-			await sendOrderConfirmationEmail({
+			const emailResult = await sendOrderConfirmationEmail({
 				orderId: order.id,
 				customerName,
 				customerEmail: session.user.email,
@@ -637,6 +637,14 @@ export async function createOrder(
 					fields: eventData?.fields,
 				},
 			});
+
+			// If email was sent successfully, mark confirmationEmailSent as true
+			if (emailResult.success) {
+				await prisma.order.update({
+					where: { id: order.id },
+					data: { confirmationEmailSent: true },
+				});
+			}
 		} catch (emailError) {
 			// Log error but don't fail the order
 			console.error("Failed to send order confirmation email:", emailError);
