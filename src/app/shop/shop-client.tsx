@@ -996,7 +996,7 @@ export function ShopClient({
 											disabled={!pkg.isAvailable}
 										>
 											<Gift className="mr-2 h-4 w-4" />
-											{pkg.isAvailable ? "Select Options" : "Unavailable"}
+											{pkg.isAvailable ? "Select Options" : "Sold Out"}
 										</Button>
 									</CardFooter>
 								</Card>
@@ -1169,13 +1169,15 @@ export function ShopClient({
 											)}
 											{isProductLoading
 												? "Adding..."
-												: !product.isPreOrder && product.stock !== null && product.stock === 0
-													? "Out of Stock"
-													: requiresSize && !selectedSize
-														? "Select Size"
-														: product.isPreOrder
-															? "Pre-Order Now"
-															: "Add to Cart"}
+												: !product.isAvailable
+													? "Sold Out"
+													: !product.isPreOrder && product.stock !== null && product.stock === 0
+														? "Out of Stock"
+														: requiresSize && !selectedSize
+															? "Select Size"
+															: product.isPreOrder
+																? "Pre-Order Now"
+																: "Add to Cart"}
 										</Button>
 									)}
 								</CardFooter>
