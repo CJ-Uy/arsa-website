@@ -395,7 +395,10 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: ${colors.burgundy};">Need Help?</h3>
       <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
-		Email us at <a href="mailto:arsa.resgen@gmail.com" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">arsa.resgen@gmail.com</a><br>
+		Contact us at the <a href="https://www.facebook.com/ARSAFlowerFest" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">FlowerFest Help Desk</a><br>
+	  </p> 
+	  <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
+		or email us at <a href="mailto:arsa.resgen@gmail.com" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">arsa.resgen@gmail.com</a><br>
 	  </p>
     </div>
 
@@ -521,7 +524,11 @@ individually and separately in their own transactions.
 ───────────────────────────────────────
 NEED HELP?
 ───────────────────────────────────────
-Email us at:
+
+Contact us at the FlowerFest Help Desk:
+https://www.facebook.com/ARSAFlowerFest
+
+or email us at:
 arsa.resgen@gmail.com
 
 ═══════════════════════════════════════

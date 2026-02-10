@@ -826,7 +826,15 @@ export function ShopClient({
 								<h3 className="text-lg font-semibold">Sign in to shop</h3>
 								<p className="text-muted-foreground text-sm leading-relaxed">
 									Sign in with Google to shop. If you have trouble, try refreshing or using a
-									different browser/device. Still need help? Email us at{" "}
+									different browser/device. Still need help? Contact us at{" "}
+									<a
+										className="text-[#165B95] underline"
+										target="_blank"
+										href="https://www.facebook.com/ARSAFlowerFest"
+									>
+										FlowerFest Help Desk
+									</a>
+									{" "}or email us at{" "}
 									<a
 										className="text-[#165B95] underline"
 										target="_blank"
@@ -834,13 +842,6 @@ export function ShopClient({
 									>
 										arsa.resgen@gmail.com
 									</a>
-									{/* <a
-										className="text-[#165B95] underline"
-										target="_blank"
-										href="https://www.facebook.com/ARSAFlowerFest"
-									>
-										FlowerFest Help Desk
-									</a> */}
 								</p>
 							</div>
 							<Button
