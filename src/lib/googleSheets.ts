@@ -194,6 +194,77 @@ function formatComplexValue(value: any): string {
 }
 
 /**
+ * Get the last sync timestamp from sheet metadata
+ * Uses a FIXED column (ZY) to avoid issues when column count changes
+ */
+async function getLastSyncTimestamp(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	sheets: any,
+	spreadsheetId: string,
+	sheetName: string,
+): Promise<Date | null> {
+	try {
+		// Use fixed column AY where the timestamp is currently stored
+		const metadataColumn = "AY";
+		console.log(`[Smart Sync] Reading timestamp from fixed column ${metadataColumn}`);
+		const response = await sheets.spreadsheets.values.get({
+			spreadsheetId,
+			range: `${sheetName}!${metadataColumn}1:${metadataColumn}2`,
+		});
+
+		console.log(`[Smart Sync] Full response values:`, JSON.stringify(response.data.values));
+		const timestampString = response.data.values?.[1]?.[0];
+		console.log(`[Smart Sync] Raw timestamp string: "${timestampString}"`);
+		console.log(`[Smart Sync] Timestamp type: ${typeof timestampString}`);
+
+		if (!timestampString || timestampString === "undefined" || timestampString === "null") {
+			console.log("[Smart Sync] No valid timestamp found in metadata");
+			return null;
+		}
+
+		// Parse the timestamp (format: "MM/DD/YYYY, HH:MM:SS AM/PM")
+		const parsedDate = new Date(timestampString);
+		if (isNaN(parsedDate.getTime())) {
+			console.log("[Smart Sync] Failed to parse timestamp");
+			return null;
+		}
+		console.log(`[Smart Sync] Parsed timestamp: ${parsedDate.toISOString()}`);
+		return parsedDate;
+	} catch (error) {
+		console.error("[Smart Sync] Error getting last sync timestamp:", error);
+		return null;
+	}
+}
+
+/**
+ * Check if there are new orders since the last sync
+ */
+async function hasNewOrdersSinceLastSync(
+	lastSyncTimestamp: Date | null,
+	eventId?: string,
+): Promise<boolean> {
+	if (!lastSyncTimestamp) {
+		// No previous sync, so there are "new" orders
+		console.log("[Smart Sync] No last sync timestamp - treating as first sync");
+		return true;
+	}
+
+	const whereClause = {
+		...(eventId ? { eventId } : {}),
+		createdAt: { gt: lastSyncTimestamp },
+	};
+
+	const newOrderCount = await prisma.order.count({
+		where: whereClause,
+	});
+
+	console.log(
+		`[Smart Sync] Found ${newOrderCount} orders created after ${lastSyncTimestamp.toISOString()}`,
+	);
+	return newOrderCount > 0;
+}
+
+/**
  * Fetch orders from database with optional event filter
  */
 async function getOrdersForSync(eventId?: string) {
@@ -573,6 +644,7 @@ async function uploadImageToDrive(imageUrl: string, auth: any): Promise<string |
 /**
  * Sync orders to Google Sheets
  * This will clear the sheet and rewrite all data
+ * SMART SYNC: Only syncs if there are new orders since last sync (prevents unnecessary flickering)
  */
 export async function syncOrdersToGoogleSheets(eventId?: string): Promise<{
 	success: boolean;
@@ -585,6 +657,45 @@ export async function syncOrdersToGoogleSheets(eventId?: string): Promise<{
 		const settings = await getGoogleSheetsSettings();
 		const spreadsheetId = settings.spreadsheetId;
 		const sheetName = settings.sheetName;
+
+		// SMART SYNC: Check if there are new orders before doing a full sync
+		let lastSyncTimestamp: Date | null = null;
+		try {
+			// Get headers to determine column count for metadata location
+			const headerResponse = await sheets.spreadsheets.values.get({
+				spreadsheetId,
+				range: `${sheetName}!A1:ZZ1`,
+			});
+			const columnCount = headerResponse.data.values?.[0]?.length || 0;
+			console.log(`[Smart Sync] Column count: ${columnCount}`);
+
+			if (columnCount > 0) {
+				// Get last sync timestamp from fixed column
+				lastSyncTimestamp = await getLastSyncTimestamp(sheets, spreadsheetId, sheetName);
+				console.log(
+					`[Smart Sync] Last sync timestamp: ${lastSyncTimestamp?.toISOString() || "none"}`,
+				);
+
+				// Check if there are new orders
+				const hasNewOrders = await hasNewOrdersSinceLastSync(lastSyncTimestamp, eventId);
+				console.log(`[Smart Sync] Has new orders: ${hasNewOrders}`);
+
+				if (!hasNewOrders) {
+					// No new orders since last sync - skip the sync to prevent flickering!
+					console.log("[Smart Sync] ✅ Skipping sync - no new orders (prevents flickering)");
+					return {
+						success: true,
+						message: "No new orders since last sync - skipped to prevent flickering",
+						syncedCount: 0,
+					};
+				} else {
+					console.log("[Smart Sync] ⚠️ Proceeding with full sync - new orders detected");
+				}
+			}
+		} catch (error) {
+			// If we can't check (e.g., first sync or sheet is empty), proceed with full sync
+			console.log("[Smart Sync] Could not check for new orders, proceeding with full sync:", error);
+		}
 
 		// Fetch orders
 		const orders = await getOrdersForSync(eventId);
@@ -636,42 +747,48 @@ export async function syncOrdersToGoogleSheets(eventId?: string): Promise<{
 			},
 		});
 
-		// Format header row and auto-resize columns
-		await sheets.spreadsheets.batchUpdate({
-			spreadsheetId,
-			requestBody: {
-				requests: [
-					{
-						repeatCell: {
-							range: {
-								sheetId: 0, // Assumes first sheet
-								startRowIndex: 0,
-								endRowIndex: 1,
+		// Format header row and auto-resize columns (skip if protected)
+		try {
+			await sheets.spreadsheets.batchUpdate({
+				spreadsheetId,
+				requestBody: {
+					requests: [
+						{
+							repeatCell: {
+								range: {
+									sheetId: 0, // Assumes first sheet
+									startRowIndex: 0,
+									endRowIndex: 1,
+								},
+								cell: {
+									userEnteredFormat: {
+										textFormat: { bold: true },
+										backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
+									},
+								},
+								fields: "userEnteredFormat(textFormat,backgroundColor)",
 							},
-							cell: {
-								userEnteredFormat: {
-									textFormat: { bold: true },
-									backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
+						},
+						{
+							autoResizeDimensions: {
+								dimensions: {
+									sheetId: 0,
+									dimension: "COLUMNS",
+									startIndex: 0,
+									endIndex: headers.length,
 								},
 							},
-							fields: "userEnteredFormat(textFormat,backgroundColor)",
 						},
-					},
-					{
-						autoResizeDimensions: {
-							dimensions: {
-								sheetId: 0,
-								dimension: "COLUMNS",
-								startIndex: 0,
-								endIndex: headers.length,
-							},
-						},
-					},
-				],
-			},
-		});
+					],
+				},
+			});
+		} catch (formatError) {
+			// If formatting fails (e.g., due to protected cells), continue anyway
+			// The data has already been written successfully
+			console.warn("Could not format header row (possibly protected cells):", formatError);
+		}
 
-		// Update last sync timestamp in a metadata area
+		// Update last sync timestamp in a metadata area (fixed column ZY)
 		const syncTimestamp = new Date().toLocaleString("en-US", {
 			timeZone: "Asia/Manila", // UTC+8
 			year: "numeric",
@@ -682,7 +799,10 @@ export async function syncOrdersToGoogleSheets(eventId?: string): Promise<{
 			second: "2-digit",
 			hour12: true,
 		});
-		const metadataColumn = getColumnName(headers.length + 3); // 2 columns after data (column numbers start at 1)
+		const metadataColumn = "AY"; // Fixed column (where timestamp is currently stored)
+		console.log(
+			`[Smart Sync] Writing timestamp to fixed column ${metadataColumn}: ${syncTimestamp}`,
+		);
 		await sheets.spreadsheets.values.update({
 			spreadsheetId,
 			range: `${sheetName}!${metadataColumn}1:${metadataColumn}2`,
