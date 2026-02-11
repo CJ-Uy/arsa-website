@@ -272,14 +272,18 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
               </thead>
               <tbody>
                 ${deliveryDetails
-									.map(
-										(row) => `
+									.map((row) => {
+										// Sort keys to ensure consistent column order (col-{timestamp} IDs sort by creation order)
+										const sortedValues = Object.keys(row)
+											.sort()
+											.map((k) => row[k]);
+										return `
                 <tr>
-                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[0] || "N/A"}</td>
-                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[1] || "N/A"}</td>
-                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${Object.values(row)[2] || "N/A"}</td>
-                </tr>`,
-									)
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${sortedValues[0] || "N/A"}</td>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${sortedValues[1] || "N/A"}</td>
+                  <td style="padding: 8px 10px; font-size: 13px; color: ${colors.burgundy}; border-bottom: 1px solid ${colors.pastelRed};">${sortedValues[2] || "N/A"}</td>
+                </tr>`;
+									})
 									.join("")}
               </tbody>
             </table>
@@ -479,9 +483,12 @@ Pick Up Details:
 
 Delivery Details:`;
 					deliveryDetails.forEach((row, index) => {
-						const values = Object.values(row);
+						// Sort keys to ensure consistent column order (col-{timestamp} IDs sort by creation order)
+						const sortedValues = Object.keys(row)
+							.sort()
+							.map((k) => row[k]);
 						claimingDetailsText += `
-  ${index + 1}. Date: ${values[0] || "N/A"} | Time: ${values[1] || "N/A"} | Location: ${values[2] || "N/A"}`;
+  ${index + 1}. Date: ${sortedValues[0] || "N/A"} | Time: ${sortedValues[1] || "N/A"} | Location: ${sortedValues[2] || "N/A"}`;
 					});
 				}
 			}
