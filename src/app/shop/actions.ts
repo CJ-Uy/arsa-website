@@ -414,6 +414,161 @@ export async function createOrder(
 			return { success: false, message: "Cart is empty" };
 		}
 
+		// Validate cutoff time and date restrictions for delivery/pickup dates
+		if (eventId && eventData) {
+			const fields = eventData.fields as Record<string, any> | undefined;
+			if (fields) {
+				// Fetch the event's checkout config for cutoff validation
+				const eventForCutoff = await prisma.shopEvent.findUnique({
+					where: { id: eventId },
+					select: { checkoutConfig: true },
+				});
+
+				const checkoutConfig = eventForCutoff?.checkoutConfig as {
+					cutoffTime?: string;
+					cutoffDaysOffset?: number;
+					additionalFields?: Array<{
+						id: string;
+						label: string;
+						type: string;
+						minDateOffset?: number;
+						disabledDates?: string[];
+						columns?: Array<{
+							id: string;
+							label: string;
+							type: string;
+							minDateOffset?: number;
+							disabledDates?: string[];
+						}>;
+					}>;
+				} | null;
+
+				if (checkoutConfig) {
+					const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+					const todayStart = new Date(now);
+					todayStart.setHours(0, 0, 0, 0);
+
+					// Collect all date values to validate: { dateString, fieldConfig }
+					const datesToValidate: Array<{
+						dateString: string;
+						fieldLabel: string;
+						minDateOffset?: number;
+						disabledDates?: string[];
+					}> = [];
+
+					// Helper to check if a field name is a delivery/pickup date
+					const isDateRelatedField = (text: string) => {
+						const lower = text.toLowerCase();
+						return (
+							lower.includes("delivery") ||
+							lower.includes("pickup") ||
+							lower.includes("pick up") ||
+							lower.includes("date")
+						);
+					};
+
+					// Go through all submitted fields and match them to their config
+					for (const [fieldLabel, fieldValue] of Object.entries(fields)) {
+						// Find matching field config by label
+						const fieldConfig = checkoutConfig.additionalFields?.find(
+							(f) => f.label === fieldLabel,
+						);
+
+						if (!fieldConfig) continue;
+
+						if (fieldConfig.type === "date" && typeof fieldValue === "string" && fieldValue) {
+							// Simple date field
+							if (isDateRelatedField(`${fieldConfig.id} ${fieldConfig.label}`)) {
+								datesToValidate.push({
+									dateString: fieldValue,
+									fieldLabel: fieldConfig.label,
+									minDateOffset: fieldConfig.minDateOffset,
+									disabledDates: fieldConfig.disabledDates,
+								});
+							}
+						} else if (fieldConfig.type === "repeater" && Array.isArray(fieldValue)) {
+							// Repeater field - check each row for date columns
+							const dateColumns = fieldConfig.columns?.filter(
+								(col) => col.type === "date" && isDateRelatedField(`${col.id} ${col.label}`),
+							);
+
+							if (dateColumns?.length) {
+								for (const row of fieldValue) {
+									if (!row || typeof row !== "object") continue;
+									for (const col of dateColumns) {
+										const cellValue = (row as Record<string, any>)[col.id];
+										if (typeof cellValue === "string" && cellValue) {
+											datesToValidate.push({
+												dateString: cellValue,
+												fieldLabel: `${fieldConfig.label} - ${col.label}`,
+												minDateOffset: col.minDateOffset,
+												disabledDates: col.disabledDates,
+											});
+										}
+									}
+								}
+							}
+						}
+					}
+
+					// Validate each collected date
+					for (const dateInfo of datesToValidate) {
+						const selectedDate = new Date(dateInfo.dateString);
+						selectedDate.setHours(0, 0, 0, 0);
+
+						// Check minDateOffset
+						if (dateInfo.minDateOffset !== undefined) {
+							const minAllowed = new Date(todayStart);
+							minAllowed.setDate(minAllowed.getDate() + dateInfo.minDateOffset);
+							if (selectedDate < minAllowed) {
+								return {
+									success: false,
+									message: `The selected date for "${dateInfo.fieldLabel}" is no longer available. Please choose a date on or after ${minAllowed.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`,
+								};
+							}
+						}
+
+						// Check disabledDates
+						if (dateInfo.disabledDates?.length) {
+							const selectedDateStr = selectedDate.toISOString().split("T")[0];
+							if (dateInfo.disabledDates.includes(selectedDateStr)) {
+								return {
+									success: false,
+									message: `The selected date for "${dateInfo.fieldLabel}" is no longer available. Please go back and choose a different date.`,
+								};
+							}
+						}
+
+						// Check cutoff time
+						if (checkoutConfig.cutoffTime) {
+							const [cutoffHours, cutoffMinutes] = checkoutConfig.cutoffTime.split(":").map(Number);
+							const cutoffToday = new Date(now);
+							cutoffToday.setHours(cutoffHours, cutoffMinutes, 0, 0);
+
+							if (now > cutoffToday) {
+								// Past cutoff - calculate earliest allowed delivery date
+								const daysOffset = checkoutConfig.cutoffDaysOffset || 2;
+								const earliestDelivery = new Date(todayStart);
+								earliestDelivery.setDate(earliestDelivery.getDate() + daysOffset);
+
+								if (selectedDate < earliestDelivery) {
+									const formattedEarliest = earliestDelivery.toLocaleDateString("en-US", {
+										month: "long",
+										day: "numeric",
+										year: "numeric",
+									});
+									return {
+										success: false,
+										message: `We've passed today's ${checkoutConfig.cutoffTime.replace(/^0/, "")} cutoff for upcoming orders. The earliest available pickup/delivery date is ${formattedEarliest}. Please update your selected date and try again.`,
+									};
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// Validate daily stock for delivery date if applicable
 		if (eventId && eventData) {
 			// Find delivery date in event data fields

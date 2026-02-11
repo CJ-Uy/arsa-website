@@ -833,8 +833,8 @@ export function ShopClient({
 										href="https://www.facebook.com/ARSAFlowerFest"
 									>
 										FlowerFest Help Desk
-									</a>
-									{" "}or email us at{" "}
+									</a>{" "}
+									or email us at{" "}
 									<a
 										className="text-[#165B95] underline"
 										target="_blank"
