@@ -2253,7 +2253,15 @@ export function CheckoutClient({
 							</div>
 						))}
 					</div>
-					<p className="text-muted-foreground text-sm">Need help? Contact the helpdesk.</p>
+					<p className="text-muted-foreground mb-3 text-sm">
+						Need help? Contact us at the{" "}
+						<a
+							href="https://www.facebook.com/ARSAFlowerFest"
+							className="font-bold text-red-600 underline"
+						>
+							FlowerFest Help Desk
+						</a>
+					</p>
 					<DialogFooter>
 						<Button onClick={() => setShowValidationDialog(false)}>Go Back and Fill Out</Button>
 					</DialogFooter>
