@@ -22,7 +22,8 @@
 			"Bash(node -e:*)",
 			"Bash(node:*)",
 			"Bash(python3 -c:*)",
-			"Bash(npx prisma:*)"
+			"Bash(npx prisma:*)",
+			"mcp__sequential-thinking__sequentialthinking"
 		],
 		"deny": [],
 		"ask": []

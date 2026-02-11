@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
 	Upload,
@@ -29,9 +29,17 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createOrder } from "../actions";
+import { createOrder, validateAndCleanCart } from "../actions";
 import { extractRefNumberFromPdf } from "../gcashActions";
 import { toast } from "sonner";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { parseGcashReceiptClient } from "@/lib/gcashReaders/readReceipt.client";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
@@ -189,6 +197,7 @@ type CheckoutClientProps = {
 		remaining: number;
 		productStocks: Array<{ productName: string; remaining: number; limit: number }>;
 	}>;
+	removedItems?: string[];
 };
 
 export function CheckoutClient({
@@ -197,6 +206,7 @@ export function CheckoutClient({
 	event,
 	dailyStockInfo: initialDailyStockInfo,
 	availableDates,
+	removedItems,
 }: CheckoutClientProps) {
 	const router = useRouter();
 	const [firstName, setFirstName] = useState(user.firstName || "");
@@ -209,6 +219,26 @@ export function CheckoutClient({
 	const [gcashRefNumber, setGcashRefNumber] = useState<string | null>(null);
 	const [extractingRefNumber, setExtractingRefNumber] = useState(false);
 	const [selectedPaymentOption, setSelectedPaymentOption] = useState<string | null>(null);
+
+	// Multi-step checkout state
+	const [currentStep, setCurrentStep] = useState(1);
+	const [showValidationDialog, setShowValidationDialog] = useState(false);
+	const [validationErrors, setValidationErrors] = useState<string[]>([]);
+	const [proceedingToPayment, setProceedingToPayment] = useState(false);
+	const hasShownToast = useRef(false);
+
+	// Show toast for removed sold-out items (only once)
+	useEffect(() => {
+		if (removedItems && removedItems.length > 0 && !hasShownToast.current) {
+			hasShownToast.current = true;
+			toast.warning(
+				`The following items were removed from your cart because they are no longer available: ${removedItems.join(", ")}`,
+				{ duration: 8000 },
+			);
+			// Trigger cart counter update
+			window.dispatchEvent(new Event("cartUpdated"));
+		}
+	}, [removedItems]);
 
 	// Daily stock limit states - initialized from server-provided data
 	const dailyStockInfo = initialDailyStockInfo;
@@ -720,108 +750,85 @@ export function CheckoutClient({
 		}
 	};
 
-	const isFormValid = useCallback(() => {
-		if (!firstName.trim() || !lastName.trim()) {
-			return false;
-		}
+	// NOTE: isFormValid and getFormInvalidReason removed - replaced by getAllMissingFields + handleProceedToPayment
 
-		if (!receiptFile) {
-			return false;
-		}
+	// Get ALL missing required fields (for validation dialog)
+	const getAllMissingFields = useCallback((): string[] => {
+		const missing: string[] = [];
 
-		for (const field of additionalFields) {
-			if (isFieldVisible(field) && field.required) {
-				if (field.type === "repeater") {
-					const rows = repeaterValues[field.id] || [];
-					const minRows = field.minRows || 1;
-					if (rows.length < minRows) {
-						return false;
-					}
-					for (const row of rows) {
-						for (const col of field.columns || []) {
-							if (!row[col.id] || String(row[col.id]).trim() === "") {
-								return false;
-							}
-						}
-					}
-				} else if (field.type === "checkbox") {
-					if (!eventFieldValues[field.id]) {
-						return false;
-					}
-				} else {
-					const value = eventFieldValues[field.id];
-					if (!value || (typeof value === "string" && !value.trim())) {
-						return false;
-					}
-				}
-			}
-		}
-
-		return true;
-	}, [
-		firstName,
-		lastName,
-		receiptFile,
-		additionalFields,
-		eventFieldValues,
-		repeaterValues,
-		isFieldVisible,
-	]);
-
-	// Get the reason why the form is invalid (for showing to user)
-	const getFormInvalidReason = useCallback((): string | null => {
-		if (!firstName.trim() && !lastName.trim()) {
-			return "Please enter your first and last name";
-		}
 		if (!firstName.trim()) {
-			return "Please enter your first name";
+			missing.push("First Name");
 		}
 		if (!lastName.trim()) {
-			return "Please enter your last name";
-		}
-
-		if (!receiptFile) {
-			return "Please upload your payment receipt";
+			missing.push("Last Name");
 		}
 
 		for (const field of additionalFields) {
-			if (isFieldVisible(field) && field.required) {
-				if (field.type === "repeater") {
-					const rows = repeaterValues[field.id] || [];
-					const minRows = field.minRows || 1;
-					if (rows.length < minRows) {
-						return `"${field.label}" requires at least ${minRows} row(s)`;
-					}
+			if (field.type === "message") continue;
+			if (!isFieldVisible(field) || !field.required) continue;
+
+			if (field.type === "repeater") {
+				const rows = repeaterValues[field.id] || [];
+				const minRows = field.minRows || 1;
+				if (rows.length < minRows) {
+					missing.push(
+						`${field.label} (requires at least ${minRows} row${minRows > 1 ? "s" : ""})`,
+					);
+				} else {
 					for (let i = 0; i < rows.length; i++) {
 						for (const col of field.columns || []) {
 							if (!rows[i][col.id] || String(rows[i][col.id]).trim() === "") {
-								return `Please fill in all fields in "${field.label}" row ${i + 1}`;
+								missing.push(`${field.label} - Row ${i + 1}, ${col.label}`);
 							}
 						}
 					}
-				} else if (field.type === "checkbox") {
-					if (!eventFieldValues[field.id]) {
-						return `Please check "${field.label}"`;
-					}
-				} else {
-					const value = eventFieldValues[field.id];
-					if (!value || (typeof value === "string" && !value.trim())) {
-						return `Please fill in "${field.label}"`;
-					}
+				}
+			} else if (field.type === "checkbox") {
+				if (!eventFieldValues[field.id]) {
+					missing.push(field.label);
+				}
+			} else {
+				const value = eventFieldValues[field.id];
+				if (!value || (typeof value === "string" && !value.trim())) {
+					missing.push(field.label);
 				}
 			}
 		}
 
-		return null;
-	}, [
-		firstName,
-		lastName,
-		receiptFile,
-		additionalFields,
-		eventFieldValues,
-		repeaterValues,
-		isFieldVisible,
-	]);
+		return missing;
+	}, [firstName, lastName, additionalFields, eventFieldValues, repeaterValues, isFieldVisible]);
+
+	// Handle "Proceed to Payment" - validates details and checks availability
+	const handleProceedToPayment = async () => {
+		setProceedingToPayment(true);
+		try {
+			// Re-check cart for sold-out items before proceeding
+			const result = await validateAndCleanCart();
+			if (result.removedItems.length > 0) {
+				toast.warning(
+					`The following items were removed from your cart because they are no longer available: ${result.removedItems.join(", ")}`,
+					{ duration: 8000 },
+				);
+				window.dispatchEvent(new Event("cartUpdated"));
+				router.refresh();
+				return;
+			}
+
+			// Validate all required fields
+			const missing = getAllMissingFields();
+			if (missing.length > 0) {
+				setValidationErrors(missing);
+				setShowValidationDialog(true);
+				return;
+			}
+
+			// All valid - proceed to payment step
+			setCurrentStep(2);
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		} finally {
+			setProceedingToPayment(false);
+		}
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -992,1031 +999,1130 @@ export function CheckoutClient({
 
 	return (
 		<form onSubmit={handleSubmit}>
+			{/* Stepper UI */}
+			<div className="mb-8 flex items-center justify-center gap-0">
+				<button
+					type="button"
+					className="flex items-center gap-2"
+					onClick={() => {
+						if (currentStep === 2) {
+							setCurrentStep(1);
+							window.scrollTo({ top: 0, behavior: "smooth" });
+						}
+					}}
+				>
+					<div
+						className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+							currentStep >= 1
+								? "bg-primary text-primary-foreground"
+								: "bg-muted text-muted-foreground"
+						}`}
+					>
+						{currentStep > 1 ? <Check className="h-4 w-4" /> : "1"}
+					</div>
+					<span
+						className={`text-sm font-medium ${currentStep >= 1 ? "text-foreground" : "text-muted-foreground"}`}
+					>
+						Details
+					</span>
+				</button>
+				<div
+					className={`mx-3 h-0.5 w-12 transition-colors sm:w-20 ${
+						currentStep >= 2 ? "bg-primary" : "bg-muted"
+					}`}
+				/>
+				<button
+					type="button"
+					className="flex items-center gap-2"
+					onClick={() => {
+						if (currentStep === 1) {
+							handleProceedToPayment();
+						}
+					}}
+				>
+					<div
+						className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+							currentStep >= 2
+								? "bg-primary text-primary-foreground"
+								: "bg-muted text-muted-foreground"
+						}`}
+					>
+						2
+					</div>
+					<span
+						className={`text-sm font-medium ${currentStep >= 2 ? "text-foreground" : "text-muted-foreground"}`}
+					>
+						Payment
+					</span>
+				</button>
+			</div>
+
 			<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
 				<div className="space-y-6 lg:col-span-2">
-					<Card>
-						<CardHeader>
-							<CardTitle>Customer Information</CardTitle>
-							<CardDescription>Please provide your information</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-								<div>
-									<Label htmlFor="firstName">First Name *</Label>
-									<Input
-										id="firstName"
-										type="text"
-										placeholder="Juan"
-										value={firstName}
-										onChange={(e) => setFirstName(e.target.value)}
-										required
-										className="mt-2"
-									/>
-								</div>
-								<div>
-									<Label htmlFor="lastName">Last Name *</Label>
-									<Input
-										id="lastName"
-										type="text"
-										placeholder="Dela Cruz"
-										value={lastName}
-										onChange={(e) => setLastName(e.target.value)}
-										required
-										className="mt-2"
-									/>
-								</div>
-							</div>
-							<div>
-								<Label htmlFor="studentId">Student ID (Optional)</Label>
-								<Input
-									id="studentId"
-									type="text"
-									placeholder="e.g., 212345, 2012-12345"
-									value={studentId}
-									onChange={(e) => setStudentId(e.target.value)}
-									className="mt-2"
-								/>
-							</div>
-							<div>
-								<Label>Email</Label>
-								<p className="mt-1 text-sm font-medium">{user.email}</p>
-							</div>
-						</CardContent>
-					</Card>
+					{/* Step 1: Details */}
+					{currentStep === 1 && (
+						<>
+							<Card>
+								<CardHeader>
+									<CardTitle>Customer Information</CardTitle>
+									<CardDescription>Please provide your information</CardDescription>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+										<div>
+											<Label htmlFor="firstName">First Name *</Label>
+											<Input
+												id="firstName"
+												type="text"
+												placeholder="Juan"
+												value={firstName}
+												onChange={(e) => setFirstName(e.target.value)}
+												required
+												className="mt-2"
+											/>
+										</div>
+										<div>
+											<Label htmlFor="lastName">Last Name *</Label>
+											<Input
+												id="lastName"
+												type="text"
+												placeholder="Dela Cruz"
+												value={lastName}
+												onChange={(e) => setLastName(e.target.value)}
+												required
+												className="mt-2"
+											/>
+										</div>
+									</div>
+									<div>
+										<Label htmlFor="studentId">Student ID (Optional)</Label>
+										<Input
+											id="studentId"
+											type="text"
+											placeholder="e.g., 212345, 2012-12345"
+											value={studentId}
+											onChange={(e) => setStudentId(e.target.value)}
+											className="mt-2"
+										/>
+									</div>
+									<div>
+										<Label>Email</Label>
+										<p className="mt-1 text-sm font-medium">{user.email}</p>
+									</div>
+								</CardContent>
+							</Card>
 
-					{/* Event-specific fields */}
-					{event && additionalFields.length > 0 && (
-						<Card className="border-primary/20 border-2">
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<Gift className="h-5 w-5" />
-									{event.name} Details
-								</CardTitle>
-								{checkoutConfig?.headerMessage && (
-									<CardDescription>
-										{parseMarkdownLinks(checkoutConfig.headerMessage)}
-									</CardDescription>
-								)}
-								{checkoutConfig?.termsMessage && (
-									<Alert className="mt-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-										<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-										<AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-											{parseMarkdownLinks(checkoutConfig.termsMessage)}
-										</AlertDescription>
-									</Alert>
-								)}
-								{cutoffWarning && (
-									<Alert className="mt-3 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-										<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-										<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-											{cutoffWarning}
-										</AlertDescription>
-									</Alert>
-								)}
-							</CardHeader>
-							<CardContent className="space-y-4">
-								{additionalFields.map((field) => {
-									// Check if field should be visible
-									if (!isFieldVisible(field)) return null;
+							{/* Event-specific fields */}
+							{event && additionalFields.length > 0 && (
+								<Card className="border-primary/20 border-2">
+									<CardHeader>
+										<CardTitle className="flex items-center gap-2">
+											<Gift className="h-5 w-5" />
+											{event.name} Details
+										</CardTitle>
+										{checkoutConfig?.headerMessage && (
+											<CardDescription>
+												{parseMarkdownLinks(checkoutConfig.headerMessage)}
+											</CardDescription>
+										)}
+										{checkoutConfig?.termsMessage && (
+											<Alert className="mt-3 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+												<AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+												<AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+													{parseMarkdownLinks(checkoutConfig.termsMessage)}
+												</AlertDescription>
+											</Alert>
+										)}
+										{cutoffWarning && (
+											<Alert className="mt-3 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+												<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+												<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+													{cutoffWarning}
+												</AlertDescription>
+											</Alert>
+										)}
+									</CardHeader>
+									<CardContent className="space-y-4">
+										{additionalFields.map((field) => {
+											// Check if field should be visible
+											if (!isFieldVisible(field)) return null;
 
-									return (
-										<div key={field.id}>
-											{field.type !== "message" && (
-												<Label htmlFor={field.id}>
-													{field.label}
-													{field.required && " *"}
-												</Label>
-											)}
-
-											{field.type === "message" && field.messageContent && (
-												<div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
-													<p className="text-sm text-blue-800 dark:text-blue-200">
-														{parseMarkdownLinks(field.messageContent)}
-													</p>
-												</div>
-											)}
-
-											{field.type === "text" && (
-												<div className="space-y-1">
-													<Input
-														id={field.id}
-														type="text"
-														placeholder={field.placeholder}
-														value={(eventFieldValues[field.id] as string) || ""}
-														onChange={(e) => updateEventField(field.id, e.target.value)}
-														maxLength={field.maxLength}
-														required={field.required}
-														className="mt-2"
-													/>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-													{field.maxLength && (
-														<p className="text-muted-foreground text-right text-xs">
-															{((eventFieldValues[field.id] as string) || "").length} /{" "}
-															{field.maxLength} characters
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "textarea" && (
-												<div className="space-y-1">
-													<Textarea
-														id={field.id}
-														placeholder={field.placeholder}
-														value={(eventFieldValues[field.id] as string) || ""}
-														onChange={(e) => updateEventField(field.id, e.target.value)}
-														maxLength={field.maxLength}
-														required={field.required}
-														rows={3}
-														className="mt-2"
-													/>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-													{field.maxLength && (
-														<p className="text-muted-foreground text-right text-xs">
-															{((eventFieldValues[field.id] as string) || "").length} /{" "}
-															{field.maxLength} characters
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "select" && field.options && (
-												<div className="space-y-1">
-													<Select
-														value={(eventFieldValues[field.id] as string) || ""}
-														onValueChange={(value) => updateEventField(field.id, value)}
-													>
-														<SelectTrigger className="mt-2">
-															<SelectValue placeholder={field.placeholder || "Select an option"} />
-														</SelectTrigger>
-														<SelectContent>
-															{field.options.map((option) => (
-																<SelectItem key={option} value={option}>
-																	{option}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "checkbox" && (
-												<div className="mt-2 space-y-1">
-													<div className="flex items-center gap-2">
-														<Checkbox
-															id={field.id}
-															checked={(eventFieldValues[field.id] as boolean) || false}
-															onCheckedChange={(checked) => updateEventField(field.id, !!checked)}
-														/>
-														<Label htmlFor={field.id} className="cursor-pointer font-normal">
-															{field.placeholder || field.label}
+											return (
+												<div key={field.id}>
+													{field.type !== "message" && (
+														<Label htmlFor={field.id}>
+															{field.label}
+															{field.required && " *"}
 														</Label>
-													</div>
-													{field.description && (
-														<p className="text-muted-foreground ml-6 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
 													)}
-												</div>
-											)}
 
-											{field.type === "toggle" && (
-												<div className="mt-2 space-y-1">
-													<div className="flex items-center gap-3">
-														<button
-															type="button"
-															role="switch"
-															aria-checked={(eventFieldValues[field.id] as boolean) || false}
-															onClick={() =>
-																updateEventField(field.id, !eventFieldValues[field.id])
-															}
-															className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
-																eventFieldValues[field.id]
-																	? "bg-primary"
-																	: "bg-gray-200 dark:bg-gray-700"
-															}`}
-														>
-															<span
-																className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-transform ${
-																	eventFieldValues[field.id] ? "translate-x-5" : "translate-x-0"
-																}`}
+													{field.type === "message" && field.messageContent && (
+														<div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+															<p className="text-sm text-blue-800 dark:text-blue-200">
+																{parseMarkdownLinks(field.messageContent)}
+															</p>
+														</div>
+													)}
+
+													{field.type === "text" && (
+														<div className="space-y-1">
+															<Input
+																id={field.id}
+																type="text"
+																placeholder={field.placeholder}
+																value={(eventFieldValues[field.id] as string) || ""}
+																onChange={(e) => updateEventField(field.id, e.target.value)}
+																maxLength={field.maxLength}
+																required={field.required}
+																className="mt-2"
 															/>
-														</button>
-														<span
-															className={`text-sm ${
-																eventFieldValues[field.id]
-																	? "text-primary font-medium"
-																	: "text-muted-foreground"
-															}`}
-														>
-															{eventFieldValues[field.id]
-																? field.toggleOnMessage || "Enabled"
-																: field.toggleOffMessage || "Disabled"}
-														</span>
-													</div>
-													{field.description && (
-														<p className="text-muted-foreground text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+															{field.maxLength && (
+																<p className="text-muted-foreground text-right text-xs">
+																	{((eventFieldValues[field.id] as string) || "").length} /{" "}
+																	{field.maxLength} characters
+																</p>
+															)}
+														</div>
 													)}
-												</div>
-											)}
 
-											{field.type === "date" && (
-												<div className="mt-2 space-y-1">
-													<DatePicker
-														value={
-															eventFieldValues[field.id]
-																? new Date(eventFieldValues[field.id] as string)
-																: undefined
-														}
-														onChange={(date) =>
-															updateEventField(
-																field.id,
-																date
-																	? date.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" })
-																	: "",
-															)
-														}
-														placeholder={field.placeholder || "Select date"}
-														minDate={computeEffectiveDate(
-															field.minDate,
-															field.minDateOffset,
-															"min",
-														)}
-														maxDate={computeEffectiveDate(
-															field.maxDate,
-															field.maxDateOffset,
-															"max",
-														)}
-														disabledDates={(() => {
-															// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
-															const configDisabled =
-																field.disabledDates?.map((d) => new Date(d)) || [];
-															const fieldText = `${field.id} ${field.label}`.toLowerCase();
-															const isDateField =
-																fieldText.includes("delivery") ||
-																fieldText.includes("pickup") ||
-																fieldText.includes("pick up");
+													{field.type === "textarea" && (
+														<div className="space-y-1">
+															<Textarea
+																id={field.id}
+																placeholder={field.placeholder}
+																value={(eventFieldValues[field.id] as string) || ""}
+																onChange={(e) => updateEventField(field.id, e.target.value)}
+																maxLength={field.maxLength}
+																required={field.required}
+																rows={3}
+																className="mt-2"
+															/>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+															{field.maxLength && (
+																<p className="text-muted-foreground text-right text-xs">
+																	{((eventFieldValues[field.id] as string) || "").length} /{" "}
+																	{field.maxLength} characters
+																</p>
+															)}
+														</div>
+													)}
 
-															if (isDateField) {
-																const allBlocked = [...configDisabled];
+													{field.type === "select" && field.options && (
+														<div className="space-y-1">
+															<Select
+																value={(eventFieldValues[field.id] as string) || ""}
+																onValueChange={(value) => updateEventField(field.id, value)}
+															>
+																<SelectTrigger className="mt-2">
+																	<SelectValue
+																		placeholder={field.placeholder || "Select an option"}
+																	/>
+																</SelectTrigger>
+																<SelectContent>
+																	{field.options.map((option) => (
+																		<SelectItem key={option} value={option}>
+																			{option}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
 
-																// Add daily stock blocked dates
-																if (dailyStockInfo.hasLimitedItems) {
-																	const stockBlocked = blockedDates.map((dateStr) => {
-																		const [year, month, day] = dateStr.split("-").map(Number);
-																		return new Date(year, month - 1, day);
-																	});
-																	allBlocked.push(...stockBlocked);
+													{field.type === "checkbox" && (
+														<div className="mt-2 space-y-1">
+															<div className="flex items-center gap-2">
+																<Checkbox
+																	id={field.id}
+																	checked={(eventFieldValues[field.id] as boolean) || false}
+																	onCheckedChange={(checked) =>
+																		updateEventField(field.id, !!checked)
+																	}
+																/>
+																<Label htmlFor={field.id} className="cursor-pointer font-normal">
+																	{field.placeholder || field.label}
+																</Label>
+															</div>
+															{field.description && (
+																<p className="text-muted-foreground ml-6 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "toggle" && (
+														<div className="mt-2 space-y-1">
+															<div className="flex items-center gap-3">
+																<button
+																	type="button"
+																	role="switch"
+																	aria-checked={(eventFieldValues[field.id] as boolean) || false}
+																	onClick={() =>
+																		updateEventField(field.id, !eventFieldValues[field.id])
+																	}
+																	className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
+																		eventFieldValues[field.id]
+																			? "bg-primary"
+																			: "bg-gray-200 dark:bg-gray-700"
+																	}`}
+																>
+																	<span
+																		className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-transform ${
+																			eventFieldValues[field.id] ? "translate-x-5" : "translate-x-0"
+																		}`}
+																	/>
+																</button>
+																<span
+																	className={`text-sm ${
+																		eventFieldValues[field.id]
+																			? "text-primary font-medium"
+																			: "text-muted-foreground"
+																	}`}
+																>
+																	{eventFieldValues[field.id]
+																		? field.toggleOnMessage || "Enabled"
+																		: field.toggleOffMessage || "Disabled"}
+																</span>
+															</div>
+															{field.description && (
+																<p className="text-muted-foreground text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "date" && (
+														<div className="mt-2 space-y-1">
+															<DatePicker
+																value={
+																	eventFieldValues[field.id]
+																		? new Date(eventFieldValues[field.id] as string)
+																		: undefined
+																}
+																onChange={(date) =>
+																	updateEventField(
+																		field.id,
+																		date
+																			? date.toLocaleDateString("en-CA", {
+																					timeZone: "Asia/Manila",
+																				})
+																			: "",
+																	)
+																}
+																placeholder={field.placeholder || "Select date"}
+																minDate={computeEffectiveDate(
+																	field.minDate,
+																	field.minDateOffset,
+																	"min",
+																)}
+																maxDate={computeEffectiveDate(
+																	field.maxDate,
+																	field.maxDateOffset,
+																	"max",
+																)}
+																disabledDates={(() => {
+																	// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
+																	const configDisabled =
+																		field.disabledDates?.map((d) => new Date(d)) || [];
+																	const fieldText = `${field.id} ${field.label}`.toLowerCase();
+																	const isDateField =
+																		fieldText.includes("delivery") ||
+																		fieldText.includes("pickup") ||
+																		fieldText.includes("pick up");
+
+																	if (isDateField) {
+																		const allBlocked = [...configDisabled];
+
+																		// Add daily stock blocked dates
+																		if (dailyStockInfo.hasLimitedItems) {
+																			const stockBlocked = blockedDates.map((dateStr) => {
+																				const [year, month, day] = dateStr.split("-").map(Number);
+																				return new Date(year, month - 1, day);
+																			});
+																			allBlocked.push(...stockBlocked);
+																		}
+
+																		// Add cutoff blocked dates
+																		allBlocked.push(...cutoffBlockedDates);
+
+																		return allBlocked.length > 0 ? allBlocked : undefined;
+																	}
+																	return configDisabled.length > 0 ? configDisabled : undefined;
+																})()}
+															/>
+															{field.description && (
+																<p className="text-muted-foreground text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+															{/* Show remaining stock for delivery/pickup date fields */}
+															{(() => {
+																const fieldText = `${field.id} ${field.label}`.toLowerCase();
+																const isDateField =
+																	fieldText.includes("delivery") ||
+																	fieldText.includes("pickup") ||
+																	fieldText.includes("pick up");
+																if (
+																	isDateField &&
+																	dailyStockInfo.hasLimitedItems &&
+																	eventFieldValues[field.id]
+																) {
+																	const dateString = (eventFieldValues[field.id] as string).split(
+																		"T",
+																	)[0];
+																	const productStocks = dateProductStocksMap.get(dateString);
+																	if (productStocks && productStocks.length > 0) {
+																		return (
+																			<div className="text-muted-foreground mt-2 space-y-1 text-xs">
+																				<p className="font-medium">
+																					Stock availability for {dateString}:
+																				</p>
+																				{productStocks.map((stock, idx) => (
+																					<p key={idx}>
+																						•{" "}
+																						{stock.remaining > 0 ? (
+																							<>
+																								<span className="font-medium">
+																									{stock.remaining}
+																								</span>{" "}
+																								slot{stock.remaining !== 1 ? "s" : ""} remaining for{" "}
+																								<span className="font-medium">
+																									{stock.productName}
+																								</span>
+																							</>
+																						) : (
+																							<span className="text-destructive font-medium">
+																								Sold out for {stock.productName}
+																							</span>
+																						)}
+																					</p>
+																				))}
+																			</div>
+																		);
+																	}
+																}
+																return null;
+															})()}
+														</div>
+													)}
+
+													{field.type === "time" && (
+														<div className="mt-2 space-y-1">
+															<TimePicker
+																value={
+																	eventFieldValues[field.id]
+																		? (eventFieldValues[field.id] as string)
+																		: ""
+																}
+																onChange={(time) => updateEventField(field.id, time)}
+															/>
+															{field.description && (
+																<p className="text-muted-foreground text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "number" && (
+														<div className="space-y-1">
+															<Input
+																id={field.id}
+																type="number"
+																placeholder={field.placeholder}
+																value={(eventFieldValues[field.id] as string) || ""}
+																onChange={(e) => updateEventField(field.id, e.target.value)}
+																min={field.min}
+																max={field.max}
+																step={field.step}
+																required={field.required}
+																className="mt-2"
+															/>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "email" && (
+														<div className="space-y-1">
+															<Input
+																id={field.id}
+																type="email"
+																placeholder={field.placeholder || "email@example.com"}
+																value={(eventFieldValues[field.id] as string) || ""}
+																onChange={(e) => updateEventField(field.id, e.target.value)}
+																required={field.required}
+																className="mt-2"
+															/>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "phone" && (
+														<div className="space-y-1">
+															<Input
+																id={field.id}
+																type="tel"
+																placeholder={field.placeholder || "+63 XXX XXX XXXX"}
+																value={(eventFieldValues[field.id] as string) || ""}
+																onChange={(e) => updateEventField(field.id, e.target.value)}
+																required={field.required}
+																className="mt-2"
+															/>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "radio" && field.options && (
+														<div className="space-y-1">
+															<RadioGroup
+																value={(eventFieldValues[field.id] as string) || ""}
+																onValueChange={(value) => updateEventField(field.id, value)}
+																className="mt-2 space-y-2"
+															>
+																{field.options.map((option) => (
+																	<div key={option} className="flex items-center space-x-2">
+																		<RadioGroupItem value={option} id={`${field.id}-${option}`} />
+																		<Label
+																			htmlFor={`${field.id}-${option}`}
+																			className="cursor-pointer font-normal"
+																		>
+																			{option}
+																		</Label>
+																	</div>
+																))}
+															</RadioGroup>
+															{field.description && (
+																<p className="text-muted-foreground mt-1 text-xs">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+														</div>
+													)}
+
+													{field.type === "repeater" && field.columns && (
+														<div className="mt-3 space-y-3">
+															{/* Description */}
+															{field.description && (
+																<p className="text-muted-foreground text-sm">
+																	{parseMarkdownLinks(field.description)}
+																</p>
+															)}
+
+															{/* Auto-sort indicator */}
+															{field.autoSortByDateTime && (
+																<p className="text-muted-foreground text-xs italic">
+																	Entries will be automatically sorted chronologically
+																</p>
+															)}
+
+															{/* Column headers for desktop */}
+															<div className="hidden gap-2 md:flex">
+																{field.columns.map((col) => (
+																	<div key={col.id} className="flex-1 text-sm font-medium">
+																		{col.label}
+																	</div>
+																))}
+																<div className="w-10"></div>
+															</div>
+
+															{/* Rows */}
+															{(repeaterValues[field.id] || []).map((row, rowIndex) => (
+																<div
+																	key={rowIndex}
+																	className="rounded-lg border bg-slate-50 p-3 md:flex md:items-center md:gap-2 md:bg-transparent md:p-0 dark:bg-slate-900 dark:md:bg-transparent"
+																>
+																	{/* Mobile: Show row number with custom label */}
+																	<div className="mb-2 flex items-center justify-between md:hidden">
+																		<span className="text-muted-foreground text-sm font-medium">
+																			{field.rowLabel || "Entry"} #{rowIndex + 1}
+																		</span>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="sm"
+																			onClick={() =>
+																				removeRepeaterRow(field.id, rowIndex, field.minRows)
+																			}
+																			disabled={
+																				(repeaterValues[field.id]?.length || 0) <=
+																				(field.minRows || 1)
+																			}
+																			className="text-destructive hover:text-destructive h-8 w-8 p-0"
+																		>
+																			<Trash2 className="h-4 w-4" />
+																		</Button>
+																	</div>
+
+																	{field.columns?.map((col) => (
+																		<div key={col.id} className="mb-2 md:mb-0 md:flex-1">
+																			{/* Mobile label */}
+																			<label className="text-muted-foreground mb-1 block text-xs md:hidden">
+																				{col.label}
+																			</label>
+
+																			{col.type === "text" && (
+																				<Input
+																					value={row[col.id] || ""}
+																					onChange={(e) =>
+																						updateRepeaterCell(
+																							field.id,
+																							rowIndex,
+																							col.id,
+																							e.target.value,
+																							field.autoSortByDateTime,
+																							field.columns,
+																						)
+																					}
+																					placeholder={col.placeholder || col.label}
+																				/>
+																			)}
+
+																			{col.type === "date" && (
+																				<DatePicker
+																					value={row[col.id] ? new Date(row[col.id]) : undefined}
+																					onChange={(date) =>
+																						updateRepeaterCell(
+																							field.id,
+																							rowIndex,
+																							col.id,
+																							date
+																								? date.toLocaleDateString("en-CA", {
+																										timeZone: "Asia/Manila",
+																									})
+																								: "",
+																							field.autoSortByDateTime,
+																							field.columns,
+																						)
+																					}
+																					placeholder={col.placeholder || "Select date"}
+																					minDate={computeEffectiveDate(
+																						col.minDate,
+																						col.minDateOffset,
+																						"min",
+																					)}
+																					maxDate={computeEffectiveDate(
+																						col.maxDate,
+																						col.maxDateOffset,
+																						"max",
+																					)}
+																					disabledDates={(() => {
+																						// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
+																						const configDisabled =
+																							col.disabledDates?.map((d) => new Date(d)) || [];
+																						const colText = `${col.id} ${col.label}`.toLowerCase();
+																						const fieldText =
+																							`${field.id} ${field.label}`.toLowerCase();
+																						const combinedText = `${fieldText} ${colText}`;
+																						const isDateField =
+																							combinedText.includes("delivery") ||
+																							combinedText.includes("pickup") ||
+																							combinedText.includes("pick up");
+
+																						if (isDateField) {
+																							const allBlocked = [...configDisabled];
+
+																							// Add daily stock blocked dates
+																							if (dailyStockInfo.hasLimitedItems) {
+																								const stockBlocked = blockedDates.map((dateStr) => {
+																									const [year, month, day] = dateStr
+																										.split("-")
+																										.map(Number);
+																									return new Date(year, month - 1, day);
+																								});
+																								allBlocked.push(...stockBlocked);
+																							}
+
+																							// Add cutoff blocked dates
+																							allBlocked.push(...cutoffBlockedDates);
+
+																							return allBlocked.length > 0 ? allBlocked : undefined;
+																						}
+																						return configDisabled.length > 0
+																							? configDisabled
+																							: undefined;
+																					})()}
+																				/>
+																			)}
+
+																			{col.type === "time" && (
+																				<TimePicker
+																					value={row[col.id] || ""}
+																					onChange={(time) =>
+																						updateRepeaterCell(
+																							field.id,
+																							rowIndex,
+																							col.id,
+																							time,
+																							false, // Don't sort on partial selection
+																							field.columns,
+																						)
+																					}
+																					onComplete={(time) => {
+																						// Only sort when full time is selected
+																						if (field.autoSortByDateTime) {
+																							updateRepeaterCell(
+																								field.id,
+																								rowIndex,
+																								col.id,
+																								time,
+																								true,
+																								field.columns,
+																							);
+																						}
+																					}}
+																					placeholder={col.placeholder || "Select time"}
+																					minTime={col.minTime}
+																					maxTime={col.maxTime}
+																				/>
+																			)}
+
+																			{col.type === "select" && col.options && (
+																				<Select
+																					value={row[col.id] || ""}
+																					onValueChange={(value) =>
+																						updateRepeaterCell(
+																							field.id,
+																							rowIndex,
+																							col.id,
+																							value,
+																							field.autoSortByDateTime,
+																							field.columns,
+																						)
+																					}
+																				>
+																					<SelectTrigger>
+																						<SelectValue
+																							placeholder={col.placeholder || "Select..."}
+																						/>
+																					</SelectTrigger>
+																					<SelectContent>
+																						{col.options.map((opt) => (
+																							<SelectItem key={opt} value={opt}>
+																								{opt}
+																							</SelectItem>
+																						))}
+																					</SelectContent>
+																				</Select>
+																			)}
+																		</div>
+																	))}
+
+																	{/* Desktop delete button */}
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		onClick={() =>
+																			removeRepeaterRow(field.id, rowIndex, field.minRows)
+																		}
+																		disabled={
+																			(repeaterValues[field.id]?.length || 0) <=
+																			(field.minRows || 1)
+																		}
+																		className="text-destructive hover:text-destructive hidden h-10 w-10 md:flex"
+																	>
+																		<Trash2 className="h-4 w-4" />
+																	</Button>
+																</div>
+															))}
+
+															{/* Stock availability for earliest date in repeater */}
+															{(() => {
+																// Find delivery/pickup date columns
+																const dateColumns = field.columns?.filter((col) => {
+																	const colText = `${col.id} ${col.label}`.toLowerCase();
+																	const fieldText = `${field.id} ${field.label}`.toLowerCase();
+																	const combinedText = `${fieldText} ${colText}`;
+																	return (
+																		col.type === "date" &&
+																		(combinedText.includes("delivery") ||
+																			combinedText.includes("pickup") ||
+																			combinedText.includes("pick up"))
+																	);
+																});
+
+																if (
+																	!dateColumns ||
+																	dateColumns.length === 0 ||
+																	!dailyStockInfo.hasLimitedItems
+																) {
+																	return null;
 																}
 
-																// Add cutoff blocked dates
-																allBlocked.push(...cutoffBlockedDates);
+																// Collect all dates from all rows for delivery/pickup columns
+																const allDates: string[] = [];
+																const rows = repeaterValues[field.id] || [];
+																rows.forEach((row) => {
+																	dateColumns.forEach((col) => {
+																		if (row[col.id]) {
+																			allDates.push(row[col.id].split("T")[0]);
+																		}
+																	});
+																});
 
-																return allBlocked.length > 0 ? allBlocked : undefined;
-															}
-															return configDisabled.length > 0 ? configDisabled : undefined;
-														})()}
-													/>
-													{field.description && (
-														<p className="text-muted-foreground text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-													{/* Show remaining stock for delivery/pickup date fields */}
-													{(() => {
-														const fieldText = `${field.id} ${field.label}`.toLowerCase();
-														const isDateField =
-															fieldText.includes("delivery") ||
-															fieldText.includes("pickup") ||
-															fieldText.includes("pick up");
-														if (
-															isDateField &&
-															dailyStockInfo.hasLimitedItems &&
-															eventFieldValues[field.id]
-														) {
-															const dateString = (eventFieldValues[field.id] as string).split(
-																"T",
-															)[0];
-															const productStocks = dateProductStocksMap.get(dateString);
-															if (productStocks && productStocks.length > 0) {
+																// Find the earliest date
+																if (allDates.length === 0) return null;
+																const earliestDate = allDates.sort()[0];
+
+																// Get stock info for earliest date
+																const productStocks = dateProductStocksMap.get(earliestDate);
+																if (!productStocks || productStocks.length === 0) return null;
+
 																return (
-																	<div className="text-muted-foreground mt-2 space-y-1 text-xs">
-																		<p className="font-medium">
-																			Stock availability for {dateString}:
+																	<div className="text-muted-foreground mb-3 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-800 dark:bg-amber-950">
+																		<p className="font-medium text-amber-800 dark:text-amber-200">
+																			Stock availability for {earliestDate}:
 																		</p>
 																		{productStocks.map((stock, idx) => (
-																			<p key={idx}>
+																			<p key={idx} className="text-amber-700 dark:text-amber-300">
 																				•{" "}
 																				{stock.remaining > 0 ? (
 																					<>
 																						<span className="font-medium">{stock.remaining}</span>{" "}
-																						slot{stock.remaining !== 1 ? "s" : ""} remaining for{" "}
-																						<span className="font-medium">{stock.productName}</span>
+																						slot
+																						{stock.remaining !== 1 ? "s" : ""} remaining -{" "}
+																						{stock.productName}
 																					</>
 																				) : (
 																					<span className="text-destructive font-medium">
-																						Sold out for {stock.productName}
+																						Sold out - {stock.productName}
 																					</span>
 																				)}
 																			</p>
 																		))}
 																	</div>
 																);
-															}
-														}
-														return null;
-													})()}
-												</div>
-											)}
+															})()}
 
-											{field.type === "time" && (
-												<div className="mt-2 space-y-1">
-													<TimePicker
-														value={
-															eventFieldValues[field.id]
-																? (eventFieldValues[field.id] as string)
-																: ""
-														}
-														onChange={(time) => updateEventField(field.id, time)}
-													/>
-													{field.description && (
-														<p className="text-muted-foreground text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "number" && (
-												<div className="space-y-1">
-													<Input
-														id={field.id}
-														type="number"
-														placeholder={field.placeholder}
-														value={(eventFieldValues[field.id] as string) || ""}
-														onChange={(e) => updateEventField(field.id, e.target.value)}
-														min={field.min}
-														max={field.max}
-														step={field.step}
-														required={field.required}
-														className="mt-2"
-													/>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "email" && (
-												<div className="space-y-1">
-													<Input
-														id={field.id}
-														type="email"
-														placeholder={field.placeholder || "email@example.com"}
-														value={(eventFieldValues[field.id] as string) || ""}
-														onChange={(e) => updateEventField(field.id, e.target.value)}
-														required={field.required}
-														className="mt-2"
-													/>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "phone" && (
-												<div className="space-y-1">
-													<Input
-														id={field.id}
-														type="tel"
-														placeholder={field.placeholder || "+63 XXX XXX XXXX"}
-														value={(eventFieldValues[field.id] as string) || ""}
-														onChange={(e) => updateEventField(field.id, e.target.value)}
-														required={field.required}
-														className="mt-2"
-													/>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "radio" && field.options && (
-												<div className="space-y-1">
-													<RadioGroup
-														value={(eventFieldValues[field.id] as string) || ""}
-														onValueChange={(value) => updateEventField(field.id, value)}
-														className="mt-2 space-y-2"
-													>
-														{field.options.map((option) => (
-															<div key={option} className="flex items-center space-x-2">
-																<RadioGroupItem value={option} id={`${field.id}-${option}`} />
-																<Label
-																	htmlFor={`${field.id}-${option}`}
-																	className="cursor-pointer font-normal"
-																>
-																	{option}
-																</Label>
-															</div>
-														))}
-													</RadioGroup>
-													{field.description && (
-														<p className="text-muted-foreground mt-1 text-xs">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-												</div>
-											)}
-
-											{field.type === "repeater" && field.columns && (
-												<div className="mt-3 space-y-3">
-													{/* Description */}
-													{field.description && (
-														<p className="text-muted-foreground text-sm">
-															{parseMarkdownLinks(field.description)}
-														</p>
-													)}
-
-													{/* Auto-sort indicator */}
-													{field.autoSortByDateTime && (
-														<p className="text-muted-foreground text-xs italic">
-															Entries will be automatically sorted chronologically
-														</p>
-													)}
-
-													{/* Column headers for desktop */}
-													<div className="hidden gap-2 md:flex">
-														{field.columns.map((col) => (
-															<div key={col.id} className="flex-1 text-sm font-medium">
-																{col.label}
-															</div>
-														))}
-														<div className="w-10"></div>
-													</div>
-
-													{/* Rows */}
-													{(repeaterValues[field.id] || []).map((row, rowIndex) => (
-														<div
-															key={rowIndex}
-															className="rounded-lg border bg-slate-50 p-3 md:flex md:items-center md:gap-2 md:bg-transparent md:p-0 dark:bg-slate-900 dark:md:bg-transparent"
-														>
-															{/* Mobile: Show row number with custom label */}
-															<div className="mb-2 flex items-center justify-between md:hidden">
-																<span className="text-muted-foreground text-sm font-medium">
-																	{field.rowLabel || "Entry"} #{rowIndex + 1}
-																</span>
-																<Button
-																	type="button"
-																	variant="ghost"
-																	size="sm"
-																	onClick={() =>
-																		removeRepeaterRow(field.id, rowIndex, field.minRows)
-																	}
-																	disabled={
-																		(repeaterValues[field.id]?.length || 0) <= (field.minRows || 1)
-																	}
-																	className="text-destructive hover:text-destructive h-8 w-8 p-0"
-																>
-																	<Trash2 className="h-4 w-4" />
-																</Button>
-															</div>
-
-															{field.columns?.map((col) => (
-																<div key={col.id} className="mb-2 md:mb-0 md:flex-1">
-																	{/* Mobile label */}
-																	<label className="text-muted-foreground mb-1 block text-xs md:hidden">
-																		{col.label}
-																	</label>
-
-																	{col.type === "text" && (
-																		<Input
-																			value={row[col.id] || ""}
-																			onChange={(e) =>
-																				updateRepeaterCell(
-																					field.id,
-																					rowIndex,
-																					col.id,
-																					e.target.value,
-																					field.autoSortByDateTime,
-																					field.columns,
-																				)
-																			}
-																			placeholder={col.placeholder || col.label}
-																		/>
-																	)}
-
-																	{col.type === "date" && (
-																		<DatePicker
-																			value={row[col.id] ? new Date(row[col.id]) : undefined}
-																			onChange={(date) =>
-																				updateRepeaterCell(
-																					field.id,
-																					rowIndex,
-																					col.id,
-																					date
-																						? date.toLocaleDateString("en-CA", {
-																								timeZone: "Asia/Manila",
-																							})
-																						: "",
-																					field.autoSortByDateTime,
-																					field.columns,
-																				)
-																			}
-																			placeholder={col.placeholder || "Select date"}
-																			minDate={computeEffectiveDate(
-																				col.minDate,
-																				col.minDateOffset,
-																				"min",
-																			)}
-																			maxDate={computeEffectiveDate(
-																				col.maxDate,
-																				col.maxDateOffset,
-																				"max",
-																			)}
-																			disabledDates={(() => {
-																				// Combine field config disabled dates with daily stock blocked dates and cutoff blocked dates
-																				const configDisabled =
-																					col.disabledDates?.map((d) => new Date(d)) || [];
-																				const colText = `${col.id} ${col.label}`.toLowerCase();
-																				const fieldText =
-																					`${field.id} ${field.label}`.toLowerCase();
-																				const combinedText = `${fieldText} ${colText}`;
-																				const isDateField =
-																					combinedText.includes("delivery") ||
-																					combinedText.includes("pickup") ||
-																					combinedText.includes("pick up");
-
-																				if (isDateField) {
-																					const allBlocked = [...configDisabled];
-
-																					// Add daily stock blocked dates
-																					if (dailyStockInfo.hasLimitedItems) {
-																						const stockBlocked = blockedDates.map((dateStr) => {
-																							const [year, month, day] = dateStr
-																								.split("-")
-																								.map(Number);
-																							return new Date(year, month - 1, day);
-																						});
-																						allBlocked.push(...stockBlocked);
-																					}
-
-																					// Add cutoff blocked dates
-																					allBlocked.push(...cutoffBlockedDates);
-
-																					return allBlocked.length > 0 ? allBlocked : undefined;
-																				}
-																				return configDisabled.length > 0
-																					? configDisabled
-																					: undefined;
-																			})()}
-																		/>
-																	)}
-
-																	{col.type === "time" && (
-																		<TimePicker
-																			value={row[col.id] || ""}
-																			onChange={(time) =>
-																				updateRepeaterCell(
-																					field.id,
-																					rowIndex,
-																					col.id,
-																					time,
-																					false, // Don't sort on partial selection
-																					field.columns,
-																				)
-																			}
-																			onComplete={(time) => {
-																				// Only sort when full time is selected
-																				if (field.autoSortByDateTime) {
-																					updateRepeaterCell(
-																						field.id,
-																						rowIndex,
-																						col.id,
-																						time,
-																						true,
-																						field.columns,
-																					);
-																				}
-																			}}
-																			placeholder={col.placeholder || "Select time"}
-																			minTime={col.minTime}
-																			maxTime={col.maxTime}
-																		/>
-																	)}
-
-																	{col.type === "select" && col.options && (
-																		<Select
-																			value={row[col.id] || ""}
-																			onValueChange={(value) =>
-																				updateRepeaterCell(
-																					field.id,
-																					rowIndex,
-																					col.id,
-																					value,
-																					field.autoSortByDateTime,
-																					field.columns,
-																				)
-																			}
-																		>
-																			<SelectTrigger>
-																				<SelectValue placeholder={col.placeholder || "Select..."} />
-																			</SelectTrigger>
-																			<SelectContent>
-																				{col.options.map((opt) => (
-																					<SelectItem key={opt} value={opt}>
-																						{opt}
-																					</SelectItem>
-																				))}
-																			</SelectContent>
-																		</Select>
-																	)}
-																</div>
-															))}
-
-															{/* Desktop delete button */}
+															{/* Add row button */}
 															<Button
 																type="button"
-																variant="ghost"
-																size="icon"
-																onClick={() => removeRepeaterRow(field.id, rowIndex, field.minRows)}
+																variant="outline"
+																size="sm"
+																onClick={() => addRepeaterRow(field.id, field.maxRows)}
 																disabled={
-																	(repeaterValues[field.id]?.length || 0) <= (field.minRows || 1)
+																	(repeaterValues[field.id]?.length || 0) >= (field.maxRows || 50)
 																}
-																className="text-destructive hover:text-destructive hidden h-10 w-10 md:flex"
+																className="w-full"
 															>
-																<Trash2 className="h-4 w-4" />
+																<Plus className="mr-2 h-4 w-4" />
+																Add {field.rowLabel || "Entry"}
+																{field.minRows && (
+																	<span className="text-muted-foreground ml-2 text-xs">
+																		(min: {field.minRows})
+																	</span>
+																)}
 															</Button>
-														</div>
-													))}
-
-													{/* Stock availability for earliest date in repeater */}
-													{(() => {
-														// Find delivery/pickup date columns
-														const dateColumns = field.columns?.filter((col) => {
-															const colText = `${col.id} ${col.label}`.toLowerCase();
-															const fieldText = `${field.id} ${field.label}`.toLowerCase();
-															const combinedText = `${fieldText} ${colText}`;
-															return (
-																col.type === "date" &&
-																(combinedText.includes("delivery") ||
-																	combinedText.includes("pickup") ||
-																	combinedText.includes("pick up"))
-															);
-														});
-
-														if (
-															!dateColumns ||
-															dateColumns.length === 0 ||
-															!dailyStockInfo.hasLimitedItems
-														) {
-															return null;
-														}
-
-														// Collect all dates from all rows for delivery/pickup columns
-														const allDates: string[] = [];
-														const rows = repeaterValues[field.id] || [];
-														rows.forEach((row) => {
-															dateColumns.forEach((col) => {
-																if (row[col.id]) {
-																	allDates.push(row[col.id].split("T")[0]);
-																}
-															});
-														});
-
-														// Find the earliest date
-														if (allDates.length === 0) return null;
-														const earliestDate = allDates.sort()[0];
-
-														// Get stock info for earliest date
-														const productStocks = dateProductStocksMap.get(earliestDate);
-														if (!productStocks || productStocks.length === 0) return null;
-
-														return (
-															<div className="text-muted-foreground mb-3 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-800 dark:bg-amber-950">
-																<p className="font-medium text-amber-800 dark:text-amber-200">
-																	Stock availability for {earliestDate}:
-																</p>
-																{productStocks.map((stock, idx) => (
-																	<p key={idx} className="text-amber-700 dark:text-amber-300">
-																		•{" "}
-																		{stock.remaining > 0 ? (
-																			<>
-																				<span className="font-medium">{stock.remaining}</span> slot
-																				{stock.remaining !== 1 ? "s" : ""} remaining -{" "}
-																				{stock.productName}
-																			</>
-																		) : (
-																			<span className="text-destructive font-medium">
-																				Sold out - {stock.productName}
-																			</span>
-																		)}
-																	</p>
-																))}
-															</div>
-														);
-													})()}
-
-													{/* Add row button */}
-													<Button
-														type="button"
-														variant="outline"
-														size="sm"
-														onClick={() => addRepeaterRow(field.id, field.maxRows)}
-														disabled={
-															(repeaterValues[field.id]?.length || 0) >= (field.maxRows || 50)
-														}
-														className="w-full"
-													>
-														<Plus className="mr-2 h-4 w-4" />
-														Add {field.rowLabel || "Entry"}
-														{field.minRows && (
-															<span className="text-muted-foreground ml-2 text-xs">
-																(min: {field.minRows})
-															</span>
-														)}
-													</Button>
-												</div>
-											)}
-										</div>
-									);
-								})}
-							</CardContent>
-						</Card>
-					)}
-
-					{/* Daily Stock Warning */}
-					{dailyStockInfo.hasLimitedItems && (
-						<Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-							<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-							<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
-								<strong>Limited Daily Stock:</strong>
-								{dailyStockInfo.items.map((item, index) => (
-									<div key={index} className="mt-2">
-										<strong>{item.name}</strong>
-									</div>
-								))}
-								Some items in your cart have limited availability per day. Some dates may be
-								unavailable.
-							</AlertDescription>
-						</Alert>
-					)}
-
-					<Card>
-						<CardHeader>
-							<CardTitle>Payment Instructions</CardTitle>
-							<CardDescription>
-								{event?.checkoutConfig?.paymentOptions &&
-								event.checkoutConfig.paymentOptions.length > 0
-									? "Choose a payment method and complete your payment"
-									: "Please follow these steps to complete your payment"}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							{event?.checkoutConfig?.paymentOptions &&
-							event.checkoutConfig.paymentOptions.length > 0 ? (
-								<>
-									{/* Custom Payment Options - Radio buttons */}
-									<div className="space-y-2">
-										<p className="text-sm font-medium">Select Payment Method</p>
-										<RadioGroup
-											value={selectedPaymentOption || ""}
-											onValueChange={setSelectedPaymentOption}
-											className="space-y-2"
-										>
-											{event.checkoutConfig.paymentOptions.map((option) => (
-												<div
-													key={option.id}
-													className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors ${
-														selectedPaymentOption === option.id
-															? "border-primary bg-primary/5"
-															: "hover:border-primary/50"
-													}`}
-												>
-													<RadioGroupItem value={option.id} id={option.id} />
-													<Label htmlFor={option.id} className="flex-1 cursor-pointer font-medium">
-														{option.title}
-													</Label>
-												</div>
-											))}
-										</RadioGroup>
-									</div>
-
-									{/* Selected Payment Option Details */}
-									{selectedPaymentOption &&
-										(() => {
-											const selectedOption = event.checkoutConfig?.paymentOptions?.find(
-												(o) => o.id === selectedPaymentOption,
-											);
-											if (!selectedOption) return null;
-											return (
-												<div className="space-y-3 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
-													<p className="font-medium">{selectedOption.title}</p>
-													<p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-														{selectedOption.instructions}
-													</p>
-													{selectedOption.imageUrl && (
-														<div className="rounded-lg border-2 bg-white p-3">
-															{/* eslint-disable-next-line @next/next/no-img-element */}
-															<img
-																src={selectedOption.imageUrl}
-																alt={`${selectedOption.title} QR Code`}
-																className="w-full object-contain"
-															/>
 														</div>
 													)}
 												</div>
 											);
-										})()}
-
-									<Alert>
-										<AlertCircle className="h-4 w-4" />
-										<AlertDescription>
-											<ol className="mt-2 list-inside list-decimal space-y-2">
-												<li>Select a payment method above</li>
-												<li>Send ₱{total.toFixed(2)} using the selected method</li>
-												<li>Take a screenshot of the receipt</li>
-												<li>Upload the screenshot below</li>
-												<li>Click "Place Order"</li>
-											</ol>
-										</AlertDescription>
-									</Alert>
-								</>
-							) : (
-								<>
-									{/* Default GCash Payment Instructions */}
-									<Alert>
-										<AlertCircle className="h-4 w-4" />
-										<AlertDescription>
-											<ol className="mt-2 list-inside list-decimal space-y-2">
-												<li>
-													Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
-													<strong>0916 361 1002</strong>
-												</li>
-												<li>Take a screenshot of the receipt</li>
-												<li>Upload the screenshot below</li>
-												<li>Add any special instructions (optional)</li>
-												<li>Click "Place Order"</li>
-											</ol>
-										</AlertDescription>
-									</Alert>
-
-									{/* Default GCash QR Code */}
-									<div className="rounded-lg border-2 bg-white p-3">
-										{/* eslint-disable-next-line @next/next/no-img-element */}
-										<img
-											src="/images/gcash_qr.jpg"
-											alt="GCash QR Code"
-											className="w-full object-contain"
-										/>
-									</div>
-								</>
+										})}
+									</CardContent>
+								</Card>
 							)}
 
-							<div>
-								<Label htmlFor="receipt">GCash Receipt Screenshot *</Label>
-								<div className="mt-2">
-									<input
-										type="file"
-										id="receipt"
-										accept="image/*,application/pdf"
-										onChange={handleFileChange}
-										className="hidden"
-									/>
-									<label htmlFor="receipt">
-										<div className="hover:border-primary cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors">
-											{receiptPreview ? (
-												<div className="space-y-4">
-													<img
-														src={receiptPreview}
-														alt="Receipt preview"
-														className="mx-auto max-h-64 rounded-lg"
-													/>
-													<div className="space-y-2">
-														<div className="flex items-center justify-center text-green-600">
-															<Check className="mr-2 h-5 w-5" />
-															<span className="font-medium">Receipt uploaded</span>
-														</div>
-														{extractingRefNumber && (
-															<div className="flex items-center justify-center text-blue-600">
-																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-																<span className="text-sm">Extracting reference number...</span>
-															</div>
-														)}
-														{gcashRefNumber && (
-															<Badge variant="outline" className="flex items-center gap-2">
-																<span className="text-xs">Ref No:</span>
-																<span className="font-mono font-semibold">{gcashRefNumber}</span>
-															</Badge>
-														)}
-													</div>
-													<Button
-														type="button"
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															setReceiptFile(null);
-															setReceiptPreview(null);
-														}}
-													>
-														Change Receipt
-													</Button>
-												</div>
-											) : receiptFile && receiptFile.type === "application/pdf" ? (
-												<div className="space-y-4">
-													<div className="text-muted-foreground flex items-center justify-center">
-														<FileText className="mr-2 h-12 w-12" />
-													</div>
-													<div className="space-y-2">
-														<div className="flex items-center justify-center text-green-600">
-															<Check className="mr-2 h-5 w-5" />
-															<span className="font-medium">PDF uploaded: {receiptFile.name}</span>
-														</div>
-														{gcashRefNumber && (
-															<Badge variant="outline" className="flex items-center gap-2">
-																<span className="text-xs">Ref No:</span>
-																<span className="font-mono font-semibold">{gcashRefNumber}</span>
-															</Badge>
-														)}
-													</div>
-													<Button
-														type="button"
-														variant="outline"
-														size="sm"
-														onClick={() => {
-															setReceiptFile(null);
-															setReceiptPreview(null);
-															setGcashRefNumber(null);
-														}}
-													>
-														Change Receipt
-													</Button>
-												</div>
-											) : (
-												<div className="space-y-2">
-													<Upload className="text-muted-foreground mx-auto h-12 w-12" />
-													<p className="text-sm font-medium">Click to upload receipt</p>
-													<p className="text-muted-foreground text-xs">
-														Image (PNG, JPG) or PDF (max 20MB)
-													</p>
-													<p className="text-muted-foreground text-xs">
-														PDF support: GCash transaction history exports
-													</p>
-												</div>
-											)}
-										</div>
-									</label>
-								</div>
-							</div>
+							{/* Daily Stock Warning */}
+							{dailyStockInfo.hasLimitedItems && (
+								<Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+									<AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+									<AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+										<strong>Limited Daily Stock:</strong>
+										{dailyStockInfo.items.map((item, index) => (
+											<div key={index} className="mt-2">
+												<strong>{item.name}</strong>
+											</div>
+										))}
+										Some items in your cart have limited availability per day. Some dates may be
+										unavailable.
+									</AlertDescription>
+								</Alert>
+							)}
 
-							<div>
-								<Label htmlFor="notes">Special Instructions (Optional)</Label>
-								{specialNotes.length > 0 && (
-									<div className="mt-2 space-y-2">
-										{specialNotes.map((note, index) => (
-											<Alert
-												key={index}
-												className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/50"
-											>
-												<AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-												<AlertDescription className="text-sm font-medium text-red-800 dark:text-red-200">
-													{note}
+							{/* Special Instructions (moved from payment section to Step 1) */}
+							<Card>
+								<CardHeader>
+									<CardTitle>Special Instructions</CardTitle>
+									<CardDescription>Any additional notes for your order</CardDescription>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									{specialNotes.length > 0 && (
+										<div className="space-y-2">
+											{specialNotes.map((note, index) => (
+												<Alert
+													key={index}
+													className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/50"
+												>
+													<AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+													<AlertDescription className="text-sm font-medium text-red-800 dark:text-red-200">
+														{note}
+													</AlertDescription>
+												</Alert>
+											))}
+										</div>
+									)}
+									<Textarea
+										id="notes"
+										placeholder="Add any special instructions or notes for your order..."
+										value={notes}
+										onChange={(e) => setNotes(e.target.value)}
+										rows={4}
+									/>
+								</CardContent>
+							</Card>
+						</>
+					)}
+
+					{/* Step 2: Payment */}
+					{currentStep === 2 && (
+						<>
+							<Card>
+								<CardHeader>
+									<CardTitle>Payment Instructions</CardTitle>
+									<CardDescription>
+										{event?.checkoutConfig?.paymentOptions &&
+										event.checkoutConfig.paymentOptions.length > 0
+											? "Choose a payment method and complete your payment"
+											: "Please follow these steps to complete your payment"}
+									</CardDescription>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									{event?.checkoutConfig?.paymentOptions &&
+									event.checkoutConfig.paymentOptions.length > 0 ? (
+										<>
+											{/* Custom Payment Options - Radio buttons */}
+											<div className="space-y-2">
+												<p className="text-sm font-medium">Select Payment Method</p>
+												<RadioGroup
+													value={selectedPaymentOption || ""}
+													onValueChange={setSelectedPaymentOption}
+													className="space-y-2"
+												>
+													{event.checkoutConfig.paymentOptions.map((option) => (
+														<div
+															key={option.id}
+															className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors ${
+																selectedPaymentOption === option.id
+																	? "border-primary bg-primary/5"
+																	: "hover:border-primary/50"
+															}`}
+														>
+															<RadioGroupItem value={option.id} id={option.id} />
+															<Label
+																htmlFor={option.id}
+																className="flex-1 cursor-pointer font-medium"
+															>
+																{option.title}
+															</Label>
+														</div>
+													))}
+												</RadioGroup>
+											</div>
+
+											{/* Selected Payment Option Details */}
+											{selectedPaymentOption &&
+												(() => {
+													const selectedOption = event.checkoutConfig?.paymentOptions?.find(
+														(o) => o.id === selectedPaymentOption,
+													);
+													if (!selectedOption) return null;
+													return (
+														<div className="space-y-3 rounded-lg border bg-slate-50 p-4 dark:bg-slate-900">
+															<p className="font-medium">{selectedOption.title}</p>
+															<p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+																{selectedOption.instructions}
+															</p>
+															{selectedOption.imageUrl && (
+																<div className="rounded-lg border-2 bg-white p-3">
+																	{/* eslint-disable-next-line @next/next/no-img-element */}
+																	<img
+																		src={selectedOption.imageUrl}
+																		alt={`${selectedOption.title} QR Code`}
+																		className="w-full object-contain"
+																	/>
+																</div>
+															)}
+														</div>
+													);
+												})()}
+
+											<Alert>
+												<AlertCircle className="h-4 w-4" />
+												<AlertDescription>
+													<ol className="mt-2 list-inside list-decimal space-y-2">
+														<li>Select a payment method above</li>
+														<li>Send ₱{total.toFixed(2)} using the selected method</li>
+														<li>Take a screenshot of the receipt</li>
+														<li>Upload the screenshot below</li>
+														<li>Click &ldquo;Place Order&rdquo;</li>
+													</ol>
 												</AlertDescription>
 											</Alert>
-										))}
+										</>
+									) : (
+										<>
+											{/* Default GCash Payment Instructions */}
+											<Alert>
+												<AlertCircle className="h-4 w-4" />
+												<AlertDescription>
+													<ol className="mt-2 list-inside list-decimal space-y-2">
+														<li>
+															Send ₱{total.toFixed(2)} via GCash using the QR code below or to:{" "}
+															<strong>0916 361 1002</strong>
+														</li>
+														<li>Take a screenshot of the receipt</li>
+														<li>Upload the screenshot below</li>
+														<li>Add any special instructions (optional)</li>
+														<li>Click &ldquo;Place Order&rdquo;</li>
+													</ol>
+												</AlertDescription>
+											</Alert>
+
+											{/* Default GCash QR Code */}
+											<div className="rounded-lg border-2 bg-white p-3">
+												{/* eslint-disable-next-line @next/next/no-img-element */}
+												<img
+													src="/images/gcash_qr.jpg"
+													alt="GCash QR Code"
+													className="w-full object-contain"
+												/>
+											</div>
+										</>
+									)}
+
+									<div>
+										<Label htmlFor="receipt">GCash Receipt Screenshot *</Label>
+										<div className="mt-2">
+											<input
+												type="file"
+												id="receipt"
+												accept="image/*,application/pdf"
+												onChange={handleFileChange}
+												className="hidden"
+											/>
+											<label htmlFor="receipt">
+												<div className="hover:border-primary cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors">
+													{receiptPreview ? (
+														<div className="space-y-4">
+															<img
+																src={receiptPreview}
+																alt="Receipt preview"
+																className="mx-auto max-h-64 rounded-lg"
+															/>
+															<div className="space-y-2">
+																<div className="flex items-center justify-center text-green-600">
+																	<Check className="mr-2 h-5 w-5" />
+																	<span className="font-medium">Receipt uploaded</span>
+																</div>
+																{extractingRefNumber && (
+																	<div className="flex items-center justify-center text-blue-600">
+																		<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+																		<span className="text-sm">Extracting reference number...</span>
+																	</div>
+																)}
+																{gcashRefNumber && (
+																	<Badge variant="outline" className="flex items-center gap-2">
+																		<span className="text-xs">Ref No:</span>
+																		<span className="font-mono font-semibold">
+																			{gcashRefNumber}
+																		</span>
+																	</Badge>
+																)}
+															</div>
+															<Button
+																type="button"
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	setReceiptFile(null);
+																	setReceiptPreview(null);
+																}}
+															>
+																Change Receipt
+															</Button>
+														</div>
+													) : receiptFile && receiptFile.type === "application/pdf" ? (
+														<div className="space-y-4">
+															<div className="text-muted-foreground flex items-center justify-center">
+																<FileText className="mr-2 h-12 w-12" />
+															</div>
+															<div className="space-y-2">
+																<div className="flex items-center justify-center text-green-600">
+																	<Check className="mr-2 h-5 w-5" />
+																	<span className="font-medium">
+																		PDF uploaded: {receiptFile.name}
+																	</span>
+																</div>
+																{gcashRefNumber && (
+																	<Badge variant="outline" className="flex items-center gap-2">
+																		<span className="text-xs">Ref No:</span>
+																		<span className="font-mono font-semibold">
+																			{gcashRefNumber}
+																		</span>
+																	</Badge>
+																)}
+															</div>
+															<Button
+																type="button"
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	setReceiptFile(null);
+																	setReceiptPreview(null);
+																	setGcashRefNumber(null);
+																}}
+															>
+																Change Receipt
+															</Button>
+														</div>
+													) : (
+														<div className="space-y-2">
+															<Upload className="text-muted-foreground mx-auto h-12 w-12" />
+															<p className="text-sm font-medium">Click to upload receipt</p>
+															<p className="text-muted-foreground text-xs">
+																Image (PNG, JPG) or PDF (max 20MB)
+															</p>
+															<p className="text-muted-foreground text-xs">
+																PDF support: GCash transaction history exports
+															</p>
+														</div>
+													)}
+												</div>
+											</label>
+										</div>
 									</div>
-								)}
-								<Textarea
-									id="notes"
-									placeholder="Add any special instructions or notes for your order..."
-									value={notes}
-									onChange={(e) => setNotes(e.target.value)}
-									rows={4}
-									className="mt-2"
-								/>
-							</div>
-						</CardContent>
-					</Card>
+								</CardContent>
+							</Card>
+						</>
+					)}
 				</div>
 
 				<div className="lg:col-span-1">
@@ -2059,24 +2165,60 @@ export function CheckoutClient({
 								</div>
 							</div>
 
-							<Button
-								type="submit"
-								className="w-full"
-								size="lg"
-								disabled={loading || !isFormValid()}
-							>
-								{loading ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Processing...
-									</>
-								) : (
-									"Place Order"
-								)}
-							</Button>
+							{currentStep === 1 ? (
+								<>
+									<Button
+										type="button"
+										className="w-full"
+										size="lg"
+										disabled={proceedingToPayment}
+										onClick={handleProceedToPayment}
+									>
+										{proceedingToPayment ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												Checking...
+											</>
+										) : (
+											"Proceed to Payment →"
+										)}
+									</Button>
+								</>
+							) : (
+								<>
+									<Button
+										type="button"
+										variant="ghost"
+										className="w-full"
+										onClick={() => {
+											setCurrentStep(1);
+											window.scrollTo({ top: 0, behavior: "smooth" });
+										}}
+									>
+										← Back to Details
+									</Button>
+									<Button
+										type="submit"
+										className="w-full"
+										size="lg"
+										disabled={loading || !receiptFile}
+									>
+										{loading ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												Processing...
+											</>
+										) : (
+											"Place Order"
+										)}
+									</Button>
 
-							{!loading && !isFormValid() && (
-								<p className="text-destructive text-center text-sm">{getFormInvalidReason()}</p>
+									{!loading && !receiptFile && (
+										<p className="text-destructive text-center text-sm">
+											Please upload your payment receipt
+										</p>
+									)}
+								</>
 							)}
 
 							<p className="text-muted-foreground text-center text-xs">
@@ -2088,6 +2230,35 @@ export function CheckoutClient({
 					</Card>
 				</div>
 			</div>
+
+			{/* Validation Dialog */}
+			<Dialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2">
+							<AlertCircle className="text-destructive h-5 w-5" />
+							Missing Required Fields
+						</DialogTitle>
+						<DialogDescription>
+							Please complete the following fields before proceeding to payment:
+						</DialogDescription>
+					</DialogHeader>
+					<div className="max-h-64 space-y-3 overflow-y-auto">
+						{validationErrors.map((field, index) => (
+							<div key={index} className="flex items-start gap-2 text-sm">
+								<span className="text-destructive mt-0.5 font-bold">&#8226;</span>
+								<span>
+									Please scroll up and fill out <strong>&ldquo;{field}&rdquo;</strong>.
+								</span>
+							</div>
+						))}
+					</div>
+					<p className="text-muted-foreground text-sm">Need help? Contact the helpdesk.</p>
+					<DialogFooter>
+						<Button onClick={() => setShowValidationDialog(false)}>Go Back and Fill Out</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</form>
 	);
 }

@@ -5,7 +5,17 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/main/theme-toggle";
-import { Menu, X, ShoppingCart, User, LogOut, Settings, Link2, CalendarHeart } from "lucide-react";
+import {
+	Menu,
+	X,
+	ShoppingCart,
+	User,
+	LogOut,
+	Settings,
+	Link2,
+	CalendarHeart,
+	Mail,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "@/lib/auth-client";

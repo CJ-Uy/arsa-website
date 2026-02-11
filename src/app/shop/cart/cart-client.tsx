@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
 	Trash2,
 	Plus,
@@ -146,14 +146,29 @@ type CartItem = {
 
 type CartClientProps = {
 	initialCart: CartItem[];
+	removedItems?: string[];
 };
 
-export function CartClient({ initialCart }: CartClientProps) {
+export function CartClient({ initialCart, removedItems }: CartClientProps) {
 	const router = useRouter();
 	const [cartItems, setCartItems] = useState<CartItem[]>(initialCart);
 	const [loading, setLoading] = useState<string | null>(null);
 	const [checkoutLoading, setCheckoutLoading] = useState(false);
 	const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
+	const hasShownToast = useRef(false);
+
+	// Show toast for removed sold-out items (only once)
+	useEffect(() => {
+		if (removedItems && removedItems.length > 0 && !hasShownToast.current) {
+			hasShownToast.current = true;
+			toast.warning(
+				`The following items were removed from your cart because they are no longer available: ${removedItems.join(", ")}`,
+				{ duration: 8000 },
+			);
+			// Trigger cart counter update
+			window.dispatchEvent(new Event("cartUpdated"));
+		}
+	}, [removedItems]);
 
 	// Helper to get correct product price based on size
 	const getProductPrice = (item: CartItem) => {

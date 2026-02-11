@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getCart, type PackageSelections } from "../actions";
+import { getCart, validateAndCleanCart, type PackageSelections } from "../actions";
 import { CartClient } from "./cart-client";
 
 export default async function CartPage() {
@@ -12,6 +12,9 @@ export default async function CartPage() {
 	if (!session?.user) {
 		redirect("/shop");
 	}
+
+	// Clean up unavailable/sold-out items before fetching cart
+	const { removedItems } = await validateAndCleanCart();
 
 	const { cart } = await getCart();
 
@@ -24,7 +27,7 @@ export default async function CartPage() {
 	return (
 		<div className="container mx-auto px-4 py-10">
 			<h1 className="mb-8 text-4xl font-bold">Shopping Cart</h1>
-			<CartClient initialCart={typedCart} />
+			<CartClient initialCart={typedCart} removedItems={removedItems} />
 		</div>
 	);
 }

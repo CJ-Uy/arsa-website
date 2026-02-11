@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { getCart } from "../actions";
+import { getCart, validateAndCleanCart } from "../actions";
 import { CheckoutClient } from "./checkout-client";
 import { getCartDailyStockInfo, getAvailableDatesForCart } from "./daily-stock-actions";
 
@@ -17,6 +17,9 @@ export default async function CheckoutPage() {
 	if (!session?.user) {
 		redirect("/shop");
 	}
+
+	// Clean up unavailable/sold-out items before fetching cart
+	const { removedItems } = await validateAndCleanCart();
 
 	const { cart } = await getCart();
 
@@ -121,6 +124,7 @@ export default async function CheckoutPage() {
 				event={eventForCheckout}
 				dailyStockInfo={dailyStockInfo}
 				availableDates={availableDates}
+				removedItems={removedItems}
 			/>
 		</div>
 	);

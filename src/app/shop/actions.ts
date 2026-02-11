@@ -185,6 +185,80 @@ export async function getCart() {
 	}
 }
 
+// Validate cart and remove unavailable/sold-out items
+export async function validateAndCleanCart(): Promise<{
+	success: boolean;
+	removedItems: string[];
+}> {
+	try {
+		const session = await getSession();
+		if (!session?.user) {
+			return { success: true, removedItems: [] };
+		}
+
+		// Fetch cart items directly from DB (bypass cache for fresh availability data)
+		const cartItems = await prisma.cartItem.findMany({
+			where: { userId: session.user.id },
+			include: {
+				product: true,
+				package: true,
+			},
+		});
+
+		const idsToRemove: string[] = [];
+		const removedNames: string[] = [];
+
+		for (const item of cartItems) {
+			let shouldRemove = false;
+			let itemName = "Unknown item";
+
+			if (item.productId && item.product) {
+				itemName = item.product.name;
+				if (!item.product.isAvailable) {
+					shouldRemove = true;
+				} else if (
+					!item.product.isPreOrder &&
+					item.product.stock !== null &&
+					item.product.stock <= 0
+				) {
+					shouldRemove = true;
+				}
+			} else if (item.packageId && item.package) {
+				itemName = item.package.name;
+				if (!item.package.isAvailable) {
+					shouldRemove = true;
+				}
+			} else if (!item.product && !item.package) {
+				// Orphan cart item - referenced product/package was deleted
+				shouldRemove = true;
+				itemName = "a deleted item";
+			}
+
+			if (shouldRemove) {
+				idsToRemove.push(item.id);
+				removedNames.push(itemName);
+			}
+		}
+
+		if (idsToRemove.length > 0) {
+			await prisma.cartItem.deleteMany({
+				where: {
+					id: { in: idsToRemove },
+					userId: session.user.id,
+				},
+			});
+
+			// Invalidate cart cache (revalidatePath removed - can't be called during render)
+			cache.delete(cacheKeys.cart(session.user.id));
+		}
+
+		return { success: true, removedItems: removedNames };
+	} catch (error) {
+		console.error("Validate and clean cart error:", error);
+		return { success: false, removedItems: [] };
+	}
+}
+
 // Package Selections type for cart items
 export type PackageSelections = {
 	fixedItems: Array<{
@@ -412,6 +486,43 @@ export async function createOrder(
 
 		if (cartItems.length === 0) {
 			return { success: false, message: "Cart is empty" };
+		}
+
+		// Safety net: check availability of all cart items before creating order
+		const unavailableIds: string[] = [];
+		const unavailableNames: string[] = [];
+
+		for (const item of cartItems) {
+			if (item.productId && item.product) {
+				if (
+					!item.product.isAvailable ||
+					(!item.product.isPreOrder && item.product.stock !== null && item.product.stock <= 0)
+				) {
+					unavailableIds.push(item.id);
+					unavailableNames.push(item.product.name);
+				}
+			} else if (item.packageId && item.package) {
+				if (!item.package.isAvailable) {
+					unavailableIds.push(item.id);
+					unavailableNames.push(item.package.name);
+				}
+			}
+		}
+
+		if (unavailableIds.length > 0) {
+			// Remove unavailable items from cart
+			await prisma.cartItem.deleteMany({
+				where: {
+					id: { in: unavailableIds },
+					userId: session.user.id,
+				},
+			});
+			cache.delete(cacheKeys.cart(session.user.id));
+
+			return {
+				success: false,
+				message: `The following items are no longer available and have been removed from your cart: ${unavailableNames.join(", ")}. Please review your cart and try again.`,
+			};
 		}
 
 		// Validate cutoff time and date restrictions for delivery/pickup dates
