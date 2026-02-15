@@ -12,7 +12,12 @@ This is the ARSA (Ateneo Resident Students Association) website - a Next.js 15 a
 - **E-Commerce Shop**: Full-featured shop with cart, checkout, order history, and GCash payment integration with OCR
 - **Shop Events System**: Event-based product organization with custom themes, checkout fields, and analytics
 - **Package System**: Product bundles with fixed items and selection pools ("Pick N from X" options)
-- **Admin Dashboard**: Product, package, event, order, and banner management with role-based access
+- **Admin Dashboard**: Product, package, event, order, banner, email logs, and settings management with role-based access
+- **Google Sheets Sync**: Automatic order syncing to a configurable Google Sheets spreadsheet
+- **Email System**: Order confirmation emails via SMTP or Resend; admin bulk email sender with logs
+- **Daily Stock Overrides**: Per-day stock and availability overrides for products
+- **Delivery Scheduling**: Configurable delivery date/time slot selection at checkout
+- **Custom Event Pages**: Events can load custom React components for unique experiences
 - **URL Shortener**: Custom short URL system with click tracking and analytics
 - **Authentication**: Better Auth with Google OAuth integration
 - **Storage**: MinIO (S3-compatible) for product images and receipt storage
@@ -51,7 +56,11 @@ npx prisma studio        # Open Prisma Studio for database management
 - **UI Components**: 57 shadcn/ui components (Radix UI primitives + Tailwind)
 - **Forms**: react-hook-form with Zod validation
 - **Notifications**: Sonner for toast notifications
-- **Excel Export**: XLSX library for order exports
+- **Charts**: Recharts for analytics dashboards
+- **Email**: Nodemailer (SMTP) or Resend
+- **Google APIs**: googleapis for Sheets sync
+- **Excel Export**: XLSX / ExcelJS for order exports
+- **Package Manager**: pnpm
 - **Deployment**: Docker + Docker Compose (standalone output mode)
 
 ## Architecture
@@ -66,7 +75,7 @@ npx prisma studio        # Open Prisma Studio for database management
 
 **Authentication (Better Auth)**
 
-- `User` - User accounts with admin role flags (`isShopAdmin`, `isRedirectsAdmin`), student ID, name fields
+- `User` - User accounts with admin role flags (`isShopAdmin`, `isEventsAdmin`, `isRedirectsAdmin`), student ID, name fields
 - `Session` - Session management with IP address and user agent tracking
 - `Account` - OAuth provider accounts (Google)
 - `Verification` - Email verification tokens
@@ -102,6 +111,15 @@ npx prisma studio        # Open Prisma Studio for database management
 **Content Management**
 
 - `Banner` - Site-wide announcements with countdown timer support
+
+**Email & Notifications**
+
+- `EmailLog` - Audit log of all sent emails (recipient, subject, status, timestamp)
+
+**Delivery & Stock**
+
+- `DailyStockOverride` - Per-day stock and availability overrides for products (overrides default stock for a specific date)
+- `DeliverySchedule` - Configurable delivery date/time slots for checkout (managed via admin settings)
 
 ### Middleware Architecture
 
@@ -172,6 +190,19 @@ The core feature that enables custom short URLs (e.g., `domain.com/shortcode` �
 - `event-card.tsx` - Event display with attendance tracking
 - `product-image-carousel.tsx` - Multi-image carousel with zoom, swipe gestures, thumbnails
 - `cart-counter.tsx` - Shopping cart item counter badge (listens to `cartUpdated` event)
+- `daily-stock-dialog.tsx` - UI dialog for viewing/editing per-day stock overrides
+- `daily-stock-overrides.tsx` - Admin component for managing daily stock overrides
+- `image-crop-editor.tsx` - Image cropping tool used during product image uploads
+- `package-selection-modal.tsx` - Modal for customers to make selections from package pools
+
+**Shop Components** ([src/components/shop/](src/components/shop/)):
+
+- `delivery-schedule-selector.tsx` - Delivery date/time slot picker shown at checkout
+
+**Admin Components** ([src/components/admin/](src/components/admin/)):
+
+- `admin-nav.tsx` - Admin sidebar navigation
+- `admin-theme-forcer.tsx` - Forces light theme in admin dashboard
 
 **Layout Components**:
 
@@ -218,6 +249,8 @@ All pages use the App Router structure in [src/app/](src/app/):
 - `/admin/packages` - Package management (bundles with fixed items and selection pools)
 - `/admin/events` - Event management with theme customization, checkout config, admin assignments, product/package assignment
 - `/admin/banner` - Banner/announcement management with countdown timers
+- `/admin/email-logs` - Email audit logs and bulk email sender
+- `/admin/settings` - Admin settings: email configuration, Google Sheets sync
 
 **Note on Event Admin Access:**
 
@@ -238,11 +271,13 @@ All pages use the App Router structure in [src/app/](src/app/):
 Located in [src/app/api/](src/app/api/):
 
 - `/api/auth/[...all]` - Better Auth routes (sign in, sign out, OAuth callbacks)
-- `/api/upload` - File upload endpoint (receipts, product images)
+- `/api/upload` - File upload endpoint (receipts, product images, event images)
 - `/api/receipts/[filename]` - Receipt file serving
 - `/api/user/roles` - Fetch current user's admin roles
 - `/api/health` - Health check endpoint
 - `/api/cache-stats` - Cache statistics endpoint
+- `/api/shop/track` - Shop click tracking (event tab analytics)
+- `/api/shop/sync-orders` - Trigger Google Sheets order sync (cron-compatible, requires `CRON_SECRET`)
 
 ### Server Actions
 
@@ -269,6 +304,8 @@ Located throughout the app:
 **Other Admin Actions:**
 
 - `src/app/admin/banner/actions.ts` - Banner management
+- `src/app/admin/email-logs/actions.ts` - Email log fetching and bulk email sending
+- `src/app/admin/settings/actions.ts` - Email config, Google Sheets settings management
 - `src/app/redirects/actions.ts` - URL redirect CRUD with authentication
 
 ### Styling
@@ -469,6 +506,84 @@ Cart → Checkout → GCash Payment → Receipt Upload → Auto-extraction → O
 - Properly formatted with transaction info only on first row per order
 - Custom checkout field data expanded into columns
 
+## Email System
+
+Order confirmation emails are sent automatically when an order is created.
+
+**Implementation** ([src/lib/email.ts](src/lib/email.ts)):
+
+- Supports two providers: SMTP (via Nodemailer) and Resend
+- Provider selection and sender email configured in Admin → Settings → Email Configuration
+- Settings stored in database and loaded at send time (not env-only)
+- All sent emails logged to `EmailLog` model for auditing
+
+**Admin Features** ([src/app/admin/email-logs/](src/app/admin/email-logs/)):
+
+- View full email audit log (recipient, subject, status, timestamp, error details)
+- Bulk email sender for sending announcements to order recipients
+- Filter logs by status (sent/failed)
+
+**Environment Variables** (fallback if no DB config):
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
+- `RESEND_API_KEY`
+
+## Google Sheets Sync
+
+Orders are automatically synced to a Google Sheets spreadsheet for offline tracking and reporting.
+
+**Implementation** ([src/lib/googleSheets.ts](src/lib/googleSheets.ts)):
+
+- Uses Google Sheets API v4 via `googleapis`
+- Service account authentication via `GOOGLE_SHEETS_CREDENTIALS` env variable (JSON)
+- Spreadsheet ID and sheet name configurable via Admin → Settings (stored in database)
+- Sync triggered automatically on order creation and via cron at `/api/shop/sync-orders`
+
+**Exported Columns**: Same format as Excel export — Order ID, customer info, products, sizes, quantities, purchase codes, prices, GCash ref, event category, custom checkout fields, delivery details.
+
+**Setup**:
+
+1. Create a Google Cloud service account and download credentials JSON
+2. Share the spreadsheet with the service account email (Editor access)
+3. Set `GOOGLE_SHEETS_CREDENTIALS` env variable
+4. Configure Spreadsheet ID in Admin → Settings
+
+## Daily Stock Override System
+
+Allows admins to override product stock and availability on a per-day basis (e.g., limit quantities for specific delivery dates).
+
+**Implementation** ([src/lib/daily-stock.ts](src/lib/daily-stock.ts)):
+
+- `DailyStockOverride` model stores overrides per product per date
+- Overrides can set: available quantity, whether the product is available that day
+- Checkout reads overrides to validate stock for the selected delivery date
+- Admin UI via `daily-stock-dialog.tsx` and `daily-stock-overrides.tsx` components
+
+## Delivery Scheduling
+
+Customers can select a delivery date and time slot during checkout.
+
+**Implementation** ([src/lib/deliveryScheduling.ts](src/lib/deliveryScheduling.ts)):
+
+- Configurable delivery slots (date + time options) managed via Admin → Settings
+- `delivery-schedule-selector.tsx` component renders the picker in checkout
+- Selected delivery date/time stored in `Order` model and included in exports
+- Daily stock overrides apply per delivery date, allowing per-day quantity limits
+
+## Custom Event Pages
+
+Events can optionally load custom React components for unique shop experiences (e.g., special headers, animations, or additional UI).
+
+**Location**: [src/app/shop/events/](src/app/shop/events/)
+
+**Structure**:
+
+- Custom pages live under `src/app/shop/events/[year]/[event-slug]/`
+- The `ShopEvent.customComponentPath` field points to the component directory
+- Example: [src/app/shop/events/2026/flower-fest-2026/](src/app/shop/events/2026/flower-fest-2026/)
+
+**Development Guide**: See [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)
+
 ## Docker Deployment
 
 The application is containerized for production:
@@ -611,7 +726,21 @@ The shop system is designed with an **event-first workflow** to streamline produ
 
 ## Recent Features
 
-### Event Categories & Product Codes (Latest)
+### Email System & Google Sheets Sync
+
+- **Email Notifications**: Order confirmation emails on purchase via SMTP or Resend
+- **Email Logs**: Full audit trail of all sent emails at `/admin/email-logs`
+- **Bulk Email Sender**: Send announcements to all order recipients from the email logs page
+- **Google Sheets Sync**: Auto-sync orders to a configurable spreadsheet; trigger via cron or manually
+- **Admin Settings Page**: Central config for email provider, sender address, and spreadsheet settings
+
+### Daily Stock & Delivery Scheduling
+
+- **Daily Stock Overrides**: Set per-day stock limits per product (e.g., limit roses to 20 on Valentine's Day)
+- **Delivery Scheduling**: Customers select delivery date/time slot at checkout; configurable slots in Admin Settings
+- **Per-Day Enforcement**: Checkout validates stock against the selected delivery date's override
+
+### Event Categories & Product Codes
 
 - **Event Categories**: Organize products within events into categories (e.g., "Solo Flowers", "Bouquets")
   - Categories appear as filter tabs in the shop
@@ -696,13 +825,24 @@ The shop system is designed with an **event-first workflow** to streamline produ
 11. **Event theming**: Test custom theme configs in different color schemes and animations
 12. **Cart updates**: Dispatch `window.dispatchEvent(new Event("cartUpdated"))` after cart changes to update the header counter
 13. **Event categories**: Categories must be created before products can be assigned to them
+14. **Google Sheets**: Use `GOOGLE_SHEETS_CREDENTIALS` env with full service account JSON; configure Spreadsheet ID in Admin → Settings
+15. **Email testing**: Configure SMTP or Resend in Admin → Settings → Email; check `/admin/email-logs` for delivery status
+16. **Daily stock**: Overrides apply per delivery date — test checkout with different dates to verify stock enforcement
+17. **Delivery scheduling**: Configure available slots in Admin → Settings before enabling delivery date selection
+18. **Package manager**: Project uses pnpm — use `pnpm install` instead of `npm install`
 
 ## Useful Links
 
 - **Documentation**: [docs/README.md](docs/README.md)
 - **Quick Reference**: [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)
 - **Deployment Guide**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- **Coolify Deployment**: [docs/COOLIFY.md](docs/COOLIFY.md)
 - **GCash OCR**: [docs/GCASH.md](docs/GCASH.md)
 - **Shop Setup**: [docs/SHOP_SETUP.md](docs/SHOP_SETUP.md)
-- **E-Shop Architecture**: [docs/ESHOP_SYSTEM.md](docs/ESHOP_SYSTEM.md) - Complete e-commerce implementation guide
-- **GCash OCR System**: [docs/GCASH_OCR_SYSTEM.md](docs/GCASH_OCR_SYSTEM.md) - Portable OCR implementation guide
+- **E-Shop Architecture**: [docs/ESHOP_SYSTEM.md](docs/ESHOP_SYSTEM.md)
+- **GCash OCR System**: [docs/GCASH_OCR_SYSTEM.md](docs/GCASH_OCR_SYSTEM.md)
+- **Google Sheets Sync**: [docs/GOOGLE_SHEETS_SYNC.md](docs/GOOGLE_SHEETS_SYNC.md)
+- **Bulk Email Guide**: [docs/BULK_EMAIL_GUIDE.md](docs/BULK_EMAIL_GUIDE.md)
+- **Daily Stock Integration**: [docs/DAILY_STOCK_INTEGRATION.md](docs/DAILY_STOCK_INTEGRATION.md)
+- **Delivery Cutoff Setup**: [docs/DELIVERY_CUTOFF_SETUP.md](docs/DELIVERY_CUTOFF_SETUP.md)
+- **Custom Event Pages**: [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)

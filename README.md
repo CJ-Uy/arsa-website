@@ -1,27 +1,25 @@
 # ARSA Website
 
-Official website for the ARSA dorm system featuring a complete e-commerce shop for merchandise, services, and payments.
+Official website for the ARSA (Ateneo Resident Students Association) dorm system — a comprehensive Next.js platform for a university dormitory with a full e-commerce shop, event management, GCash payments, and more.
 
 📚 **[View Full Documentation →](docs/README.md)**
 
-## 🚀 Features
+## Features
 
-- **URL Redirect System** - Custom short URLs with click tracking
-- **Event Calendar** - Browse upcoming ARSA events
-- **Publications** - View ARSA newsletters and resources
-- **Merch Showcase** - Interactive gacha system for viewing merchandise
-- **E-Commerce Shop** - Full shopping experience with:
-  - Google OAuth student email authentication (auto-populates name from Google)
-  - Product catalog with categories (Merch, Arsari-Sari Store, Other)
-  - Product size selection (XS, S, M, L, XL, XXL)
-  - Pre-order mode for out-of-stock items
-  - Shopping cart with size-aware items
-  - GCash payment with receipt upload
-  - Order tracking with detailed history
-  - Customer information (first name, last name, student ID)
-  - Admin dashboard for order & product management
+- **Public Pages** — Home, About, Calendar, Publications (Bridges Magazine), Merch showcase with gacha system, Resources, Contact
+- **E-Commerce Shop** — Full shopping experience with Google OAuth auth, product catalog, size selection, pre-orders, cart, GCash payment with receipt OCR, and order tracking
+- **Shop Events System** — Event-based product tabs with custom themes, animations, hero images, event-specific pricing, checkout fields, and analytics
+- **Package System** — Product bundles with fixed items and "Pick N from X" selection pools
+- **Admin Dashboard** — Role-based admin access for products, packages, events, orders, banners, email logs, and settings
+- **Google Sheets Sync** — Automatic order syncing to a configurable Google Sheets spreadsheet
+- **Email Notifications** — Order confirmation emails via SMTP or Resend, with admin bulk email support
+- **Daily Stock Overrides** — Per-day stock and availability overrides for products
+- **Delivery Scheduling** — Configurable delivery date/time slot selection at checkout
+- **URL Shortener** — Custom short URLs with click tracking and analytics
+- **In-Memory Cache** — Reduces database load with request deduplication
+- **GCash OCR** — Client-side Tesseract.js receipt scanning and PDF invoice matching
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework**: Next.js 15 (App Router) with React 19
 - **Styling**: Tailwind CSS v4
@@ -29,24 +27,30 @@ Official website for the ARSA dorm system featuring a complete e-commerce shop f
 - **Authentication**: Better Auth with Google OAuth
 - **File Storage**: MinIO (S3-compatible object storage)
 - **Image Optimization**: Sharp (upload-time optimization to WebP)
-- **UI Components**: Radix UI + shadcn/ui
+- **OCR**: Tesseract.js (client-side browser OCR)
+- **UI Components**: 57 shadcn/ui components (Radix UI + Tailwind)
 - **Forms**: react-hook-form with Zod validation
 - **Notifications**: Sonner (toast notifications)
+- **Charts**: Recharts (analytics dashboards)
+- **Email**: Nodemailer (SMTP) or Resend
+- **Google APIs**: googleapis (Sheets sync)
+- **Excel Export**: XLSX / ExcelJS
 - **Deployment**: Docker + Docker Compose (standalone output mode)
+- **Package Manager**: pnpm
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js 20+
 - PostgreSQL database
 - MinIO server (or S3-compatible storage)
 - Google OAuth credentials
 
-## 🔧 Setup
+## Setup
 
 ### 1. Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. Environment Variables
@@ -60,6 +64,7 @@ DATABASE_URL="postgresql://user:password@localhost:5432/arsa_website"
 # Better Auth
 BETTER_AUTH_SECRET="generate-with-openssl-rand-base64-32"
 BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 # Google OAuth
 GOOGLE_CLIENT_ID="your-client-id"
@@ -71,6 +76,25 @@ MINIO_PORT="9000"
 MINIO_USE_SSL="false"
 MINIO_ACCESS_KEY="minioadmin"
 MINIO_SECRET_KEY="minioadmin"
+MINIO_BUCKET_PRODUCTS="products"
+MINIO_BUCKET_RECEIPTS="receipts"
+MINIO_BUCKET_EVENTS="events"
+
+# Google Sheets Sync (optional)
+GOOGLE_SHEETS_CREDENTIALS='{...service account JSON...}'
+
+# Email (SMTP or Resend — pick one)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+# RESEND_API_KEY="re_..."
+
+# Cron (for automated sync jobs)
+CRON_SECRET="your-random-secret"
+
+# Port
+PORT=3000
 ```
 
 ### 3. Database Setup
@@ -94,7 +118,7 @@ npx prisma studio
 docker run -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
 ```
 
-**Option B: Download from** https://min.io/download
+**Option B:** Download from https://min.io/download
 
 Then create buckets and set permissions:
 
@@ -102,12 +126,19 @@ Then create buckets and set permissions:
 node scripts/setup-buckets.js
 ```
 
-### 5. Mark Admin User
+### 5. Grant Admin Access
 
-After first login, mark your account as admin:
+After first login, set admin flags directly in the database via Prisma Studio (`npx prisma studio`) or SQL:
 
 ```sql
-UPDATE "User" SET "isAdmin" = true WHERE email = 'your-email@student.ateneo.edu';
+-- Full shop admin (products, packages, orders, events, banners)
+UPDATE "User" SET "isShopAdmin" = true WHERE email = 'your-email@ateneo.edu';
+
+-- Events-only admin (events management, no orders/products)
+UPDATE "User" SET "isEventsAdmin" = true WHERE email = 'your-email@ateneo.edu';
+
+-- URL redirects admin
+UPDATE "User" SET "isRedirectsAdmin" = true WHERE email = 'your-email@ateneo.edu';
 ```
 
 ### 6. Run Development Server
@@ -118,138 +149,169 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 arsa-website/
+├── docs/                          # Documentation (see docs/README.md)
 ├── prisma/
-│   └── schema.prisma          # Database schema
-├── public/                     # Static assets
-├── scripts/                    # Utility scripts
-│   ├── setup-buckets.js       # Configure MinIO buckets
-│   └── test-minio.js          # Test MinIO connection
+│   └── schema.prisma              # Database schema
+├── public/                        # Static assets
+├── scripts/                       # Utility scripts
+│   ├── setup-buckets.js           # Configure MinIO buckets
+│   ├── test-minio.js              # Test MinIO connection
+│   ├── export-redirects.ts        # Export URL redirects
+│   └── import-redirects.ts        # Import URL redirects
 ├── src/
-│   ├── app/                   # Next.js App Router
-│   │   ├── admin/            # Admin dashboard
-│   │   ├── shop/        # E-commerce shop
-│   │   ├── api/              # API routes
-│   │   └── ...               # Other pages
+│   ├── app/                       # Next.js App Router
+│   │   ├── admin/                 # Admin dashboard
+│   │   │   ├── banner/            # Banner management
+│   │   │   ├── email-logs/        # Email logs & bulk send
+│   │   │   ├── events/            # Event CRUD & analytics
+│   │   │   ├── orders/            # Order management & OCR
+│   │   │   ├── packages/          # Package bundle management
+│   │   │   ├── products/          # Product management
+│   │   │   └── settings/          # Admin settings (email, sheets)
+│   │   ├── shop/                  # E-commerce shop
+│   │   │   ├── cart/
+│   │   │   ├── checkout/
+│   │   │   ├── events/            # Custom event pages
+│   │   │   └── orders/
+│   │   ├── redirects/             # URL shortener dashboard
+│   │   ├── api/                   # API routes
+│   │   └── (public pages)/        # about, calendar, contact, merch, etc.
 │   ├── components/
-│   │   ├── main/             # Header, Footer, etc.
-│   │   ├── features/         # Gacha, events, etc.
-│   │   └── ui/               # shadcn/ui components
+│   │   ├── admin/                 # Admin nav, theme forcer
+│   │   ├── features/              # Gacha, events, carousel, packages, etc.
+│   │   ├── main/                  # Header, Footer, Banner, theme
+│   │   ├── shop/                  # Delivery schedule selector
+│   │   └── ui/                    # 57 shadcn/ui components
+│   ├── generated/prisma/          # Generated Prisma client
+│   ├── hooks/                     # Custom React hooks
 │   ├── lib/
-│   │   ├── auth.ts           # Better Auth config
-│   │   ├── auth-client.ts    # Client-side auth
-│   │   ├── minio.ts          # MinIO utilities
-│   │   └── prisma.ts         # Prisma client
-│   └── middleware.ts          # Redirect middleware
-├── CLAUDE.md                  # AI assistant instructions
-├── SHOP_SETUP.md              # Detailed shop setup guide
-└── README.md                  # This file
+│   │   ├── auth.ts                # Better Auth config
+│   │   ├── auth-client.ts         # Client-side auth
+│   │   ├── cache.ts               # In-memory cache
+│   │   ├── daily-stock.ts         # Daily stock override system
+│   │   ├── deliveryScheduling.ts  # Delivery date/time logic
+│   │   ├── email.ts               # Email sending (SMTP/Resend)
+│   │   ├── email-logs.ts          # Email audit logging
+│   │   ├── gcashReaders/          # GCash OCR parsers
+│   │   ├── googleSheets.ts        # Google Sheets API
+│   │   ├── middleware/            # Redirect middleware
+│   │   ├── minio.ts               # MinIO utilities
+│   │   ├── prisma.ts              # Prisma client singleton
+│   │   └── utils.ts               # General utilities
+│   └── middleware.ts              # Request middleware entry point
+├── CLAUDE.md                      # AI assistant instructions
+├── docker-compose.yaml
+├── dockerfile
+└── README.md
 ```
 
-## 🏪 Shop Features
+## Routes
 
-### Customer Features
+### Public Routes
 
-- **Product Browsing**: Browse products by category (All, Merch, Arsari-Sari, Other)
-- **Size Selection**: Choose sizes (XS-XXL) for applicable products
-- **Pre-Orders**: Order products even when out of stock (if pre-order enabled)
-- **Shopping Cart**: Add items with size-aware cart management
-- **Authentication**: Google OAuth login (student email required) with loading indicators
-- **Checkout**:
-  - Auto-populated name from Google account
-  - Optional first name, last name, and student ID fields
-  - GCash payment with QR code
-  - Receipt upload with preview
-  - Special instructions/notes
-- **Order Tracking**:
-  - View order history with sizes displayed
-  - Track order status (pending → paid → confirmed → completed)
-  - View detailed order information
+- `/` — Home
+- `/about` — About ARSA
+- `/calendar` — Event calendar
+- `/publications` — Publications & Bridges magazine
+- `/merch` — Merchandise showcase with gacha system
+- `/resources` — Resource links & venue booking
+- `/contact` — Contact info & grievance forms
 
-### Admin Features
+### Shop Routes (Authentication Required)
 
-- **Order Management**:
-  - View all orders with status filtering
-  - Update order status
-  - View payment receipts
-  - See customer information (name, email, student ID)
-  - View order items with sizes
-- **Product Management**:
-  - Add/edit/delete products
-  - Upload product images (auto-optimized to WebP)
-  - Configure available sizes per product
-  - Set pre-order mode
-  - Manage stock and availability
-  - Organize by categories
+- `/shop` — Shop with event tabs, filtering, and sorting
+- `/shop/cart` — Shopping cart
+- `/shop/checkout` — Checkout with GCash payment & OCR receipt upload
+- `/shop/orders` — Order history
+- `/shop/orders/[orderId]` — Order details
 
-## 🔐 Authentication
+### Admin Routes (isShopAdmin or isEventsAdmin Required)
 
-- Uses Better Auth with Google OAuth
-- Auto-populates user name from Google account
-- Restricts access to @student.ateneo.edu emails (configurable)
-- Session-based authentication
-- Protected admin routes (shop admin and redirects admin)
+- `/admin` — Admin dashboard
+- `/admin/orders` — Order management, OCR reprocessing, invoice matching
+- `/admin/products` — Product CRUD with event assignment
+- `/admin/packages` — Package bundle management
+- `/admin/events` — Event management, themes, checkout config, analytics
+- `/admin/banner` — Banner/announcement management
+- `/admin/email-logs` — Email audit logs & bulk email sender
+- `/admin/settings` — Email config, Google Sheets sync settings
 
-## ⚡ Performance & Optimization
+### Redirect Dashboard (isRedirectsAdmin Required)
 
-### Image Optimization Strategy
+- `/redirects` — URL redirect management with click analytics
 
-This application is optimized for **weak servers** with minimal CPU/memory resources:
+## Admin Roles
 
-- **Upload-Time Optimization**: Product images are optimized once when uploaded by admins
-  - Automatically resized to max 1200x1200px (maintains aspect ratio)
-  - Converted to WebP format (~70% smaller than JPEG)
-  - Quality set to 85% (excellent quality, smaller file size)
-- **No Runtime Processing**: Images served directly from MinIO storage
-- **Next.js Image Optimization Disabled**: Reduces server load significantly
-- **Browser-Native Lazy Loading**: Uses standard `<img loading="lazy">` tags
+| Role                 | Access                                                             |
+| -------------------- | ------------------------------------------------------------------ |
+| `isShopAdmin`        | Full access: products, packages, orders, events, banners, settings |
+| `isEventsAdmin`      | Events only (cannot manage products/packages/orders)               |
+| `isRedirectsAdmin`   | URL redirect system only                                           |
+| Event-specific admin | Assigned events only (via `EventAdmin` model)                      |
 
-### Server Resource Usage
-
-- **Low Memory Footprint**: No image processing during page requests
-- **Low CPU Usage**: Only processes images during admin uploads (infrequent)
-- **Fast Page Loads**: Pre-optimized images load quickly
-- **Bandwidth Efficient**: WebP format reduces bandwidth by ~70%
-
-### SSL/TLS Support
-
-- **CA Certificates**: Bundled in Docker image for secure HTTPS connections
-- **MinIO Integration**: Secure connections to object storage
-- **OAuth Security**: Secure Google authentication flow
-
-## 📦 Available Scripts
+## Available Scripts
 
 ```bash
-npm run dev          # Start development server (Turbopack)
-npm run build        # Build for production (Turbopack)
+# Development
+npm run dev          # Start dev server (Turbopack)
+npm run build        # Build for production
 npm start            # Start production server
 npm run lint         # Run ESLint
 
+# Database
 npx prisma generate  # Generate Prisma client
-npx prisma studio    # Open Prisma Studio
 npx prisma db push   # Sync schema with database
+npx prisma studio    # Open Prisma Studio
 
+# MinIO
 node scripts/test-minio.js      # Test MinIO connection
 node scripts/setup-buckets.js   # Setup MinIO buckets
 ```
 
-## 🚢 Deployment
+## Shop Events System
 
-The app is configured for Docker deployment with standalone output mode for optimal performance:
+Events appear as tabs in the shop during their active date range. Each event supports:
 
-### Docker Features
+- Custom themes (colors, animations: confetti/hearts/snow/sparkles/petals)
+- Multiple hero images in a carousel
+- Event-specific pricing per product/package
+- Event-exclusive products (hidden outside the event tab)
+- Product categories within events (e.g., "Solo Flowers", "Bouquets")
+- Product codes that generate purchase codes on order (e.g., `LLY_01-28-26-15:33_1`)
+- Custom checkout fields (text, textarea, select, checkbox, date)
+- Custom terms, confirmation messages, and header text
+- Click & purchase analytics with conversion rate charts
+- Event-specific admin access control
 
-- **Multi-stage Build**: Optimized build process with separate stages
-- **Standalone Output**: Minimal production bundle (~150MB vs ~500MB)
-- **Alpine Linux**: Lightweight base image with security updates
-- **CA Certificates**: Bundled for SSL/TLS support
-- **Non-root User**: Runs as `nextjs` user for security
-- **Sharp Integration**: Native image processing with Alpine-compatible binaries
+## Package System
 
-### Quick Start
+Packages are product bundles with two content types:
+
+- **Fixed Items** — Products always included (with quantity support)
+- **Selection Pools** — "Pick N from these options" (e.g., "Choose 3 shirts from 8")
+
+## GCash Payment & OCR
+
+The checkout flow auto-extracts GCash reference numbers from uploaded receipts:
+
+- Client-side OCR using Tesseract.js (~8–12 seconds per receipt)
+- Duplicate reference detection across orders
+- Admin can upload GCash transaction history PDFs for automatic order matching
+- Batch reprocessing to extract references from existing orders
+
+## Performance & Optimization
+
+- **Upload-time image optimization** — Sharp resizes to max 1200×1200px, converts to WebP at 85% quality
+- **No runtime image processing** — Images served directly from MinIO
+- **In-memory cache** — Reduces database queries with request deduplication and automatic expiry
+- **Standalone Docker output** — ~150MB production image vs ~500MB
+- **Console removal** — Production builds strip `console.log` statements
+
+## Deployment
 
 ```bash
 # Build and start with Docker Compose
@@ -258,120 +320,68 @@ docker-compose up -d
 # View logs
 docker-compose logs -f
 
-# Stop services
+# Stop
 docker-compose down
 ```
 
-### Environment Variables
-
-Ensure your `.env` file includes production values:
+**Production environment variables to update:**
 
 ```env
-# Production URLs
 BETTER_AUTH_URL="https://yourdomain.com"
+NEXT_PUBLIC_APP_URL="https://yourdomain.com"
 MINIO_ENDPOINT="minio-s3.yourdomain.com"
 MINIO_USE_SSL="true"
 ```
 
-See [dockerfile](dockerfile) and [docker-compose.yaml](docker-compose.yaml) for configuration details.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/COOLIFY.md](docs/COOLIFY.md) for full deployment guides.
 
-## 📚 Documentation
+## Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Instructions for Claude Code AI
-- [SHOP_SETUP.md](SHOP_SETUP.md) - Detailed shop setup guide
-- [Next.js Docs](https://nextjs.org/docs)
-- [Prisma Docs](https://www.prisma.io/docs)
-- [Better Auth Docs](https://www.better-auth.com/docs)
-- [MinIO Docs](https://min.io/docs/minio/linux/index.html)
+| Document                                                           | Description                   |
+| ------------------------------------------------------------------ | ----------------------------- |
+| [docs/README.md](docs/README.md)                                   | Documentation index           |
+| [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)                 | Quick developer reference     |
+| [docs/SHOP_SETUP.md](docs/SHOP_SETUP.md)                           | Shop system setup guide       |
+| [docs/ESHOP_SYSTEM.md](docs/ESHOP_SYSTEM.md)                       | E-commerce architecture       |
+| [docs/GCASH.md](docs/GCASH.md)                                     | GCash OCR implementation      |
+| [docs/GOOGLE_SHEETS_SYNC.md](docs/GOOGLE_SHEETS_SYNC.md)           | Google Sheets integration     |
+| [docs/BULK_EMAIL_GUIDE.md](docs/BULK_EMAIL_GUIDE.md)               | Bulk email guide              |
+| [docs/DAILY_STOCK_INTEGRATION.md](docs/DAILY_STOCK_INTEGRATION.md) | Daily stock overrides         |
+| [docs/DELIVERY_CUTOFF_SETUP.md](docs/DELIVERY_CUTOFF_SETUP.md)     | Delivery scheduling setup     |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)                           | Deployment guide              |
+| [docs/DOCKER.md](docs/DOCKER.md)                                   | Docker setup                  |
+| [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)           | Custom event page development |
 
-## 📝 Routes
-
-### Public Routes
-
-- `/` - Home
-- `/about` - About ARSA
-- `/calendar` - Event calendar
-- `/publications` - Publications
-- `/merch` - Merchandise showcase
-- `/resources` - Resource links
-- `/contact` - Contact info
-
-### Shop Routes (Authentication Required)
-
-- `/shop` - Shop homepage
-- `/shop/cart` - Shopping cart
-- `/shop/checkout` - Checkout with receipt upload
-- `/shop/orders` - Order history
-- `/shop/orders/[id]` - Order details
-
-### Admin Routes (Admin Only)
-
-- `/admin` - Admin dashboard
-- `/admin/orders` - Order management
-- `/admin/products` - Product management
-
-### Redirect Dashboard
-
-- `/redirects` - URL redirect management (protected)
-
-## 🐛 Troubleshooting
-
-### Common Issues
+## Troubleshooting
 
 **Images not loading in production:**
 
-- Ensure MinIO is accessible from production server
+- Ensure MinIO is accessible and `MINIO_ENDPOINT` / `MINIO_USE_SSL` are set correctly
 - Check SSL certificates are properly configured
-- Verify `MINIO_ENDPOINT` and `MINIO_USE_SSL` environment variables
-- Images are served as `<img>` tags (not Next.js Image component) for maximum compatibility
 
 **OAuth not working:**
 
-- Verify `BETTER_AUTH_URL` matches your production domain
+- Verify `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` match your production domain
 - Check Google OAuth redirect URIs include your production URL
-- Ensure email domain restrictions are properly configured
 
 **Database connection issues:**
 
 - Verify `DATABASE_URL` format and credentials
-- Check PostgreSQL is accessible from Docker container
 - Run `npx prisma db push` after schema changes
+- Run `npx prisma generate` after schema changes and restart the dev server
 
-**Performance issues:**
+**Google Sheets not syncing:**
 
-- Images are pre-optimized at upload time (WebP, 1200px max)
-- Next.js image optimization is disabled to save server resources
-- Use CDN for static assets if needed
+- Verify `GOOGLE_SHEETS_CREDENTIALS` service account JSON is valid
+- Ensure the service account has Editor access to the spreadsheet
+- Configure the spreadsheet ID in Admin → Settings
 
-See [SHOP_SETUP.md](SHOP_SETUP.md#troubleshooting) for more detailed solutions.
+**Email not sending:**
 
-## 🏗️ Architecture Decisions
+- Check SMTP credentials or `RESEND_API_KEY` in environment variables
+- Configure sender email in Admin → Settings → Email Configuration
 
-### Why Regular `<img>` Tags Instead of Next.js Image?
-
-We use native `<img>` tags throughout the application for several reasons:
-
-1. **Server Resource Efficiency**: Next.js Image component runs an optimization server that processes images on-demand, consuming significant CPU and memory
-2. **Pre-Optimization**: Images are optimized once at upload time using Sharp (resized, converted to WebP)
-3. **Weak Server Friendly**: Perfect for low-resource environments (shared hosting, small VPS)
-4. **SSL Compatibility**: Avoids SSL certificate validation issues in Docker containers
-5. **Simplicity**: Direct serving from MinIO without intermediate processing
-
-### Database Schema Design
-
-- **Custom Prisma Output**: Generated client in `src/generated/prisma/` for better organization
-- **Size-Aware Cart**: Cart items include `size` field for products with size variants
-- **Composite Indexes**: Used instead of unique constraints due to nullable size fields
-- **User Information**: Stores `firstName`, `lastName`, `studentId` for order fulfillment
-- **Pre-Order Support**: `isPreOrder` flag enables selling out-of-stock items
-
-### Middleware Architecture
-
-- **Chainable Middleware**: Request flows through redirect middleware first, then Next.js routing
-- **Database Lookup**: Checks all paths against redirect codes for SEO-friendly URLs
-- **Click Tracking**: Records analytics data for each redirect hit
-
-## 📄 License
+## License
 
 Copyright © 2025 ARSA
 
