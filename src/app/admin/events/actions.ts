@@ -730,6 +730,89 @@ export async function getEventAnalytics(
 	}
 }
 
+// Get sales data grouped by item and day for Excel export
+export async function getEventSalesByDay(eventId: string) {
+	try {
+		const authResult = await verifyEventsAdminAccess();
+		if (!authResult.authorized) {
+			return { success: false, message: authResult.message };
+		}
+
+		const orders = await prisma.order.findMany({
+			where: {
+				eventId,
+				status: { not: "cancelled" },
+			},
+			select: {
+				createdAt: true,
+				orderItems: {
+					select: {
+						quantity: true,
+						price: true,
+						size: true,
+						product: { select: { name: true } },
+						package: { select: { name: true } },
+					},
+				},
+			},
+			orderBy: { createdAt: "asc" },
+		});
+
+		// Pivot: itemKey -> date -> { qty, revenue }
+		const itemsByDate: Record<string, Record<string, { qty: number; revenue: number }>> = {};
+		const allDates = new Set<string>();
+		const itemMeta: Record<string, { name: string; size: string }> = {};
+
+		for (const order of orders) {
+			const dateKey = order.createdAt.toISOString().slice(0, 10);
+			allDates.add(dateKey);
+
+			for (const item of order.orderItems) {
+				const itemName = item.product?.name ?? item.package?.name ?? "Unknown";
+				const size = item.size ?? "-";
+				const itemKey = `${itemName}|||${size}`;
+
+				if (!itemsByDate[itemKey]) {
+					itemsByDate[itemKey] = {};
+					itemMeta[itemKey] = { name: itemName, size };
+				}
+				if (!itemsByDate[itemKey][dateKey]) {
+					itemsByDate[itemKey][dateKey] = { qty: 0, revenue: 0 };
+				}
+				itemsByDate[itemKey][dateKey].qty += item.quantity;
+				itemsByDate[itemKey][dateKey].revenue += item.price * item.quantity;
+			}
+		}
+
+		const sortedDates = Array.from(allDates).sort();
+
+		const rows = Object.entries(itemsByDate).map(([key, dateData]) => {
+			const meta = itemMeta[key];
+			const dayQty: Record<string, number> = {};
+			const dayRevenue: Record<string, number> = {};
+			let totalQty = 0;
+			let totalRevenue = 0;
+
+			for (const date of sortedDates) {
+				const d = dateData[date] ?? { qty: 0, revenue: 0 };
+				dayQty[date] = d.qty;
+				dayRevenue[date] = d.revenue;
+				totalQty += d.qty;
+				totalRevenue += d.revenue;
+			}
+
+			return { name: meta.name, size: meta.size, dayQty, dayRevenue, totalQty, totalRevenue };
+		});
+
+		rows.sort((a, b) => a.name.localeCompare(b.name) || a.size.localeCompare(b.size));
+
+		return { success: true as const, data: { dates: sortedDates, rows } };
+	} catch (error) {
+		console.error("Get sales by day error:", error);
+		return { success: false, message: "Failed to fetch sales data" };
+	}
+}
+
 // ============================================
 // Event Admin Management
 // ============================================

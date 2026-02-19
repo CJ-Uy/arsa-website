@@ -34,6 +34,7 @@ import {
 	addEventAdmin,
 	removeEventAdmin,
 	getEventAnalytics,
+	getEventSalesByDay,
 	updateEventProductDailyStock,
 	type EventFormData,
 	type CheckoutField,
@@ -80,6 +81,7 @@ import {
 	ShoppingCart,
 	DollarSign,
 	Percent,
+	FileDown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -515,6 +517,7 @@ export function EventsManagement({
 		};
 	} | null>(null);
 	const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+	const [downloadingReport, setDownloadingReport] = useState(false);
 
 	// Daily stock dialog state
 	const [dailyStockDialogOpen, setDailyStockDialogOpen] = useState(false);
@@ -601,6 +604,117 @@ export function EventsManagement({
 			toast.error("Failed to load analytics");
 		} finally {
 			setLoadingAnalytics(false);
+		}
+	};
+
+	const handleDownloadSalesReport = async () => {
+		if (!editingEvent) return;
+		setDownloadingReport(true);
+		try {
+			const result = await getEventSalesByDay(editingEvent.id);
+			if (!result.success || !("data" in result) || !result.data) {
+				toast.error("Failed to fetch sales data");
+				return;
+			}
+
+			const { dates, rows } = result.data;
+
+			const ExcelJS = (await import("exceljs")).default;
+			const workbook = new ExcelJS.Workbook();
+			workbook.creator = "ARSA Shop";
+			workbook.created = new Date();
+
+			const sheet = workbook.addWorksheet("Sales by Day");
+
+			// Build column definitions
+			const columns: Partial<ExcelJS.Column>[] = [
+				{ header: "Item Name", key: "name", width: 32 },
+				{ header: "Size", key: "size", width: 10 },
+			];
+			for (const date of dates) {
+				const label = new Date(date + "T00:00:00Z").toLocaleDateString("en-US", {
+					timeZone: "Asia/Manila",
+					month: "short",
+					day: "numeric",
+					year: "numeric",
+				});
+				columns.push({ header: label, key: `qty_${date}`, width: 14 });
+			}
+			columns.push(
+				{ header: "Total Count", key: "totalQty", width: 14 },
+				{ header: "Total Revenue", key: "totalRevenue", width: 16 },
+			);
+
+			sheet.columns = columns;
+
+			// Style header row
+			const headerRow = sheet.getRow(1);
+			headerRow.font = { bold: true };
+			headerRow.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: "FFE0E0E0" },
+			};
+			headerRow.alignment = { horizontal: "center" };
+
+			// Add data rows
+			for (const row of rows) {
+				const rowData: Record<string, string | number> = {
+					name: row.name,
+					size: row.size,
+					totalQty: row.totalQty,
+					totalRevenue: row.totalRevenue,
+				};
+				for (const date of dates) {
+					rowData[`qty_${date}`] = row.dayQty[date] ?? 0;
+				}
+				const excelRow = sheet.addRow(rowData);
+				// Center date quantity cells
+				for (let i = 3; i <= 2 + dates.length; i++) {
+					excelRow.getCell(i).alignment = { horizontal: "center" };
+				}
+			}
+
+			// Add totals row
+			const totalsData: Record<string, string | number> = {
+				name: "TOTAL",
+				size: "",
+				totalQty: rows.reduce((s, r) => s + r.totalQty, 0),
+				totalRevenue: rows.reduce((s, r) => s + r.totalRevenue, 0),
+			};
+			for (const date of dates) {
+				totalsData[`qty_${date}`] = rows.reduce((s, r) => s + (r.dayQty[date] ?? 0), 0);
+			}
+			const totalsRow = sheet.addRow(totalsData);
+			totalsRow.font = { bold: true };
+			totalsRow.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: "FFCCE5FF" },
+			};
+
+			// Format total revenue column as currency
+			const revenueColIdx = columns.length;
+			sheet.getColumn(revenueColIdx).numFmt = "₱#,##0.00";
+
+			// Download the file
+			const buffer = await workbook.xlsx.writeBuffer();
+			const blob = new Blob([buffer], {
+				type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			});
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			const today = new Date().toISOString().slice(0, 10);
+			link.href = url;
+			link.download = `ARSA_${editingEvent.slug}_sales_by_day_${today}.xlsx`;
+			link.click();
+			URL.revokeObjectURL(url);
+			toast.success("Sales report downloaded!");
+		} catch (err) {
+			console.error(err);
+			toast.error("Failed to generate report");
+		} finally {
+			setDownloadingReport(false);
 		}
 	};
 
@@ -3885,9 +3999,9 @@ export function EventsManagement({
 							{editingEvent && (
 								<TabsContent value="analytics" className="space-y-4 pt-4">
 									{/* Time Range Selector */}
-									<div className="flex items-center justify-between">
+									<div className="flex flex-wrap items-center justify-between gap-2">
 										<h3 className="text-lg font-semibold">Event Analytics</h3>
-										<div className="flex gap-2">
+										<div className="flex flex-wrap gap-2">
 											{(["24h", "7d", "30d", "all"] as const).map((range) => (
 												<Button
 													key={range}
@@ -3908,6 +4022,20 @@ export function EventsManagement({
 																: "All Time"}
 												</Button>
 											))}
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onClick={handleDownloadSalesReport}
+												disabled={downloadingReport}
+											>
+												{downloadingReport ? (
+													<Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+												) : (
+													<FileDown className="mr-1.5 h-4 w-4" />
+												)}
+												Sales Report
+											</Button>
 										</div>
 									</div>
 
