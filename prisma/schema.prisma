@@ -22,7 +22,8 @@ model Redirects {
   clicks       Int      @default(0)
   createdAt    DateTime @default(now())
 
-  clickLogs RedirectClick[]
+  clickLogs    RedirectClick[]
+  redirectTags RedirectTagAssignment[]
 }
 
 model RedirectClick {
@@ -36,6 +37,27 @@ model RedirectClick {
 
   @@index([redirectId])
   @@index([clickedAt])
+}
+
+model RedirectTag {
+  id    String @id @default(uuid())
+  name  String @unique
+  color String @default("#6b7280")
+
+  assignments RedirectTagAssignment[]
+}
+
+model RedirectTagAssignment {
+  id         String @id @default(uuid())
+  redirectId String
+  tagId      String
+
+  redirect Redirects   @relation(fields: [redirectId], references: [id], onDelete: Cascade)
+  tag      RedirectTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([redirectId, tagId])
+  @@index([redirectId])
+  @@index([tagId])
 }
 
 // Better Auth Models

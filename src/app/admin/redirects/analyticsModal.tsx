@@ -22,6 +22,7 @@ type Redirect = {
 	newURL: string;
 	redirectCode: string;
 	clicks: number;
+	tags: string[];
 	createdAt: Date;
 };
 
@@ -35,6 +36,7 @@ const timeRangeOptions: { value: TimeRange; label: string }[] = [
 	{ value: "24h", label: "Last 24 Hours" },
 	{ value: "7d", label: "Last 7 Days" },
 	{ value: "30d", label: "Last 30 Days" },
+	{ value: "lifetime", label: "All Time" },
 ];
 
 export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalProps) {
@@ -73,6 +75,14 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 			const date = new Date(dateStr + ":00:00Z");
 			return date.toLocaleTimeString("en-US", { hour: "numeric", hour12: true });
 		}
+		// Handle monthly format (YYYY-MM)
+		if (dateStr.length === 7) {
+			const [year, month] = dateStr.split("-");
+			return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", {
+				month: "short",
+				year: "2-digit",
+			});
+		}
 		// Handle daily format (YYYY-MM-DD)
 		const date = new Date(dateStr);
 		return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -86,6 +96,13 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 				day: "numeric",
 				hour: "numeric",
 				hour12: true,
+			});
+		}
+		if (dateStr.length === 7) {
+			const [year, month] = dateStr.split("-");
+			return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", {
+				month: "long",
+				year: "numeric",
 			});
 		}
 		const date = new Date(dateStr);
@@ -104,11 +121,28 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 				return "7 days";
 			case "30d":
 				return "30 days";
+			case "lifetime":
+				return "all time";
 		}
 	};
 
 	const getAvgLabel = () => {
-		return timeRange === "24h" ? "Avg/Hour" : "Avg/Day";
+		if (timeRange === "24h") return "Avg/Hour";
+		if (timeRange === "lifetime") {
+			// Determine from clickData key format
+			const firstKey = analytics?.clickData[0]?.date;
+			if (firstKey?.includes("T")) return "Avg/Hour";
+			if (firstKey?.length === 7) return "Avg/Month";
+			// Check if it looks like weekly (daily keys but spread > 60 days)
+			if (analytics && analytics.clickData.length > 0) {
+				const firstDate = new Date(analytics.clickData[0].date);
+				const lastDate = new Date(analytics.clickData[analytics.clickData.length - 1].date);
+				const daySpan = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24);
+				if (daySpan > 60) return "Avg/Week";
+			}
+			return "Avg/Day";
+		}
+		return "Avg/Day";
 	};
 
 	return (
@@ -158,7 +192,7 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 							</div>
 
 							{/* Time Range Selector */}
-							<div className="flex gap-2">
+							<div className="flex flex-wrap gap-2">
 								{timeRangeOptions.map((option) => (
 									<Button
 										key={option.value}
@@ -178,7 +212,9 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 										<TrendingUp className="text-muted-foreground h-3.5 w-3.5" />
 										<p className="text-muted-foreground text-xs">Total ({getTimeRangeLabel()})</p>
 									</div>
-									<p className="mt-1.5 text-xl font-bold">{analytics.totalClicks}</p>
+									<p className="mt-1.5 text-xl font-bold">
+										{analytics.totalClicks.toLocaleString()}
+									</p>
 								</div>
 								<div className="rounded-lg border p-3">
 									<div className="flex items-center gap-1.5">
@@ -243,6 +279,12 @@ export function AnalyticsModal({ redirect, open, onOpenChange }: AnalyticsModalP
 										</LineChart>
 									</ResponsiveContainer>
 								</div>
+								{timeRange === "lifetime" && (
+									<p className="text-muted-foreground mt-2 text-xs">
+										Note: Click logs older than 30 days are periodically cleaned up. Chart detail
+										may be incomplete for older periods, but the total count is accurate.
+									</p>
+								)}
 							</div>
 						</div>
 					) : null}

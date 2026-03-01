@@ -1,14 +1,13 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { Unauthorized } from "./unauthorized";
 import { Suspense } from "react";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminNav, AdminPageTitle } from "@/components/admin/admin-nav";
 import { AdminThemeForcer } from "@/components/admin/admin-theme-forcer";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth.api.getSession({
@@ -26,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			isShopAdmin: true,
 			isEventsAdmin: true,
 			isTicketsAdmin: true,
+			isRedirectsAdmin: true,
 			isSuperAdmin: true,
 			eventAdmins: {
 				select: { eventId: true },
@@ -36,17 +36,112 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	const isShopAdmin = user?.isShopAdmin ?? false;
 	const isEventsAdmin = user?.isEventsAdmin ?? false;
 	const isTicketsAdmin = user?.isTicketsAdmin ?? false;
+	const isRedirectsAdmin = user?.isRedirectsAdmin ?? false;
 	const isSuperAdmin = user?.isSuperAdmin ?? false;
 	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
 
 	// Must have at least one admin permission to access
-	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isSuperAdmin) {
+	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isRedirectsAdmin && !isSuperAdmin) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
+	const navItems = [
+		// Shop group
+		...(isShopAdmin
+			? [
+					{
+						href: "/admin/orders",
+						label: "Orders",
+						iconKey: "orders" as const,
+						group: "Shop",
+					},
+					{
+						href: "/admin/products",
+						label: "Products",
+						iconKey: "products" as const,
+						group: "Shop",
+					},
+					{
+						href: "/admin/packages",
+						label: "Packages",
+						iconKey: "packages" as const,
+						group: "Shop",
+					},
+				]
+			: []),
+		...(canAccessEvents
+			? [
+					{
+						href: "/admin/events",
+						label: "Events",
+						iconKey: "events" as const,
+						group: "Shop",
+					},
+				]
+			: []),
+		// Tools group
+		...(isTicketsAdmin
+			? [
+					{
+						href: "/admin/tickets",
+						label: "Tickets",
+						iconKey: "tickets" as const,
+						group: "Tools",
+					},
+				]
+			: []),
+		...(isRedirectsAdmin
+			? [
+					{
+						href: "/admin/redirects",
+						label: "Redirects",
+						iconKey: "redirects" as const,
+						group: "Tools",
+					},
+				]
+			: []),
+		...(isShopAdmin
+			? [
+					{
+						href: "/admin/banner",
+						label: "Banner",
+						iconKey: "banner" as const,
+						group: "Tools",
+					},
+				]
+			: []),
+		// System group
+		...(isShopAdmin
+			? [
+					{
+						href: "/admin/email-logs",
+						label: "Email Logs",
+						iconKey: "email" as const,
+						group: "System",
+					},
+					{
+						href: "/admin/settings",
+						label: "Settings",
+						iconKey: "settings" as const,
+						group: "System",
+					},
+				]
+			: []),
+		...(isSuperAdmin
+			? [
+					{
+						href: "/admin/super",
+						label: "Super Admin",
+						iconKey: "super" as const,
+						group: "System",
+					},
+				]
+			: []),
+	];
+
 	return (
-		<div className="min-h-screen">
+		<SidebarProvider>
 			{/* Force light mode on admin pages */}
 			<AdminThemeForcer />
 
@@ -55,66 +150,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 				<NavigationProgress />
 			</Suspense>
 
-			{/* Shop Header */}
-			<header className="border-b">
-				<div className="container mx-auto flex items-center justify-between px-4 py-4">
-					<Link
-						href="/shop"
-						className="flex items-center gap-3 transition-opacity hover:opacity-80"
-					>
-						<img src="/images/logo.png" alt="ARSA Logo" className="h-12 w-12 object-contain" />
-						<h1 className="text-xl font-bold">ARSA Shop</h1>
-					</Link>
-					<Link href="/shop">
-						<Button variant="ghost" size="sm">
-							<ArrowLeft className="mr-2 h-4 w-4" />
-							Back to Shop
-						</Button>
-					</Link>
-				</div>
-			</header>
+			<AdminNav
+				items={navItems}
+				user={{
+					name: session.user.name ?? null,
+					email: session.user.email ?? null,
+					image: session.user.image ?? null,
+				}}
+			/>
 
-			{/* Admin Dashboard Content */}
-			<div className="container mx-auto px-4 py-10">
-				<div className="mb-8">
-					<h1 className="mb-2 text-4xl font-bold">
-						{isShopAdmin ? "Admin Dashboard" : "Events Dashboard"}
-					</h1>
-					<p className="text-muted-foreground">
-						{isShopAdmin ? "Manage orders, products, and events" : "Manage your assigned events"}
-					</p>
-				</div>
+			<SidebarInset>
+				{/* Header */}
+				<header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+					<SidebarTrigger className="-ml-1" />
+					<Separator orientation="vertical" className="mr-2 h-4" />
+					<AdminPageTitle items={navItems} />
+				</header>
 
-				<AdminNav
-					items={[
-						...(isShopAdmin
-							? [
-									{ href: "/admin/orders", label: "Orders", iconKey: "orders" as const },
-									{ href: "/admin/products", label: "Products", iconKey: "products" as const },
-									{ href: "/admin/packages", label: "Packages", iconKey: "packages" as const },
-								]
-							: []),
-						...(canAccessEvents
-							? [{ href: "/admin/events", label: "Events", iconKey: "events" as const }]
-							: []),
-						...(isTicketsAdmin
-							? [{ href: "/admin/tickets", label: "Tickets", iconKey: "tickets" as const }]
-							: []),
-						...(isShopAdmin
-							? [
-									{ href: "/admin/banner", label: "Banner", iconKey: "banner" as const },
-									{ href: "/admin/email-logs", label: "Email Logs", iconKey: "email" as const },
-									{ href: "/admin/settings", label: "Settings", iconKey: "settings" as const },
-								]
-							: []),
-						...(isSuperAdmin
-							? [{ href: "/admin/super", label: "Super Admin", iconKey: "super" as const }]
-							: []),
-					]}
-				/>
-
-				{children}
-			</div>
-		</div>
+				{/* Main Content */}
+				<div className="flex-1 overflow-x-hidden px-4 py-8 lg:px-8">{children}</div>
+			</SidebarInset>
+		</SidebarProvider>
 	);
 }

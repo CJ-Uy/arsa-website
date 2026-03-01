@@ -113,7 +113,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
 												)}
 												{userRoles.isRedirectsAdmin && (
 													<DropdownMenuItem asChild>
-														<Link href="/redirects" className="cursor-pointer">
+														<Link href="/admin/redirects" className="cursor-pointer">
 															<Link2 className="mr-2 h-4 w-4" />
 															Redirects Admin
 														</Link>

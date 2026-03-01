@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 
 /**
- * Forces light mode theme when on admin pages (/admin/* or /redirects/*)
+ * Forces light mode theme when on admin pages (/admin/*)
  * Only changes theme when navigating between admin and non-admin pages
  * Allows manual theme toggling while staying on the same page type
  */
@@ -15,7 +15,7 @@ export function AdminThemeForcer() {
 	const lastPageTypeRef = useRef<"admin" | "other" | null>(null);
 
 	useEffect(() => {
-		const isAdminPage = pathname.startsWith("/admin") || pathname.startsWith("/redirects");
+		const isAdminPage = pathname.startsWith("/admin");
 		const currentPageType = isAdminPage ? "admin" : "other";
 
 		// Only force theme change when switching between admin and non-admin areas
