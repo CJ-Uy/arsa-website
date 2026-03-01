@@ -43,6 +43,10 @@ export const auth = betterAuth({
 				type: "boolean",
 				defaultValue: false,
 			},
+			isTicketsAdmin: {
+				type: "boolean",
+				defaultValue: false,
+			},
 		},
 		async onCreate(user: { name?: string; email: string }) {
 			// Auto-populate firstName and lastName from Google name

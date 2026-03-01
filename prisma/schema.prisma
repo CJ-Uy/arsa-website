@@ -51,14 +51,17 @@ model User {
   isShopAdmin      Boolean  @default(false)
   isEventsAdmin    Boolean  @default(false)
   isRedirectsAdmin Boolean  @default(false)
+  isTicketsAdmin   Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  sessions    Session[]
-  accounts    Account[]
-  orders      Order[]
-  cartItems   CartItem[]
-  eventAdmins EventAdmin[] // Events this user is an admin for
+  sessions         Session[]
+  accounts         Account[]
+  orders           Order[]
+  cartItems        CartItem[]
+  eventAdmins      EventAdmin[] // Events this user is an admin for
+  scannedTickets   Ticket[]         @relation("TicketScanner")
+  ticketVerifiers  TicketVerifier[]
 }
 
 model Session {
@@ -447,4 +450,57 @@ model EmailLog {
   @@index([sentAt])
   @@index([status])
   @@index([emailType])
+}
+
+// ============================================
+// Ticket System
+// ============================================
+
+model TicketEvent {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean   @default(true)
+  date        DateTime? // The event date (optional metadata)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tickets   Ticket[]
+  verifiers TicketVerifier[]
+
+  @@index([isActive])
+}
+
+model Ticket {
+  id            String    @id @default(uuid())
+  shortCode     String    @unique // 8-char alphanumeric for QR/manual entry
+  email         String
+  ticketEventId String
+  scanned       Boolean   @default(false)
+  scannedAt     DateTime?
+  scannedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ticketEvent TicketEvent @relation(fields: [ticketEventId], references: [id], onDelete: Cascade)
+  scannedBy   User?       @relation("TicketScanner", fields: [scannedById], references: [id], onDelete: SetNull)
+
+  @@index([ticketEventId])
+  @@index([email])
+  @@index([shortCode])
+  @@index([scannedById])
+}
+
+model TicketVerifier {
+  id            String   @id @default(uuid())
+  userId        String
+  ticketEventId String
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketEvent TicketEvent @relation(fields: [ticketEventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ticketEventId])
+  @@index([userId])
+  @@index([ticketEventId])
 }

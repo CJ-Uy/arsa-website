@@ -20,7 +20,7 @@ type LayoutWrapperProps = {
 
 export function LayoutWrapper({ children, banner }: LayoutWrapperProps) {
 	const pathname = usePathname();
-	const isShopRoute = pathname?.startsWith("/shop") || pathname?.startsWith("/admin");
+	const isShopRoute = pathname?.startsWith("/shop") || pathname?.startsWith("/admin") || pathname?.startsWith("/ticket-verify");
 	const [isMinimized, setIsMinimized] = useState(false);
 
 	useEffect(() => {

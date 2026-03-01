@@ -18,6 +18,7 @@ This is the ARSA (Ateneo Resident Students Association) website - a Next.js 15 a
 - **Daily Stock Overrides**: Per-day stock and availability overrides for products
 - **Delivery Scheduling**: Configurable delivery date/time slot selection at checkout
 - **Custom Event Pages**: Events can load custom React components for unique experiences
+- **Ticket System**: Ticket generation and QR code verification for events, with Mail Merge integration and camera scanning
 - **URL Shortener**: Custom short URL system with click tracking and analytics
 - **Authentication**: Better Auth with Google OAuth integration
 - **Storage**: MinIO (S3-compatible) for product images and receipt storage
@@ -120,6 +121,12 @@ npx prisma studio        # Open Prisma Studio for database management
 
 - `DailyStockOverride` - Per-day stock and availability overrides for products (overrides default stock for a specific date)
 - `DeliverySchedule` - Configurable delivery date/time slots for checkout (managed via admin settings)
+
+**Ticket System**
+
+- `TicketEvent` - Lightweight event for ticket generation (separate from ShopEvent), with name, description, date, active status
+- `Ticket` - Individual ticket instances with unique 8-char `shortCode` for QR codes, email, scan status, scanner tracking
+- `TicketVerifier` - Junction table assigning users as ticket verifiers for specific events
 
 ### Middleware Architecture
 
@@ -262,6 +269,11 @@ All pages use the App Router structure in [src/app/](src/app/):
 
 - `/redirects` - URL redirect management with click analytics
 
+**Ticket System**:
+
+- `/admin/tickets` - Ticket event management, bulk generation, verifier assignment (isTicketsAdmin Required)
+- `/ticket-verify` - QR code scanner and manual verification page for assigned verifiers
+
 **Error Pages**:
 
 - `/not-found` - Custom 404 page
@@ -278,6 +290,8 @@ Located in [src/app/api/](src/app/api/):
 - `/api/cache-stats` - Cache statistics endpoint
 - `/api/shop/track` - Shop click tracking (event tab analytics)
 - `/api/shop/sync-orders` - Trigger Google Sheets order sync (cron-compatible, requires `CRON_SECRET`)
+- `/api/tickets/qr` - QR code PNG generation (HMAC-signed, no auth — for email `<img>` embeds)
+- `/api/tickets/suggest` - Ticket short code autocomplete for manual verification input
 
 ### Server Actions
 
@@ -307,6 +321,11 @@ Located throughout the app:
 - `src/app/admin/email-logs/actions.ts` - Email log fetching and bulk email sending
 - `src/app/admin/settings/actions.ts` - Email config, Google Sheets settings management
 - `src/app/redirects/actions.ts` - URL redirect CRUD with authentication
+
+**Ticket Actions:**
+
+- `src/app/admin/tickets/actions.ts` - Ticket event CRUD, bulk ticket generation, verifier management, mail merge export
+- `src/app/ticket-verify/actions.ts` - Ticket lookup and scan verification with access control
 
 ### Styling
 
@@ -570,6 +589,60 @@ Customers can select a delivery date and time slot during checkout.
 - Selected delivery date/time stored in `Order` model and included in exports
 - Daily stock overrides apply per delivery date, allowing per-day quantity limits
 
+## Ticket System
+
+The ticket system enables generating tickets for events, distributing them via email with QR codes, and verifying them at the door with a camera scanner or manual input.
+
+### Architecture
+
+- **TicketEvent**: Lightweight event model (separate from ShopEvent) — just name, description, date, active status
+- **Ticket**: Each ticket has a unique 8-char `shortCode` (unambiguous charset, no 0/O/1/I) used in QR codes and manual entry
+- **TicketVerifier**: Junction table assigning users as verifiers for specific events
+- **HMAC-signed QR URLs**: `/api/tickets/qr?id=CODE&sig=HMAC` serves QR PNG without authentication, safe for email `<img>` tags
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| [src/lib/ticketUtils.ts](src/lib/ticketUtils.ts) | Short code generator, HMAC sign/verify |
+| [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts) | Append-only Google Sheets sync for tickets |
+| [src/app/admin/tickets/actions.ts](src/app/admin/tickets/actions.ts) | Event CRUD, bulk generation, verifier management, mail merge export |
+| [src/app/admin/tickets/page.tsx](src/app/admin/tickets/page.tsx) | Admin page (Server Component) |
+| [src/app/admin/tickets/tickets-management.tsx](src/app/admin/tickets/tickets-management.tsx) | Admin UI (event list, ticket table, generate tab, verifiers) |
+| [src/app/api/tickets/qr/route.ts](src/app/api/tickets/qr/route.ts) | QR code PNG generation API |
+| [src/app/api/tickets/suggest/route.ts](src/app/api/tickets/suggest/route.ts) | Autocomplete API for manual verification |
+| [src/app/ticket-verify/actions.ts](src/app/ticket-verify/actions.ts) | Scan verification server action |
+| [src/app/ticket-verify/page.tsx](src/app/ticket-verify/page.tsx) | Verification page (Server Component) |
+| [src/app/ticket-verify/ticket-verify-client.tsx](src/app/ticket-verify/ticket-verify-client.tsx) | Camera QR scanner + manual input UI |
+
+### Workflow
+
+1. **Admin creates a TicketEvent** in `/admin/tickets`
+2. **Admin pastes email list** (email, count per line) to bulk-generate tickets
+3. **Admin assigns verifiers** (search users by name/email)
+4. **Admin exports CSV** with `email, shortCode, qrImageUrl, verifyUrl` for Mail Merge
+5. **Admin sends emails** via external Mail Merge tool using `<img src="{{qrImageUrl}}">` for the QR code
+6. **Verifier goes to `/ticket-verify`**, logs in, and scans QR codes or types short codes
+7. **System shows result**: green (valid + marked as scanned), yellow (already scanned — shows who/when), red (not found)
+
+### Google Sheets Sync
+
+Tickets can be synced to a Google Sheet via the Settings tab in `/admin/tickets`. Unlike order sync which clears and rewrites, ticket sync is **append-only**:
+
+- **First sync**: Writes headers + all tickets
+- **Subsequent syncs**: Reads existing short codes from column A, appends only new tickets
+- **Status updates**: Updates Status/Scanned At/Scanned By columns for existing rows without rewriting
+
+**Implementation**: [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts)
+
+**Settings stored in**: `ShopSettings` table with key `"ticketGoogleSheets"`
+
+**Columns**: Short Code, Email, Event, Status, Scanned At, Scanned By, Created At, QR Image URL, Verify URL
+
+### Environment Variable
+
+- `TICKET_HMAC_SECRET` — Used to sign QR image URLs. Generate with `openssl rand -hex 32`.
+
 ## Custom Event Pages
 
 Events can optionally load custom React components for unique shop experiences (e.g., special headers, animations, or additional UI).
@@ -653,6 +726,13 @@ The system uses **Better Auth** for user authentication:
 - Full access to URL redirect system
 - Can create, edit, delete redirects
 - Can view click analytics
+
+**isTicketsAdmin (Boolean on User model):**
+
+- Full access to ticket event management
+- Can create ticket events, bulk-generate tickets, assign verifiers
+- Can export tickets for Mail Merge with HMAC-signed QR image URLs
+- Can also verify tickets (in addition to assigned verifiers)
 
 **Event-Specific Admin (via EventAdmin model):**
 
@@ -795,6 +875,18 @@ The shop system is designed with an **event-first workflow** to streamline produ
 - Standalone Docker output mode
 - Efficient database queries with Prisma
 
+### Ticket Generation & Verification System
+
+- **Ticket Events**: Lightweight event model (separate from ShopEvent) for ticket management
+- **Bulk Generation**: Paste CSV/text (email, count) to generate tickets with unique 8-char short codes
+- **QR Code API**: HMAC-signed `/api/tickets/qr` endpoint serves QR code PNGs embeddable in emails without auth
+- **Mail Merge Export**: CSV export with email, shortCode, qrImageUrl, verifyUrl columns for external email tools
+- **Verification Page**: `/ticket-verify` with camera QR scanner and manual input with autocomplete
+- **Scan Tracking**: Records who scanned each ticket and when; duplicate scan detection with details
+- **Verifier Assignment**: Assign users as verifiers per event; verifiers can only scan tickets for their events
+- **Google Sheets Sync**: Append-only sync to Google Sheets — no flickering, updates scan statuses in place
+- **Role**: `isTicketsAdmin` on User model for full ticket management access
+
 ## Configuration Files
 
 - **package.json** - Dependencies and scripts
@@ -830,6 +922,9 @@ The shop system is designed with an **event-first workflow** to streamline produ
 16. **Daily stock**: Overrides apply per delivery date — test checkout with different dates to verify stock enforcement
 17. **Delivery scheduling**: Configure available slots in Admin → Settings before enabling delivery date selection
 18. **Package manager**: Project uses pnpm — use `pnpm install` instead of `npm install`
+19. **Ticket system**: Set `isTicketsAdmin = true` in the database, add `TICKET_HMAC_SECRET` to `.env` (generate with `openssl rand -hex 32`)
+20. **Ticket QR codes**: The QR image URL is HMAC-signed so it works in email `<img>` tags without authentication — use the "Export for Mail Merge" CSV
+21. **Ticket verification**: Verifiers must be logged in and assigned to the event; admins (`isTicketsAdmin`) can verify any event
 
 ## Useful Links
 

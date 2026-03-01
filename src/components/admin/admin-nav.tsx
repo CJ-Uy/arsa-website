@@ -13,6 +13,7 @@ import {
 	Megaphone,
 	Mail,
 	Settings,
+	Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const iconMap = {
 	banner: Megaphone,
 	email: Mail,
 	settings: Settings,
+	tickets: Ticket,
 } as const;
 
 type AdminNavProps = {

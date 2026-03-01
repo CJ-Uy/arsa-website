@@ -25,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 		select: {
 			isShopAdmin: true,
 			isEventsAdmin: true,
+			isTicketsAdmin: true,
 			eventAdmins: {
 				select: { eventId: true },
 			},
@@ -33,11 +34,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
 	const isShopAdmin = user?.isShopAdmin ?? false;
 	const isEventsAdmin = user?.isEventsAdmin ?? false;
+	const isTicketsAdmin = user?.isTicketsAdmin ?? false;
 	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
 
 	// Must have at least one admin permission to access
-	if (!isShopAdmin && !canAccessEvents) {
+	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
@@ -92,6 +94,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 							: []),
 						...(canAccessEvents
 							? [{ href: "/admin/events", label: "Events", iconKey: "events" as const }]
+							: []),
+						...(isTicketsAdmin
+							? [{ href: "/admin/tickets", label: "Tickets", iconKey: "tickets" as const }]
 							: []),
 						...(isShopAdmin
 							? [
