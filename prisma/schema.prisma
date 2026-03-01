@@ -52,6 +52,7 @@ model User {
   isEventsAdmin    Boolean  @default(false)
   isRedirectsAdmin Boolean  @default(false)
   isTicketsAdmin   Boolean  @default(false)
+  isSuperAdmin     Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

@@ -13,6 +13,7 @@ import {
 	Megaphone,
 	Mail,
 	Settings,
+	Shield,
 	Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const iconMap = {
 	banner: Megaphone,
 	email: Mail,
 	settings: Settings,
+	super: Shield,
 	tickets: Ticket,
 } as const;
 

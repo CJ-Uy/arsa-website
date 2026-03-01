@@ -267,6 +267,13 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 		}
 	}, []);
 
+	// Load tickets for initially selected event on mount
+	useEffect(() => {
+		if (selectedEventId) {
+			loadTickets(selectedEventId);
+		}
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 	const handleSelectEvent = (eventId: string) => {
 		setSelectedEventId(eventId);
 		setTickets([]);
@@ -314,9 +321,7 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 			if (selectedEventId) {
 				setEvents((prev) =>
 					prev.map((e) =>
-						e.id === selectedEventId
-							? { ...e, ticketCount: e.ticketCount - ids.length }
-							: e,
+						e.id === selectedEventId ? { ...e, ticketCount: e.ticketCount - ids.length } : e,
 					),
 				);
 			}
@@ -538,7 +543,10 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 										<div className="min-w-0 flex-1">
 											<div className="flex items-center gap-2">
 												<span className="truncate font-medium">{event.name}</span>
-												<Badge variant={event.isActive ? "default" : "secondary"} className="text-xs">
+												<Badge
+													variant={event.isActive ? "default" : "secondary"}
+													className="text-xs"
+												>
 													{event.isActive ? "Active" : "Inactive"}
 												</Badge>
 											</div>
@@ -641,19 +649,11 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 												</Button>
 												{selectedTicketIds.size > 0 && (
 													<>
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={handleResetScans}
-														>
+														<Button size="sm" variant="outline" onClick={handleResetScans}>
 															<RotateCcw className="mr-1.5 h-4 w-4" />
 															Reset Scan
 														</Button>
-														<Button
-															size="sm"
-															variant="destructive"
-															onClick={handleDeleteTickets}
-														>
+														<Button size="sm" variant="destructive" onClick={handleDeleteTickets}>
 															<Trash2 className="mr-1.5 h-4 w-4" />
 															Delete ({selectedTicketIds.size})
 														</Button>
@@ -678,7 +678,11 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 												variant="outline"
 												onClick={handleSync}
 												disabled={syncing || !sheetSettings.spreadsheetId}
-												title={!sheetSettings.spreadsheetId ? "Configure Google Sheets in Settings tab first" : "Sync tickets to Google Sheets (append-only)"}
+												title={
+													!sheetSettings.spreadsheetId
+														? "Configure Google Sheets in Settings tab first"
+														: "Sync tickets to Google Sheets (append-only)"
+												}
 											>
 												{syncing ? (
 													<Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -697,7 +701,9 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 															<TableHead className="w-10">
 																<input
 																	type="checkbox"
-																	checked={selectedTicketIds.size === tickets.length && tickets.length > 0}
+																	checked={
+																		selectedTicketIds.size === tickets.length && tickets.length > 0
+																	}
 																	onChange={toggleAllTickets}
 																	className="rounded"
 																/>
@@ -720,7 +726,7 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 																	/>
 																</TableCell>
 																<TableCell>
-																	<code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono">
+																	<code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
 																		{ticket.shortCode}
 																	</code>
 																</TableCell>
@@ -729,7 +735,10 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 																</TableCell>
 																<TableCell>
 																	{ticket.scanned ? (
-																		<Badge variant="secondary" className="bg-green-100 text-green-800">
+																		<Badge
+																			variant="secondary"
+																			className="bg-green-100 text-green-800"
+																		>
 																			<CheckCircle2 className="mr-1 h-3 w-3" />
 																			Scanned
 																		</Badge>
@@ -778,8 +787,8 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 												Email List
 											</Label>
 											<p className="text-muted-foreground mb-2 text-xs">
-												Enter one entry per line: <code>email, count</code>. Count defaults to 1
-												if omitted.
+												Enter one entry per line: <code>email, count</code>. Count defaults to 1 if
+												omitted.
 											</p>
 											<Textarea
 												id="csv-input"
@@ -820,10 +829,7 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 											{userResults.length > 0 && (
 												<div className="mt-1 max-h-40 overflow-auto rounded-md border">
 													{userResults
-														.filter(
-															(u) =>
-																!selectedEvent.verifiers.some((v) => v.userId === u.id),
-														)
+														.filter((u) => !selectedEvent.verifiers.some((v) => v.userId === u.id))
 														.map((user) => (
 															<div
 																key={user.id}
@@ -887,7 +893,8 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 										<div>
 											<h3 className="mb-1 text-sm font-medium">Google Sheets Sync</h3>
 											<p className="text-muted-foreground mb-3 text-xs">
-												Sync tickets to a Google Sheet. Uses append-only mode — new tickets are added without clearing existing data, so no flickering.
+												Sync tickets to a Google Sheet. Uses append-only mode — new tickets are
+												added without clearing existing data, so no flickering.
 											</p>
 										</div>
 										<div>
@@ -901,7 +908,8 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 												}
 											/>
 											<p className="text-muted-foreground mt-1 text-xs">
-												The ID from the spreadsheet URL: docs.google.com/spreadsheets/d/<strong>THIS_PART</strong>/edit
+												The ID from the spreadsheet URL: docs.google.com/spreadsheets/d/
+												<strong>THIS_PART</strong>/edit
 											</p>
 										</div>
 										<div>
@@ -915,11 +923,15 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 												}
 											/>
 											<p className="text-muted-foreground mt-1 text-xs">
-												The tab name at the bottom of the spreadsheet. Defaults to &quot;Tickets&quot;.
+												The tab name at the bottom of the spreadsheet. Defaults to
+												&quot;Tickets&quot;.
 											</p>
 										</div>
 										<div className="flex gap-2">
-											<Button onClick={handleSaveSettings} disabled={savingSettings || !sheetSettings.spreadsheetId.trim()}>
+											<Button
+												onClick={handleSaveSettings}
+												disabled={savingSettings || !sheetSettings.spreadsheetId.trim()}
+											>
 												{savingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 												Save Settings
 											</Button>
@@ -937,7 +949,9 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 											</Button>
 										</div>
 										<div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-											<strong>Setup:</strong> Make sure you share the spreadsheet with the Google service account email (Editor access). The service account credentials must be set in the <code>GOOGLE_SHEETS_CREDENTIALS</code> environment variable.
+											<strong>Setup:</strong> Make sure you share the spreadsheet with the Google
+											service account email (Editor access). The service account credentials must be
+											set in the <code>GOOGLE_SHEETS_CREDENTIALS</code> environment variable.
 										</div>
 									</div>
 								</TabsContent>
@@ -1024,7 +1038,8 @@ export function TicketsManagement({ initialEvents }: { initialEvents: TicketEven
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Ticket Event?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will permanently delete the event and all its tickets. This action cannot be undone.
+							This will permanently delete the event and all its tickets. This action cannot be
+							undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

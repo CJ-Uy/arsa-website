@@ -110,7 +110,10 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 	try {
 		const sheetSettings = await getTicketSheetSettings();
 		if (!sheetSettings) {
-			return { success: false, message: "Google Sheets not configured for tickets. Go to Settings tab to configure." };
+			return {
+				success: false,
+				message: "Google Sheets not configured for tickets. Go to Settings tab to configure.",
+			};
 		}
 
 		const auth = await getGoogleSheetsClient();
@@ -173,7 +176,14 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 		if (newTickets.length === 0 && sheetHasHeaders) {
 			// No new tickets, but we should still update scan statuses
 			// Read all existing rows and update status columns in place
-			return await updateExistingRows(sheets, spreadsheetId, sheetName, tickets, event.name, baseUrl);
+			return await updateExistingRows(
+				sheets,
+				spreadsheetId,
+				sheetName,
+				tickets,
+				event.name,
+				baseUrl,
+			);
 		}
 
 		const newRows = newTickets.map((ticket) => {
@@ -186,9 +196,7 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 				ticket.scannedAt
 					? new Date(ticket.scannedAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
 					: "",
-				ticket.scannedBy
-					? ticket.scannedBy.name || ticket.scannedBy.email
-					: "",
+				ticket.scannedBy ? ticket.scannedBy.name || ticket.scannedBy.email : "",
 				new Date(ticket.createdAt).toLocaleString("en-US", { timeZone: "Asia/Manila" }),
 				`${baseUrl}/api/tickets/qr?id=${ticket.shortCode}&sig=${sig}`,
 				`${baseUrl}/ticket-verify?t=${ticket.shortCode}`,
@@ -210,9 +218,7 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 			try {
 				// Get sheetId for the target sheet
 				const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-				const sheet = spreadsheet.data.sheets?.find(
-					(s) => s.properties?.title === sheetName,
-				);
+				const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === sheetName);
 				const sheetId = sheet?.properties?.sheetId ?? 0;
 
 				await sheets.spreadsheets.batchUpdate({
@@ -277,9 +283,10 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 
 		return {
 			success: true,
-			message: newRows.length > 0
-				? `Appended ${newRows.length} new ticket${newRows.length !== 1 ? "s" : ""} and updated statuses`
-				: "Updated ticket statuses",
+			message:
+				newRows.length > 0
+					? `Appended ${newRows.length} new ticket${newRows.length !== 1 ? "s" : ""} and updated statuses`
+					: "Updated ticket statuses",
 			appendedCount: newRows.length,
 		};
 	} catch (error) {
@@ -343,15 +350,15 @@ async function updateExistingRows(
 				const rowNum = i + 1; // 1-indexed
 				updates.push({
 					range: `${sheetName}!D${rowNum}:F${rowNum}`,
-					values: [[
-						newStatus,
-						ticket.scannedAt
-							? new Date(ticket.scannedAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
-							: "",
-						ticket.scannedBy
-							? ticket.scannedBy.name || ticket.scannedBy.email
-							: "",
-					]],
+					values: [
+						[
+							newStatus,
+							ticket.scannedAt
+								? new Date(ticket.scannedAt).toLocaleString("en-US", { timeZone: "Asia/Manila" })
+								: "",
+							ticket.scannedBy ? ticket.scannedBy.name || ticket.scannedBy.email : "",
+						],
+					],
 				});
 			}
 		}
@@ -368,13 +375,18 @@ async function updateExistingRows(
 
 		return {
 			success: true,
-			message: updates.length > 0
-				? `Updated ${updates.length} ticket status${updates.length !== 1 ? "es" : ""}`
-				: "All statuses up to date",
+			message:
+				updates.length > 0
+					? `Updated ${updates.length} ticket status${updates.length !== 1 ? "es" : ""}`
+					: "All statuses up to date",
 			appendedCount: 0,
 		};
 	} catch (error) {
 		console.error("Error updating existing rows:", error);
-		return { success: true, message: "Synced new tickets (status update failed)", appendedCount: 0 };
+		return {
+			success: true,
+			message: "Synced new tickets (status update failed)",
+			appendedCount: 0,
+		};
 	}
 }

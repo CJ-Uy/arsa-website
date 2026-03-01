@@ -4,7 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { generateShortCode, signTicketCode } from "@/lib/ticketUtils";
-import { getTicketSheetSettings, saveTicketSheetSettings, syncTicketsToGoogleSheets } from "@/lib/ticketSheetSync";
+import {
+	getTicketSheetSettings,
+	saveTicketSheetSettings,
+	syncTicketsToGoogleSheets,
+} from "@/lib/ticketSheetSync";
 import { revalidatePath } from "next/cache";
 
 // ── Auth Helper ────────────────────────────────────────────────
@@ -133,7 +137,10 @@ export async function bulkGenerateTickets(ticketEventId: string, csvText: string
 
 		const entries = parseEmailCsv(csvText);
 		if (entries.length === 0) {
-			return { success: false, message: "No valid entries found. Format: email, count (one per line)" };
+			return {
+				success: false,
+				message: "No valid entries found. Format: email, count (one per line)",
+			};
 		}
 
 		// Generate tickets with unique short codes
@@ -196,7 +203,10 @@ export async function deleteTickets(ticketIds: string[]) {
 		await prisma.ticket.deleteMany({ where: { id: { in: ticketIds } } });
 
 		revalidatePath("/admin/tickets");
-		return { success: true, message: `Deleted ${ticketIds.length} ticket${ticketIds.length !== 1 ? "s" : ""}` };
+		return {
+			success: true,
+			message: `Deleted ${ticketIds.length} ticket${ticketIds.length !== 1 ? "s" : ""}`,
+		};
 	} catch (error) {
 		console.error("Error deleting tickets:", error);
 		return { success: false, message: "Failed to delete tickets" };
@@ -240,7 +250,11 @@ export async function getSignedQrUrl(shortCode: string) {
 		return { success: true, url };
 	} catch (error) {
 		console.error("Error generating signed QR URL:", error);
-		return { success: false, message: "Failed to generate QR URL. Is TICKET_HMAC_SECRET set?", url: "" };
+		return {
+			success: false,
+			message: "Failed to generate QR URL. Is TICKET_HMAC_SECRET set?",
+			url: "",
+		};
 	}
 }
 
@@ -343,7 +357,8 @@ export async function removeTicketVerifier(ticketEventId: string, userId: string
 export async function getTicketGSheetSettings() {
 	try {
 		const authResult = await verifyTicketsAdmin();
-		if (!authResult.authorized) return { success: false, message: authResult.message, settings: null };
+		if (!authResult.authorized)
+			return { success: false, message: authResult.message, settings: null };
 
 		const settings = await getTicketSheetSettings();
 		return { success: true, settings };

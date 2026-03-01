@@ -25,14 +25,19 @@ async function getVerifierAccess(userId: string) {
 
 export async function scanTicket(shortCode: string) {
 	const session = await getVerifierSession();
-	if (!session) return { success: false, message: "Please log in to verify tickets", code: "UNAUTHORIZED" };
+	if (!session)
+		return { success: false, message: "Please log in to verify tickets", code: "UNAUTHORIZED" };
 
 	const user = await getVerifierAccess(session.user.id);
 	if (!user) return { success: false, message: "User not found", code: "UNAUTHORIZED" };
 
 	const hasAnyAccess = user.isTicketsAdmin || user.ticketVerifiers.length > 0;
 	if (!hasAnyAccess) {
-		return { success: false, message: "You are not assigned as a ticket verifier", code: "FORBIDDEN" };
+		return {
+			success: false,
+			message: "You are not assigned as a ticket verifier",
+			code: "FORBIDDEN",
+		};
 	}
 
 	// Find the ticket

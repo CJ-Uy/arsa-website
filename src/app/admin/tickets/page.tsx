@@ -58,7 +58,9 @@ export default async function AdminTicketsPage() {
 		<div>
 			<div className="mb-6">
 				<h2 className="text-2xl font-bold">Ticket Management</h2>
-				<p className="text-muted-foreground mt-1">Create events, generate tickets, and manage verifiers</p>
+				<p className="text-muted-foreground mt-1">
+					Create events, generate tickets, and manage verifiers
+				</p>
 			</div>
 			<TicketsManagement initialEvents={eventsWithStats} />
 		</div>

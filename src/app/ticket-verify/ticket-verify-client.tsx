@@ -41,7 +41,13 @@ type Props = {
 	isAdmin?: boolean;
 };
 
-export function TicketVerifyClient({ isLoggedIn, hasAccess, currentUser, assignedEvents, isAdmin }: Props) {
+export function TicketVerifyClient({
+	isLoggedIn,
+	hasAccess,
+	currentUser,
+	assignedEvents,
+	isAdmin,
+}: Props) {
 	const [mode, setMode] = useState<"camera" | "manual">("manual");
 	const [manualCode, setManualCode] = useState("");
 	const [suggestions, setSuggestions] = useState<
@@ -82,9 +88,7 @@ export function TicketVerifyClient({ isLoggedIn, hasAccess, currentUser, assigne
 								}
 							}}
 						>
-							{signingIn ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : null}
+							{signingIn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 							Sign In with Google
 						</Button>
 					</CardContent>
@@ -104,13 +108,12 @@ export function TicketVerifyClient({ isLoggedIn, hasAccess, currentUser, assigne
 						</div>
 						<CardTitle>Not Authorized</CardTitle>
 						<CardDescription>
-							You are not assigned as a ticket verifier for any events. Contact an admin to get access.
+							You are not assigned as a ticket verifier for any events. Contact an admin to get
+							access.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="text-center">
-						<p className="text-muted-foreground text-sm">
-							Signed in as {currentUser?.email}
-						</p>
+						<p className="text-muted-foreground text-sm">Signed in as {currentUser?.email}</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -219,211 +222,208 @@ export function TicketVerifyClient({ isLoggedIn, hasAccess, currentUser, assigne
 	};
 
 	return (
-		<div className="flex min-h-screen flex-col items-center bg-gray-50 p-4 pt-8">
-			{/* Header */}
-			<div className="mb-6 w-full max-w-md text-center">
-				<h1 className="text-2xl font-bold">Ticket Verification</h1>
-				<p className="text-muted-foreground text-sm">
-					{isAdmin ? "Admin access — all events" : `${assignedEvents.length} event${assignedEvents.length !== 1 ? "s" : ""} assigned`}
-				</p>
-			</div>
+		<>
+			<div className="flex min-h-screen flex-col items-center bg-gray-50 p-4 pt-8">
+				{/* Header */}
+				<div className="mb-6 w-full max-w-md text-center">
+					<h1 className="text-2xl font-bold">Ticket Verification</h1>
+					<p className="text-muted-foreground text-sm">
+						{isAdmin
+							? "Admin access — all events"
+							: `${assignedEvents.length} event${assignedEvents.length !== 1 ? "s" : ""} assigned`}
+					</p>
+				</div>
 
-			{/* Mode Toggle */}
-			<div className="mb-4 flex w-full max-w-md gap-2">
-				<Button
-					variant={mode === "camera" ? "default" : "outline"}
-					className="flex-1"
-					onClick={() => (mode === "camera" ? stopCamera() : startCamera())}
-				>
-					<Camera className="mr-2 h-4 w-4" />
-					Camera
-				</Button>
-				<Button
-					variant={mode === "manual" ? "default" : "outline"}
-					className="flex-1"
-					onClick={() => {
-						stopCamera();
-						setMode("manual");
-					}}
-				>
-					<KeyboardIcon className="mr-2 h-4 w-4" />
-					Manual
-				</Button>
-			</div>
+				{/* Mode Toggle */}
+				<div className="mb-4 flex w-full max-w-md gap-2">
+					<Button
+						variant={mode === "camera" ? "default" : "outline"}
+						className="flex-1"
+						onClick={() => (mode === "camera" ? stopCamera() : startCamera())}
+					>
+						<Camera className="mr-2 h-4 w-4" />
+						Camera
+					</Button>
+					<Button
+						variant={mode === "manual" ? "default" : "outline"}
+						className="flex-1"
+						onClick={() => {
+							stopCamera();
+							setMode("manual");
+						}}
+					>
+						<KeyboardIcon className="mr-2 h-4 w-4" />
+						Manual
+					</Button>
+				</div>
 
-			{/* Scanner Area */}
-			<Card className="mb-4 w-full max-w-md">
-				<CardContent className="p-4">
-					{mode === "camera" ? (
-						<CameraScanner onResult={handleQrResult} />
-					) : (
-						<div className="space-y-2">
-							<div className="relative">
-								<Input
-									placeholder="Enter ticket code (e.g., A3F8K2M1)"
-									value={manualCode}
-									onChange={(e) => handleManualInput(e.target.value.toUpperCase())}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") handleScan(manualCode);
-									}}
-									className="font-mono text-lg tracking-wider uppercase"
-									autoFocus
-								/>
-								{loadingSuggestions && (
-									<Loader2 className="text-muted-foreground absolute top-3 right-3 h-4 w-4 animate-spin" />
-								)}
-							</div>
-
-							{/* Suggestions */}
-							{suggestions.length > 0 && (
-								<div className="max-h-40 overflow-auto rounded-md border">
-									{suggestions.map((s) => (
-										<div
-											key={s.shortCode}
-											className="hover:bg-muted/50 flex cursor-pointer items-center justify-between px-3 py-2 text-sm"
-											onClick={() => {
-												setManualCode(s.shortCode);
-												setSuggestions([]);
-												handleScan(s.shortCode);
-											}}
-										>
-											<div className="flex items-center gap-2">
-												<code className="font-mono font-medium">{s.shortCode}</code>
-												<span className="text-muted-foreground text-xs">{s.email}</span>
-											</div>
-											{s.scanned ? (
-												<Badge variant="secondary" className="text-xs">Scanned</Badge>
-											) : (
-												<Badge variant="outline" className="text-xs">Unused</Badge>
-											)}
-										</div>
-									))}
+				{/* Scanner Area */}
+				<Card className="mb-4 w-full max-w-md">
+					<CardContent className="p-4">
+						{mode === "camera" ? (
+							<CameraScanner onResult={handleQrResult} />
+						) : (
+							<div className="space-y-2">
+								<div className="relative">
+									<Input
+										placeholder="Enter ticket code (e.g., A3F8K2M1)"
+										value={manualCode}
+										onChange={(e) => handleManualInput(e.target.value.toUpperCase())}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") handleScan(manualCode);
+										}}
+										className="font-mono text-lg tracking-wider uppercase"
+										autoFocus
+									/>
+									{loadingSuggestions && (
+										<Loader2 className="text-muted-foreground absolute top-3 right-3 h-4 w-4 animate-spin" />
+									)}
 								</div>
-							)}
 
-							<Button
-								className="w-full"
-								onClick={() => handleScan(manualCode)}
-								disabled={!manualCode.trim() || scanning}
-							>
-								{scanning ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<ScanLine className="mr-2 h-4 w-4" />
+								{/* Suggestions */}
+								{suggestions.length > 0 && (
+									<div className="max-h-40 overflow-auto rounded-md border">
+										{suggestions.map((s) => (
+											<div
+												key={s.shortCode}
+												className="hover:bg-muted/50 flex cursor-pointer items-center justify-between px-3 py-2 text-sm"
+												onClick={() => {
+													setManualCode(s.shortCode);
+													setSuggestions([]);
+													handleScan(s.shortCode);
+												}}
+											>
+												<div className="flex items-center gap-2">
+													<code className="font-mono font-medium">{s.shortCode}</code>
+													<span className="text-muted-foreground text-xs">{s.email}</span>
+												</div>
+												{s.scanned ? (
+													<Badge variant="secondary" className="text-xs">
+														Scanned
+													</Badge>
+												) : (
+													<Badge variant="outline" className="text-xs">
+														Unused
+													</Badge>
+												)}
+											</div>
+										))}
+									</div>
 								)}
-								Verify Ticket
-							</Button>
-						</div>
-					)}
 
-					{cameraError && (
-						<p className="mt-2 text-center text-sm text-red-500">{cameraError}</p>
-					)}
-				</CardContent>
-			</Card>
+								<Button
+									className="w-full"
+									onClick={() => handleScan(manualCode)}
+									disabled={!manualCode.trim() || scanning}
+								>
+									{scanning ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<ScanLine className="mr-2 h-4 w-4" />
+									)}
+									Verify Ticket
+								</Button>
+							</div>
+						)}
 
-			{/* Result Card */}
-			{scanning && !result && (
-				<Card className="w-full max-w-md border-blue-200 bg-blue-50">
-					<CardContent className="flex items-center justify-center p-6">
-						<Loader2 className="mr-3 h-6 w-6 animate-spin text-blue-500" />
-						<span className="font-medium text-blue-700">Verifying ticket...</span>
+						{cameraError && <p className="mt-2 text-center text-sm text-red-500">{cameraError}</p>}
 					</CardContent>
 				</Card>
+			</div>
+
+			{/* Fullscreen Loading Overlay */}
+			{scanning && !result && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500">
+					<div className="text-center text-white">
+						<Loader2 className="mx-auto mb-4 h-16 w-16 animate-spin" />
+						<p className="text-2xl font-bold">Verifying...</p>
+					</div>
+				</div>
 			)}
 
+			{/* Fullscreen Result Overlay */}
 			{result && (
-				<Card
-					className={`w-full max-w-md ${
+				<div
+					className={`fixed inset-0 z-50 flex flex-col ${
 						result.status === "success"
-							? "border-green-300 bg-green-50"
+							? "bg-green-500"
 							: result.status === "already_scanned"
-								? "border-yellow-300 bg-yellow-50"
-								: "border-red-300 bg-red-50"
+								? "bg-yellow-500"
+								: "bg-red-500"
 					}`}
 				>
-					<CardContent className="p-6">
-						<div className="mb-3 flex items-center gap-3">
-							{result.status === "success" ? (
-								<CheckCircle2 className="h-10 w-10 text-green-600" />
-							) : result.status === "already_scanned" ? (
-								<AlertTriangle className="h-10 w-10 text-yellow-600" />
-							) : (
-								<XCircle className="h-10 w-10 text-red-600" />
-							)}
-							<div>
-								<h3
-									className={`text-lg font-bold ${
-										result.status === "success"
-											? "text-green-800"
-											: result.status === "already_scanned"
-												? "text-yellow-800"
-												: "text-red-800"
-									}`}
-								>
-									{result.status === "success"
-										? "Valid Ticket"
-										: result.status === "already_scanned"
-											? "Already Scanned"
-											: result.status === "not_found"
-												? "Ticket Not Found"
-												: result.status === "forbidden"
-													? "Not Authorized"
-													: "Error"}
-								</h3>
-								<p
-									className={`text-sm ${
-										result.status === "success"
-											? "text-green-700"
-											: result.status === "already_scanned"
-												? "text-yellow-700"
-												: "text-red-700"
-									}`}
-								>
-									{result.message}
-								</p>
-							</div>
-						</div>
+					<div className="flex flex-1 flex-col items-center justify-center p-6 text-white">
+						{result.status === "success" ? (
+							<CheckCircle2 className="mb-6 h-32 w-32" />
+						) : result.status === "already_scanned" ? (
+							<AlertTriangle className="mb-6 h-32 w-32" />
+						) : (
+							<XCircle className="mb-6 h-32 w-32" />
+						)}
+
+						<h1 className="mb-2 text-center text-4xl font-bold">
+							{result.status === "success"
+								? "Valid Ticket"
+								: result.status === "already_scanned"
+									? "Already Scanned"
+									: result.status === "not_found"
+										? "Not Found"
+										: result.status === "forbidden"
+											? "Not Authorized"
+											: "Error"}
+						</h1>
+						<p className="mb-8 text-center text-lg opacity-90">{result.message}</p>
 
 						{result.ticket && (
-							<div className="mt-3 space-y-1 rounded-md bg-white/60 p-3 text-sm">
+							<div className="w-full max-w-sm space-y-2 rounded-xl bg-white/20 p-5 backdrop-blur-sm">
 								<div className="flex justify-between">
-									<span className="text-muted-foreground">Code:</span>
-									<code className="font-mono font-medium">{result.ticket.shortCode}</code>
+									<span className="opacity-80">Code</span>
+									<code className="font-mono font-bold">{result.ticket.shortCode}</code>
 								</div>
 								<div className="flex justify-between">
-									<span className="text-muted-foreground">Email:</span>
-									<span>{result.ticket.email}</span>
+									<span className="opacity-80">Email</span>
+									<span className="text-right font-medium">{result.ticket.email}</span>
 								</div>
 								<div className="flex justify-between">
-									<span className="text-muted-foreground">Event:</span>
-									<span>{result.ticket.eventName}</span>
+									<span className="opacity-80">Event</span>
+									<span className="font-medium">{result.ticket.eventName}</span>
 								</div>
 								{result.status === "already_scanned" && result.ticket.scannedAt && (
 									<>
+										<div className="my-1 border-t border-white/30" />
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">Scanned at:</span>
-											<span>{new Date(result.ticket.scannedAt).toLocaleString()}</span>
+											<span className="opacity-80">Scanned at</span>
+											<span className="font-medium">
+												{new Date(result.ticket.scannedAt).toLocaleString()}
+											</span>
 										</div>
 										{result.ticket.scannedBy && (
 											<div className="flex justify-between">
-												<span className="text-muted-foreground">Scanned by:</span>
-												<span>{result.ticket.scannedBy.name || result.ticket.scannedBy.email}</span>
+												<span className="opacity-80">Scanned by</span>
+												<span className="font-medium">
+													{result.ticket.scannedBy.name || result.ticket.scannedBy.email}
+												</span>
 											</div>
 										)}
 									</>
 								)}
 							</div>
 						)}
+					</div>
 
-						<Button className="mt-4 w-full" variant="outline" onClick={handleReset}>
-							<RotateCcw className="mr-2 h-4 w-4" />
-							Scan Next Ticket
+					<div className="p-6 pb-10">
+						<Button
+							className="h-14 w-full text-lg font-bold"
+							variant="secondary"
+							onClick={handleReset}
+						>
+							<RotateCcw className="mr-3 h-5 w-5" />
+							Scan Another Ticket
 						</Button>
-					</CardContent>
-				</Card>
+					</div>
+				</div>
 			)}
-		</div>
+		</>
 	);
 }
 
@@ -454,7 +454,9 @@ function CameraScanner({ onResult }: { onResult: (text: string) => void }) {
 					setLoading(false);
 				}
 			});
-		return () => { mounted = false; };
+		return () => {
+			mounted = false;
+		};
 	}, []);
 
 	const handleScan = useCallback(

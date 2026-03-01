@@ -602,18 +602,18 @@ The ticket system enables generating tickets for events, distributing them via e
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| [src/lib/ticketUtils.ts](src/lib/ticketUtils.ts) | Short code generator, HMAC sign/verify |
-| [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts) | Append-only Google Sheets sync for tickets |
-| [src/app/admin/tickets/actions.ts](src/app/admin/tickets/actions.ts) | Event CRUD, bulk generation, verifier management, mail merge export |
-| [src/app/admin/tickets/page.tsx](src/app/admin/tickets/page.tsx) | Admin page (Server Component) |
-| [src/app/admin/tickets/tickets-management.tsx](src/app/admin/tickets/tickets-management.tsx) | Admin UI (event list, ticket table, generate tab, verifiers) |
-| [src/app/api/tickets/qr/route.ts](src/app/api/tickets/qr/route.ts) | QR code PNG generation API |
-| [src/app/api/tickets/suggest/route.ts](src/app/api/tickets/suggest/route.ts) | Autocomplete API for manual verification |
-| [src/app/ticket-verify/actions.ts](src/app/ticket-verify/actions.ts) | Scan verification server action |
-| [src/app/ticket-verify/page.tsx](src/app/ticket-verify/page.tsx) | Verification page (Server Component) |
-| [src/app/ticket-verify/ticket-verify-client.tsx](src/app/ticket-verify/ticket-verify-client.tsx) | Camera QR scanner + manual input UI |
+| File                                                                                             | Purpose                                                             |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [src/lib/ticketUtils.ts](src/lib/ticketUtils.ts)                                                 | Short code generator, HMAC sign/verify                              |
+| [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts)                                         | Append-only Google Sheets sync for tickets                          |
+| [src/app/admin/tickets/actions.ts](src/app/admin/tickets/actions.ts)                             | Event CRUD, bulk generation, verifier management, mail merge export |
+| [src/app/admin/tickets/page.tsx](src/app/admin/tickets/page.tsx)                                 | Admin page (Server Component)                                       |
+| [src/app/admin/tickets/tickets-management.tsx](src/app/admin/tickets/tickets-management.tsx)     | Admin UI (event list, ticket table, generate tab, verifiers)        |
+| [src/app/api/tickets/qr/route.ts](src/app/api/tickets/qr/route.ts)                               | QR code PNG generation API                                          |
+| [src/app/api/tickets/suggest/route.ts](src/app/api/tickets/suggest/route.ts)                     | Autocomplete API for manual verification                            |
+| [src/app/ticket-verify/actions.ts](src/app/ticket-verify/actions.ts)                             | Scan verification server action                                     |
+| [src/app/ticket-verify/page.tsx](src/app/ticket-verify/page.tsx)                                 | Verification page (Server Component)                                |
+| [src/app/ticket-verify/ticket-verify-client.tsx](src/app/ticket-verify/ticket-verify-client.tsx) | Camera QR scanner + manual input UI                                 |
 
 ### Workflow
 

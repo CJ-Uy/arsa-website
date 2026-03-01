@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			isShopAdmin: true,
 			isEventsAdmin: true,
 			isTicketsAdmin: true,
+			isSuperAdmin: true,
 			eventAdmins: {
 				select: { eventId: true },
 			},
@@ -35,11 +36,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	const isShopAdmin = user?.isShopAdmin ?? false;
 	const isEventsAdmin = user?.isEventsAdmin ?? false;
 	const isTicketsAdmin = user?.isTicketsAdmin ?? false;
+	const isSuperAdmin = user?.isSuperAdmin ?? false;
 	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
 
 	// Must have at least one admin permission to access
-	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin) {
+	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isSuperAdmin) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
@@ -104,6 +106,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 									{ href: "/admin/email-logs", label: "Email Logs", iconKey: "email" as const },
 									{ href: "/admin/settings", label: "Settings", iconKey: "settings" as const },
 								]
+							: []),
+						...(isSuperAdmin
+							? [{ href: "/admin/super", label: "Super Admin", iconKey: "super" as const }]
 							: []),
 					]}
 				/>
