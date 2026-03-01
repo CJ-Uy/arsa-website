@@ -125,15 +125,11 @@ function NavFooter({ user }: { user: AdminNavProps["user"] }) {
 							>
 								<Avatar className="h-8 w-8 rounded-lg">
 									<AvatarImage src={user.image || ""} alt={user.name || "User"} />
-									<AvatarFallback className="rounded-lg">
-										{getInitials(user.name)}
-									</AvatarFallback>
+									<AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">{user.name}</span>
-									<span className="text-muted-foreground truncate text-xs">
-										{user.email}
-									</span>
+									<span className="text-muted-foreground truncate text-xs">{user.email}</span>
 								</div>
 								<ChevronsUpDown className="ml-auto size-4" />
 							</SidebarMenuButton>
@@ -198,11 +194,7 @@ export function AdminNav({ items, user }: AdminNavProps) {
 						<SidebarMenuButton size="lg" asChild tooltip="ARSA Admin">
 							<Link href="/shop">
 								<div className="flex aspect-square size-8 items-center justify-center overflow-hidden">
-									<img
-										src="/images/logo.png"
-										alt="ARSA Logo"
-										className="size-8 object-contain"
-									/>
+									<img src="/images/logo.png" alt="ARSA Logo" className="size-8 object-contain" />
 								</div>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">ARSA Admin</span>
