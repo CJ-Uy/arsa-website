@@ -20,10 +20,12 @@ type LayoutWrapperProps = {
 
 export function LayoutWrapper({ children, banner }: LayoutWrapperProps) {
 	const pathname = usePathname();
+	const isHomePage = pathname === "/";
 	const isShopRoute =
 		pathname?.startsWith("/shop") ||
 		pathname?.startsWith("/admin") ||
 		pathname?.startsWith("/ticket-verify");
+	const hideDefaultLayout = isShopRoute || isHomePage;
 	const [isMinimized, setIsMinimized] = useState(false);
 
 	useEffect(() => {
@@ -46,9 +48,9 @@ export function LayoutWrapper({ children, banner }: LayoutWrapperProps) {
 			{banner && banner.isActive && !isMinimized && (
 				<AnnouncementBanner {...banner} onMinimize={handleMinimize} />
 			)}
-			{!isShopRoute && <Header />}
+			{!hideDefaultLayout && <Header />}
 			<main className="flex-1">{children}</main>
-			{!isShopRoute && <Footer />}
+			{!hideDefaultLayout && <Footer />}
 			{banner && banner.isActive && isMinimized && (
 				<AnnouncementBanner {...banner} position="bottom" onMaximize={handleMaximize} />
 			)}

@@ -192,7 +192,7 @@ export function AdminNav({ items, user }: AdminNavProps) {
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild tooltip="ARSA Admin">
-							<Link href="/shop">
+							<Link href="/">
 								<div className="flex aspect-square size-8 items-center justify-center overflow-hidden">
 									<img src="/images/logo.png" alt="ARSA Logo" className="size-8 object-contain" />
 								</div>
