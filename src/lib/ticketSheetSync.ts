@@ -1,8 +1,8 @@
 /**
- * Google Sheets Integration for Ticket Sync (Append-Only)
+ * Google Sheets Integration for Ticket Sync
  *
  * Unlike the order sync which clears and rewrites the sheet,
- * this sync only appends new tickets that aren't already in the sheet.
+ * this sync appends new tickets and removes deleted ones incrementally.
  * This prevents flickering and preserves any manual edits in the sheet.
  */
 
@@ -138,7 +138,17 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 		});
 
 		if (tickets.length === 0) {
-			return { success: true, message: "No tickets to sync", appendedCount: 0 };
+			// No tickets in DB — clean up any remaining rows in the sheet
+			const emptySet = new Set<string>();
+			const removed = await removeDeletedRows(sheets, spreadsheetId, sheetName, emptySet);
+			return {
+				success: true,
+				message:
+					removed > 0
+						? `Removed ${removed} deleted ticket${removed !== 1 ? "s" : ""} from sheet`
+						: "No tickets to sync",
+				appendedCount: 0,
+			};
 		}
 
 		const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -173,10 +183,17 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 		// Build rows for tickets that aren't already in the sheet
 		const newTickets = tickets.filter((t) => !existingCodes.has(t.shortCode));
 
+		// Remove rows for tickets that were deleted from the database
+		const dbShortCodes = new Set(tickets.map((t) => t.shortCode));
+		let removedCount = 0;
+		if (sheetHasHeaders && existingCodes.size > 0) {
+			removedCount = await removeDeletedRows(sheets, spreadsheetId, sheetName, dbShortCodes);
+		}
+
 		if (newTickets.length === 0 && sheetHasHeaders) {
 			// No new tickets, but we should still update scan statuses
 			// Read all existing rows and update status columns in place
-			return await updateExistingRows(
+			const result = await updateExistingRows(
 				sheets,
 				spreadsheetId,
 				sheetName,
@@ -184,6 +201,10 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 				event.name,
 				baseUrl,
 			);
+			if (removedCount > 0) {
+				result.message += `, removed ${removedCount} deleted ticket${removedCount !== 1 ? "s" : ""}`;
+			}
+			return result;
 		}
 
 		const newRows = newTickets.map((ticket) => {
@@ -281,12 +302,18 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 		// Also update scan statuses for existing rows
 		await updateExistingRows(sheets, spreadsheetId, sheetName, tickets, event.name, baseUrl);
 
+		const parts: string[] = [];
+		if (newRows.length > 0) {
+			parts.push(`Appended ${newRows.length} new ticket${newRows.length !== 1 ? "s" : ""}`);
+		}
+		if (removedCount > 0) {
+			parts.push(`removed ${removedCount} deleted ticket${removedCount !== 1 ? "s" : ""}`);
+		}
+		parts.push("updated statuses");
+
 		return {
 			success: true,
-			message:
-				newRows.length > 0
-					? `Appended ${newRows.length} new ticket${newRows.length !== 1 ? "s" : ""} and updated statuses`
-					: "Updated ticket statuses",
+			message: parts.join(", ").replace(/^./, (c) => c.toUpperCase()),
 			appendedCount: newRows.length,
 		};
 	} catch (error) {
@@ -295,6 +322,72 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 			success: false,
 			message: error instanceof Error ? error.message : "Unknown error during sync",
 		};
+	}
+}
+
+/**
+ * Remove rows from the sheet whose short codes no longer exist in the database.
+ * Deletes rows from bottom to top to preserve row indices.
+ * Returns the number of rows removed.
+ */
+async function removeDeletedRows(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	sheets: any,
+	spreadsheetId: string,
+	sheetName: string,
+	dbShortCodes: Set<string>,
+): Promise<number> {
+	try {
+		// Read column A to find all short codes in the sheet
+		const existing = await sheets.spreadsheets.values.get({
+			spreadsheetId,
+			range: `${sheetName}!A:A`,
+		});
+
+		const rows = existing.data.values || [];
+		if (rows.length <= 1) return 0; // Only header or empty
+
+		// Find row indices (0-based) of codes not in the database (skip header at index 0)
+		const rowsToDelete: number[] = [];
+		for (let i = 1; i < rows.length; i++) {
+			const code = rows[i]?.[0];
+			if (code && !dbShortCodes.has(code)) {
+				rowsToDelete.push(i);
+			}
+		}
+
+		if (rowsToDelete.length === 0) return 0;
+
+		// Get the sheetId for the target sheet
+		const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+		const sheet = spreadsheet.data.sheets?.find(
+			(s: { properties?: { title?: string } }) => s.properties?.title === sheetName,
+		);
+		const sheetId = sheet?.properties?.sheetId ?? 0;
+
+		// Delete rows from bottom to top so indices stay valid
+		const requests = rowsToDelete
+			.sort((a, b) => b - a)
+			.map((rowIndex) => ({
+				deleteDimension: {
+					range: {
+						sheetId,
+						dimension: "ROWS",
+						startIndex: rowIndex,
+						endIndex: rowIndex + 1,
+					},
+				},
+			}));
+
+		await sheets.spreadsheets.batchUpdate({
+			spreadsheetId,
+			requestBody: { requests },
+		});
+
+		return rowsToDelete.length;
+	} catch (error) {
+		console.error("Error removing deleted ticket rows:", error);
+		return 0;
 	}
 }
 
