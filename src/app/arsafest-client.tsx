@@ -30,31 +30,31 @@ import Autoplay from "embla-carousel-autoplay";
 
 // ─── Image Paths ────────────────────────────────────────────────────
 const IMAGES = {
-	banner: "/images/arsafest/%5BAF26%5D%20Banner.png",
-	fbCover: "/images/arsafest/%5BARSAFEST%5D%20Performer%20FB%20Cover.png",
+	banner: "/images/arsafest/%5BAF26%5D%20Banner.webp",
+	fbCover: "/images/arsafest/%5BARSAFEST%5D%20Performer%20FB%20Cover.webp",
 	lineup: [
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/16.png", name: "Sugarcane" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/17.png", name: "Noah Alejandre" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/18.png", name: "Edsa Xxtra" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/19.png", name: "Dree Yap" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/20.png", name: "ARSA DT" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/21.png", name: "Arsaound" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/16.webp", name: "Sugarcane" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/17.webp", name: "Noah Alejandre" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/18.webp", name: "Edsa Xxtra" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/19.webp", name: "Dree Yap" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/20.webp", name: "ARSA DT" },
+		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/21.webp", name: "Arsaound" },
 	],
 	kulturarsa: [
-		"/images/arsafest/KulturARSA%20pubmat/1.png",
-		"/images/arsafest/KulturARSA%20pubmat/2.png",
-		"/images/arsafest/KulturARSA%20pubmat/3.png",
-		"/images/arsafest/KulturARSA%20pubmat/4.png",
+		"/images/arsafest/KulturARSA%20pubmat/1.webp",
+		"/images/arsafest/KulturARSA%20pubmat/2.webp",
+		"/images/arsafest/KulturARSA%20pubmat/3.webp",
+		"/images/arsafest/KulturARSA%20pubmat/4.webp",
 	],
 	events: {
-		bao: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BAO%20(030126).png",
-		bingo: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).png",
+		bao: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BAO%20(030126).webp",
+		bingo: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).webp",
 		fleaMarket:
-			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/FLEA%20MARKET%20(030326).png",
-		gimmicks: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/GIMMICKS%20(030326).png",
-		henna: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/HENNA%20(030426).png",
+			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/FLEA%20MARKET%20(030326).webp",
+		gimmicks: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/GIMMICKS%20(030326).webp",
+		henna: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/HENNA%20(030426).webp",
 		pancitCanton:
-			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/PANCIT%20CANTON%20(030126).png",
+			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/PANCIT%20CANTON%20(030126).webp",
 	},
 };
 
@@ -328,7 +328,6 @@ export default function ARSAFestClient() {
 						height={960}
 						className="h-auto w-full object-contain"
 						priority
-						unoptimized
 					/>
 					{/* Gradient fade at bottom of banner into content area */}
 					<div className="absolute right-0 bottom-0 left-0 h-24 bg-gradient-to-t from-[#0f1729] to-transparent sm:h-32" />
@@ -569,7 +568,7 @@ export default function ARSAFestClient() {
 							width={1200}
 							height={400}
 							className="w-full object-cover"
-							unoptimized
+							loading="lazy"
 						/>
 					</div>
 
@@ -598,7 +597,7 @@ export default function ARSAFestClient() {
 												alt={performer.name}
 												fill
 												className="object-cover transition-transform duration-500 group-hover:scale-105"
-												unoptimized
+												loading="lazy"
 											/>
 										</div>
 									</div>
@@ -662,7 +661,7 @@ export default function ARSAFestClient() {
 										alt={item.alt}
 										fill
 										className="object-cover transition-transform duration-500 group-hover:scale-105"
-										unoptimized
+										loading="lazy"
 									/>
 									<div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 									<div className="absolute inset-x-0 bottom-0 translate-y-full p-3 transition-transform duration-300 group-hover:translate-y-0 sm:p-4">
@@ -717,7 +716,7 @@ export default function ARSAFestClient() {
 												alt={`KulturARSA Booth Design Contest ${i + 1}`}
 												fill
 												className="object-cover"
-												unoptimized
+												loading="lazy"
 											/>
 										</div>
 									</div>
