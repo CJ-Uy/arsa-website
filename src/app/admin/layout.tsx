@@ -104,6 +104,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 		...(isShopAdmin
 			? [
 					{
+						href: "/admin/content",
+						label: "Content",
+						iconKey: "content" as const,
+						group: "Tools",
+					},
+					{
 						href: "/admin/banner",
 						label: "Banner",
 						iconKey: "banner" as const,

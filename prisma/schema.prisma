@@ -527,3 +527,23 @@ model TicketVerifier {
   @@index([userId])
   @@index([ticketEventId])
 }
+
+// ============================================
+// Content Management System
+// ============================================
+
+model ContentPage {
+  id          String    @id @default(uuid())
+  slug        String    @unique // URL slug (e.g., "about", "resources")
+  title       String
+  description String?   // Short description / meta description
+  content     Json      // Rich text content stored as TipTap JSON
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  updatedBy   String?   // User ID who last updated
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}

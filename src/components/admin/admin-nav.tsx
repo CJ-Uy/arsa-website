@@ -15,6 +15,7 @@ import {
 	Shield,
 	Ticket,
 	Link2,
+	FileText,
 	ChevronsUpDown,
 	LogOut,
 	Home,
@@ -57,6 +58,7 @@ const iconMap = {
 	super: Shield,
 	tickets: Ticket,
 	redirects: Link2,
+	content: FileText,
 } as const;
 
 export type NavItemDef = {
