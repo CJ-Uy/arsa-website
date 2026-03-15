@@ -5,11 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/main/theme-toggle";
-import { Menu, X, ShoppingCart, Package, LogOut, Settings } from "lucide-react";
+import { Menu, X, ShoppingCart, Package, LogOut, LogIn, Settings } from "lucide-react";
 import { CartCounter } from "@/components/features/cart-counter";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useSession, signIn, signOut } from "@/lib/auth-client";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -113,7 +113,7 @@ export function Header() {
 				<div className="flex items-center space-x-3">
 					<ThemeToggle />
 
-					{session?.user && (
+					{session?.user ? (
 						<>
 							{isShopRoute && <CartCounter />}
 
@@ -177,6 +177,18 @@ export function Header() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</>
+					) : (
+						<Button
+							variant="ghost"
+							className="relative h-9 w-9 rounded-full p-0"
+							onClick={() => signIn.social({ provider: "google" })}
+						>
+							<Avatar className="h-9 w-9">
+								<AvatarFallback className="bg-muted">
+									<LogIn className="h-4 w-4" />
+								</AvatarFallback>
+							</Avatar>
+						</Button>
 					)}
 
 					{/* Mobile menu button */}
