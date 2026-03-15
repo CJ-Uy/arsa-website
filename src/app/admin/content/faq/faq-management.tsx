@@ -470,11 +470,11 @@ function EditorToolbar({
 // --- FAQ Management ---
 
 type Props = {
-	initialFaq: FAQItem[];
+	initialFaqJson: string;
 };
 
-export function FAQContentManagement({ initialFaq }: Props) {
-	const [faq, setFaq] = useState<FAQItem[]>(initialFaq);
+export function FAQContentManagement({ initialFaqJson }: Props) {
+	const [faq, setFaq] = useState<FAQItem[]>(() => JSON.parse(initialFaqJson));
 	const [saving, setSaving] = useState(false);
 
 	const addItem = useCallback(() => {

@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import type {
 	HeroContent,
 	EventItem,
-	FAQItem,
 	QuickAction,
 	SocialLink,
 } from "./admin/landing/actions";
@@ -90,7 +89,6 @@ type HomePageClientProps = {
 	content: {
 		hero: HeroContent;
 		events: EventItem[];
-		faq: FAQItem[];
 		quickActions: QuickAction[];
 		socials: SocialLink[];
 	};
@@ -150,7 +148,7 @@ function PaginatedEventList({ events }: { events: EventItem[] }) {
 }
 
 export function HomePageClient({ content }: HomePageClientProps) {
-	const { hero, events, faq, quickActions, socials } = content;
+	const { hero, events, quickActions, socials } = content;
 	const featuredEvent = events.find((e) => e.featured);
 
 	return (

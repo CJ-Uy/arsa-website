@@ -6,9 +6,11 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useMemo } from "react";
 import type { FAQItem } from "@/app/admin/landing/actions";
 
-export function FAQPageClient({ faq }: { faq: FAQItem[] }) {
+export function FAQPageClient({ faqJson }: { faqJson: string }) {
+	const faq: FAQItem[] = useMemo(() => JSON.parse(faqJson), [faqJson]);
 	return (
 		<div className="bg-background min-h-screen">
 			{/* Hero Banner */}

@@ -6,5 +6,5 @@ export const dynamic = "force-dynamic";
 export default async function FAQPage() {
 	const content = await getAllHomepageContent();
 
-	return <FAQPageClient faq={content.faq} />;
+	return <FAQPageClient faqJson={JSON.stringify(content.faq)} />;
 }

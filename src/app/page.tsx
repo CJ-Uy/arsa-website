@@ -4,7 +4,7 @@ import { HomePageClient } from "./home-client";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-	const { hero, events, faq, quickActions, socials } = await getAllHomepageContent();
+	const { hero, events, quickActions, socials } = await getAllHomepageContent();
 
-	return <HomePageClient content={{ hero, events, faq, quickActions, socials }} />;
+	return <HomePageClient content={{ hero, events, quickActions, socials }} />;
 }

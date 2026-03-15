@@ -17,5 +17,5 @@ export default async function AdminFAQContentPage() {
 
 	const content = await getAllHomepageContent();
 
-	return <FAQContentManagement initialFaq={content.faq} />;
+	return <FAQContentManagement initialFaqJson={JSON.stringify(content.faq)} />;
 }

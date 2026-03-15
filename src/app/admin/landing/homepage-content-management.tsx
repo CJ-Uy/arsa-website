@@ -37,7 +37,8 @@ type HomepageContent = {
 	socials: SocialLink[];
 };
 
-export function HomepageContentManagement({ initialContent }: { initialContent: HomepageContent }) {
+export function HomepageContentManagement({ initialContentJson }: { initialContentJson: string }) {
+	const initialContent: HomepageContent = JSON.parse(initialContentJson);
 	const [hero, setHero] = useState<HeroContent>(initialContent.hero);
 	const [events, setEvents] = useState<EventItem[]>(initialContent.events);
 	const [faq, setFaq] = useState<FAQItem[]>(initialContent.faq);
