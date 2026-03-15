@@ -184,13 +184,12 @@ export async function saveSiteContent(key: string, data: unknown) {
 			update: { data: data as object },
 		});
 
+		// Only revalidate paths that actually consume homepage content
 		revalidatePath("/");
 		revalidatePath("/faq");
-		revalidatePath("/about");
-		revalidatePath("/contact");
-		revalidatePath("/publications");
 		revalidatePath("/admin/landing");
-		revalidatePath("/admin/content");
+		revalidatePath("/admin/content/home");
+		revalidatePath("/admin/content/faq");
 
 		return { success: true };
 	} catch (error) {

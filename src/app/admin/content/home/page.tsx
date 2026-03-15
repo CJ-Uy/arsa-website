@@ -19,14 +19,12 @@ export default async function AdminHomeContentPage() {
 
 	return (
 		<HomeContentManagement
-			initialContent={JSON.parse(
-				JSON.stringify({
-					hero: content.hero,
-					events: content.events,
-					quickActions: content.quickActions,
-					socials: content.socials,
-				}),
-			)}
+			initialContent={{
+				hero: content.hero,
+				events: content.events,
+				quickActions: content.quickActions,
+				socials: content.socials,
+			}}
 		/>
 	);
 }
