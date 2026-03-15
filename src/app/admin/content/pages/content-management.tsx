@@ -22,10 +22,10 @@ import {
 	updateContentPage,
 	deleteContentPage,
 	toggleContentPagePublished,
-} from "./actions";
+} from "@/app/admin/pages/actions";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Eye, EyeOff, ArrowLeft, ExternalLink } from "lucide-react";
-import { RichTextEditor } from "./rich-text-editor";
+import { RichTextEditor } from "@/app/admin/pages/rich-text-editor";
 
 type ContentPageData = {
 	id: string;
@@ -40,13 +40,13 @@ type ContentPageData = {
 	updatedBy: string | null;
 };
 
-type ContentManagementProps = {
+type PagesContentManagementProps = {
 	initialPages: ContentPageData[];
 };
 
 type EditorMode = "list" | "create" | "edit";
 
-export function ContentManagement({ initialPages }: ContentManagementProps) {
+export function PagesContentManagement({ initialPages }: PagesContentManagementProps) {
 	const [pages, setPages] = useState<ContentPageData[]>(initialPages);
 	const [mode, setMode] = useState<EditorMode>("list");
 	const [editingPage, setEditingPage] = useState<ContentPageData | null>(null);
@@ -233,11 +233,7 @@ export function ContentManagement({ initialPages }: ContentManagementProps) {
 								/>
 							</div>
 							<div className="flex items-center space-x-2">
-								<Switch
-									id="isPublished"
-									checked={isPublished}
-									onCheckedChange={setIsPublished}
-								/>
+								<Switch id="isPublished" checked={isPublished} onCheckedChange={setIsPublished} />
 								<Label htmlFor="isPublished">Published</Label>
 							</div>
 						</CardContent>
@@ -279,8 +275,8 @@ export function ContentManagement({ initialPages }: ContentManagementProps) {
 							<code className="rounded bg-blue-100 px-1 dark:bg-blue-900">/page/your-slug</code>
 						</p>
 						<p>
-							<strong>Note:</strong> Only published pages are visible to the public. Draft pages
-							can only be previewed by admins.
+							<strong>Note:</strong> Only published pages are visible to the public. Draft pages can
+							only be previewed by admins.
 						</p>
 					</div>
 				</CardContent>
@@ -323,9 +319,7 @@ export function ContentManagement({ initialPages }: ContentManagementProps) {
 										<Button
 											variant="outline"
 											size="icon"
-											onClick={() =>
-												handleTogglePublished(page.id, !page.isPublished)
-											}
+											onClick={() => handleTogglePublished(page.id, !page.isPublished)}
 											title={page.isPublished ? "Unpublish" : "Publish"}
 										>
 											{page.isPublished ? (
@@ -334,11 +328,7 @@ export function ContentManagement({ initialPages }: ContentManagementProps) {
 												<Eye className="h-4 w-4" />
 											)}
 										</Button>
-										<Button
-											variant="outline"
-											size="icon"
-											onClick={() => startEdit(page)}
-										>
+										<Button variant="outline" size="icon" onClick={() => startEdit(page)}>
 											<Edit className="h-4 w-4" />
 										</Button>
 										<Button

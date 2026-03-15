@@ -48,7 +48,8 @@ const IMAGES = {
 	],
 	events: {
 		bao: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BAO%20(030126).webp",
-		bingo: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).webp",
+		bingo:
+			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).webp",
 		fleaMarket:
 			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/FLEA%20MARKET%20(030326).webp",
 		gimmicks: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/GIMMICKS%20(030326).webp",

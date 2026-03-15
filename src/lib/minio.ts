@@ -26,6 +26,7 @@ export const BUCKETS = {
 	PRODUCTS: process.env.MINIO_BUCKET_PRODUCTS || "products",
 	RECEIPTS: process.env.MINIO_BUCKET_RECEIPTS || "receipts",
 	EVENTS: process.env.MINIO_BUCKET_EVENTS || "events",
+	CONTENT: process.env.MINIO_BUCKET_CONTENT || "content",
 };
 
 // Initialize buckets
@@ -41,7 +42,8 @@ export async function initializeBuckets() {
 				if (
 					bucketName === BUCKETS.PRODUCTS ||
 					bucketName === BUCKETS.RECEIPTS ||
-					bucketName === BUCKETS.EVENTS
+					bucketName === BUCKETS.EVENTS ||
+					bucketName === BUCKETS.CONTENT
 				) {
 					const policy = {
 						Version: "2012-10-17",

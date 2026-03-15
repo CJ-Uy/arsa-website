@@ -547,3 +547,14 @@ model ContentPage {
   @@index([slug])
   @@index([isPublished])
 }
+
+model SiteContent {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g., "homepage-hero", "homepage-events", "homepage-faq"
+  data      Json     // Structured content as JSON
+  updatedBy String?  // User ID who last updated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}

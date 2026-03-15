@@ -5,17 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/main/theme-toggle";
-import {
-	Menu,
-	X,
-	ShoppingCart,
-	User,
-	LogOut,
-	Settings,
-	Link2,
-	CalendarHeart,
-	Mail,
-} from "lucide-react";
+import { Menu, X, ShoppingCart, Package, LogOut, Settings } from "lucide-react";
+import { CartCounter } from "@/components/features/cart-counter";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "@/lib/auth-client";
@@ -31,12 +22,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navigation = [
 	{ name: "Home", href: "/" },
+	{ name: "FAQ", href: "/faq" },
 	{ name: "About", href: "/about" },
-	{ name: "Calendar", href: "/calendar" },
 	{ name: "Bridges", href: "/publications" },
-	{ name: "Merch", href: "/merch" },
 	{ name: "Shop", href: "/shop" },
-	{ name: "Resources", href: "/resources" },
 	{ name: "Contact Us", href: "/contact" },
 ];
 
@@ -85,8 +74,10 @@ export function Header() {
 			.slice(0, 2);
 	};
 
+	const isShopRoute = pathname?.startsWith("/shop");
+
 	return (
-		<header className="border-primary/20 bg-primary text-primary-foreground sticky top-0 z-50 w-full border-b">
+		<header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
 			<div className="flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8">
 				{/* Logo */}
 				<div className="flex items-center">
@@ -109,8 +100,8 @@ export function Header() {
 							key={item.name}
 							href={item.href}
 							className={cn(
-								"hover:text-primary-foreground/80 text-sm font-medium transition-colors",
-								pathname === item.href ? "text-primary-foreground" : "text-primary-foreground/70",
+								"hover:text-foreground/80 text-sm font-medium transition-colors",
+								pathname === item.href ? "text-foreground" : "text-foreground/70",
 							)}
 						>
 							{item.name}
@@ -124,15 +115,7 @@ export function Header() {
 
 					{session?.user && (
 						<>
-							<Link href="/shop/cart">
-								<Button
-									variant="ghost"
-									size="sm"
-									className="text-primary-foreground hover:bg-primary-foreground/10 hidden md:flex"
-								>
-									<ShoppingCart className="h-5 w-5" />
-								</Button>
-							</Link>
+							{isShopRoute && <CartCounter />}
 
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -142,7 +125,7 @@ export function Header() {
 												src={session.user.image || ""}
 												alt={session.user.name || "User"}
 											/>
-											<AvatarFallback className="bg-primary-foreground text-primary">
+											<AvatarFallback className="bg-muted">
 												{getInitials(session.user.name)}
 											</AvatarFallback>
 										</Avatar>
@@ -159,15 +142,15 @@ export function Header() {
 									</DropdownMenuLabel>
 									<DropdownMenuSeparator />
 									<DropdownMenuItem asChild>
-										<Link href="/shop/orders" className="cursor-pointer">
+										<Link href="/shop/cart" className="cursor-pointer">
 											<ShoppingCart className="mr-2 h-4 w-4" />
-											My Orders
+											My Cart
 										</Link>
 									</DropdownMenuItem>
 									<DropdownMenuItem asChild>
-										<Link href="/shop/cart" className="cursor-pointer md:hidden">
-											<ShoppingCart className="mr-2 h-4 w-4" />
-											Cart
+										<Link href="/shop/orders" className="cursor-pointer">
+											<Package className="mr-2 h-4 w-4" />
+											My Orders
 										</Link>
 									</DropdownMenuItem>
 									{(userRoles.isShopAdmin ||
@@ -175,38 +158,12 @@ export function Header() {
 										userRoles.isRedirectsAdmin) && (
 										<>
 											<DropdownMenuSeparator />
-											{userRoles.isShopAdmin && (
-												<>
-													<DropdownMenuItem asChild>
-														<Link href="/admin" className="cursor-pointer">
-															<Settings className="mr-2 h-4 w-4" />
-															Shop Admin
-														</Link>
-													</DropdownMenuItem>
-													<DropdownMenuItem asChild>
-														<Link href="/admin/email-logs" className="cursor-pointer">
-															<Mail className="mr-2 h-4 w-4" />
-															Email Logs
-														</Link>
-													</DropdownMenuItem>
-												</>
-											)}
-											{(userRoles.isEventsAdmin || userRoles.isShopAdmin) && (
-												<DropdownMenuItem asChild>
-													<Link href="/admin/events" className="cursor-pointer">
-														<CalendarHeart className="mr-2 h-4 w-4" />
-														Events Admin
-													</Link>
-												</DropdownMenuItem>
-											)}
-											{userRoles.isRedirectsAdmin && (
-												<DropdownMenuItem asChild>
-													<Link href="/admin/redirects" className="cursor-pointer">
-														<Link2 className="mr-2 h-4 w-4" />
-														Redirects Admin
-													</Link>
-												</DropdownMenuItem>
-											)}
+											<DropdownMenuItem asChild>
+												<Link href="/admin" className="cursor-pointer">
+													<Settings className="mr-2 h-4 w-4" />
+													Admin Dashboard
+												</Link>
+											</DropdownMenuItem>
 										</>
 									)}
 									<DropdownMenuSeparator />
@@ -226,7 +183,7 @@ export function Header() {
 					<Button
 						variant="ghost"
 						size="sm"
-						className="text-primary-foreground hover:bg-primary-foreground/10 md:hidden"
+						className="md:hidden"
 						onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 					>
 						{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -236,15 +193,15 @@ export function Header() {
 
 			{/* Mobile Navigation */}
 			{mobileMenuOpen && (
-				<div className="border-primary-foreground/20 bg-primary border-t md:hidden">
+				<div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 border-t backdrop-blur md:hidden">
 					<div className="w-full space-y-3 px-4 py-4 sm:px-6 lg:px-8">
 						{navigation.map((item) => (
 							<Link
 								key={item.name}
 								href={item.href}
 								className={cn(
-									"hover:text-primary-foreground/80 block py-2 text-sm font-medium transition-colors",
-									pathname === item.href ? "text-primary-foreground" : "text-primary-foreground/70",
+									"hover:text-foreground/80 block py-2 text-sm font-medium transition-colors",
+									pathname === item.href ? "text-foreground" : "text-foreground/70",
 								)}
 								onClick={() => setMobileMenuOpen(false)}
 							>

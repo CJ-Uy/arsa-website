@@ -47,6 +47,53 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	}
 
 	const navItems = [
+		// Content group
+		...(isShopAdmin
+			? [
+					{
+						href: "/admin/content/home",
+						label: "Home",
+						iconKey: "home" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/content/faq",
+						label: "FAQ",
+						iconKey: "faq" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/content/about",
+						label: "About",
+						iconKey: "about" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/content/bridges",
+						label: "Bridges",
+						iconKey: "bridges" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/content/contact",
+						label: "Contact Us",
+						iconKey: "contact" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/content/pages",
+						label: "Other Pages",
+						iconKey: "otherpages" as const,
+						group: "Content",
+					},
+					{
+						href: "/admin/banner",
+						label: "Banner",
+						iconKey: "banner" as const,
+						group: "Content",
+					},
+				]
+			: []),
 		// Shop group
 		...(isShopAdmin
 			? [
@@ -80,17 +127,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 					},
 				]
 			: []),
-		// Tools group
 		...(isTicketsAdmin
 			? [
 					{
 						href: "/admin/tickets",
 						label: "Tickets",
 						iconKey: "tickets" as const,
-						group: "Tools",
+						group: "Shop",
 					},
 				]
 			: []),
+		// Tools group
 		...(isRedirectsAdmin
 			? [
 					{
@@ -104,33 +151,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 		...(isShopAdmin
 			? [
 					{
-						href: "/admin/content",
-						label: "Content",
-						iconKey: "content" as const,
-						group: "Tools",
-					},
-					{
-						href: "/admin/banner",
-						label: "Banner",
-						iconKey: "banner" as const,
-						group: "Tools",
-					},
-				]
-			: []),
-		// System group
-		...(isShopAdmin
-			? [
-					{
 						href: "/admin/email-logs",
 						label: "Email Logs",
 						iconKey: "email" as const,
-						group: "System",
+						group: "Tools",
 					},
 					{
 						href: "/admin/settings",
 						label: "Settings",
 						iconKey: "settings" as const,
-						group: "System",
+						group: "Tools",
 					},
 				]
 			: []),

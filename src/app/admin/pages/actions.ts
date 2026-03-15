@@ -75,7 +75,7 @@ export async function createContentPage(data: {
 			},
 		});
 
-		revalidatePath("/admin/content");
+		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${slug}`);
 
 		return { success: true, message: "Page created successfully", page };
@@ -132,7 +132,7 @@ export async function updateContentPage(
 			},
 		});
 
-		revalidatePath("/admin/content");
+		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${existing.slug}`);
 		if (slug && slug !== existing.slug) {
 			revalidatePath(`/page/${slug}`);
@@ -149,7 +149,7 @@ export async function deleteContentPage(id: string) {
 	try {
 		const page = await prisma.contentPage.delete({ where: { id } });
 
-		revalidatePath("/admin/content");
+		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${page.slug}`);
 
 		return { success: true, message: "Page deleted successfully" };
@@ -169,7 +169,7 @@ export async function toggleContentPagePublished(id: string, isPublished: boolea
 			},
 		});
 
-		revalidatePath("/admin/content");
+		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${page.slug}`);
 
 		return { success: true, message: `Page ${isPublished ? "published" : "unpublished"}`, page };

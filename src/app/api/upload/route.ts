@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
-		const type = formData.get("type") as string; // "product", "receipt", "event", or "payment"
+		const type = formData.get("type") as string; // "product", "receipt", "event", "payment", or "content"
 
 		if (!file) {
 			return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -28,8 +28,9 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
 		}
 
-		// Validate file size (max 10MB)
-		if (file.size > 10 * 1024 * 1024) {
+		// Validate file size (max 10MB for receipts, no limit for content/event/product images)
+		const unlimitedTypes = ["content", "event", "product", "payment"];
+		if (!unlimitedTypes.includes(type || "") && file.size > 10 * 1024 * 1024) {
 			return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
 		}
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 		let buffer: Buffer = Buffer.from(arrayBuffer);
 
 		// Optimize images for product, event, and payment uploads (one-time optimization at upload)
-		if (type === "product" || type === "event" || type === "payment") {
+		if (type === "product" || type === "event" || type === "payment" || type === "content") {
 			try {
 				// Resize and optimize product images
 				// Max width: 1200px, maintain aspect ratio
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
 
 		if (type === "product") {
 			bucket = BUCKETS.PRODUCTS;
+			fileName = `${randomUUID()}.webp`;
+			contentType = "image/webp";
+		} else if (type === "content") {
+			bucket = BUCKETS.CONTENT;
 			fileName = `${randomUUID()}.webp`;
 			contentType = "image/webp";
 		} else if (type === "event" || type === "payment") {

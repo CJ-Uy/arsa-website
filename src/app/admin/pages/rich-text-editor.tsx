@@ -46,6 +46,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 	const initialized = useRef(false);
 
 	const editor = useEditor({
+		immediatelyRender: false,
 		extensions: [
 			StarterKit.configure({
 				heading: { levels: [1, 2, 3] },
@@ -71,7 +72,8 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 		},
 		editorProps: {
 			attributes: {
-				class: "prose prose-sm sm:prose dark:prose-invert max-w-none min-h-[300px] p-4 focus:outline-none",
+				class:
+					"prose prose-sm sm:prose dark:prose-invert max-w-none min-h-[300px] p-4 focus:outline-none",
 			},
 		},
 	});
@@ -137,16 +139,10 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 			{/* Toolbar */}
 			<div className="flex flex-wrap gap-0.5 border-b p-1">
 				{/* Undo/Redo */}
-				<ToolbarButton
-					onClick={() => editor.chain().focus().undo().run()}
-					title="Undo"
-				>
+				<ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
 					<Undo className="h-4 w-4" />
 				</ToolbarButton>
-				<ToolbarButton
-					onClick={() => editor.chain().focus().redo().run()}
-					title="Redo"
-				>
+				<ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Redo">
 					<Redo className="h-4 w-4" />
 				</ToolbarButton>
 
@@ -318,13 +314,7 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 				{/* Image */}
 				<Popover open={imagePopoverOpen} onOpenChange={setImagePopoverOpen}>
 					<PopoverTrigger asChild>
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8"
-							title="Add Image"
-						>
+						<Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Add Image">
 							<ImageIcon className="h-4 w-4" />
 						</Button>
 					</PopoverTrigger>
