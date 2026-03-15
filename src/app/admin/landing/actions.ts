@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 
 export type HeroContent = {
 	title: string;
@@ -184,12 +183,10 @@ export async function saveSiteContent(key: string, data: unknown) {
 			update: { data: data as object },
 		});
 
-		// Only revalidate paths that actually consume homepage content
-		revalidatePath("/");
-		revalidatePath("/faq");
-		revalidatePath("/admin/landing");
-		revalidatePath("/admin/content/home");
-		revalidatePath("/admin/content/faq");
+		// All consuming pages use force-dynamic, so they re-render on every
+		// request automatically.  Calling revalidatePath is unnecessary and
+		// triggers RSC payload regeneration that can fail when FAQ answers
+		// contain rich HTML (tables with CSS classes, links, bold text, etc.).
 
 		return { success: true };
 	} catch (error) {
