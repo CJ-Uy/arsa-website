@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { saveSiteContent, type FAQItem } from "@/app/admin/landing/actions";
+import { type FAQItem } from "@/app/admin/landing/actions";
 import { toast } from "sonner";
 import {
 	Bold,
@@ -503,7 +503,12 @@ export function FAQContentManagement({ initialFaqJson }: Props) {
 	const handleSave = async () => {
 		setSaving(true);
 		try {
-			const result = await saveSiteContent("homepage-faq", faq);
+			const res = await fetch("/api/admin/content", {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ key: "homepage-faq", data: faq }),
+			});
+			const result = await res.json();
 			if (result.success) {
 				toast.success("FAQ saved successfully");
 			} else {
