@@ -185,7 +185,12 @@ export async function saveSiteContent(key: string, data: unknown) {
 		});
 
 		revalidatePath("/");
+		revalidatePath("/faq");
+		revalidatePath("/about");
+		revalidatePath("/contact");
+		revalidatePath("/publications");
 		revalidatePath("/admin/landing");
+		revalidatePath("/admin/content");
 
 		return { success: true };
 	} catch (error) {
