@@ -134,7 +134,7 @@ export function FAQPageClient({ faq }: { faq: FAQItem[] }) {
 										{item.answer.startsWith("<") ? (
 											<div className="overflow-x-auto">
 												<div
-													className="prose prose-sm dark:prose-invert text-muted-foreground max-w-none leading-relaxed break-words [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-5 [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:dark:border-gray-600 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-100 [&_th]:p-2 [&_th]:font-bold [&_th]:dark:border-gray-600 [&_th]:dark:bg-gray-800 [&_ul]:list-disc [&_ul]:pl-5"
+													className="prose dark:prose-invert text-muted-foreground max-w-none leading-relaxed break-words [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1 [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:dark:border-gray-600 [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-100 [&_th]:p-2 [&_th]:font-bold [&_th]:dark:border-gray-600 [&_th]:dark:bg-gray-800 [&_ul]:list-disc [&_ul]:pl-5"
 													dangerouslySetInnerHTML={{ __html: item.answer }}
 												/>
 											</div>
