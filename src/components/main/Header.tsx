@@ -23,10 +23,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const navigation = [
 	{ name: "Home", href: "/" },
 	{ name: "FAQ", href: "/faq" },
-	{ name: "About", href: "/about" },
-	{ name: "Bridges", href: "/publications" },
+	// { name: "About", href: "/about" },
+	// { name: "Bridges", href: "/publications" },
 	{ name: "Shop", href: "/shop" },
-	{ name: "Contact Us", href: "/contact" },
+	// { name: "Contact Us", href: "/contact" },
 ];
 
 export function Header() {
