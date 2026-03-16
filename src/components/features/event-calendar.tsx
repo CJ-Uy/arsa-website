@@ -122,7 +122,8 @@ export function EventCalendar({ events }: EventCalendarProps) {
 	const positionedEvents = useMemo(() => {
 		return events.map((ev): PositionedEvent => {
 			const start = new Date(ev.date + "T00:00:00");
-			const end = ev.endDate ? new Date(ev.endDate + "T00:00:00") : start;
+			const end =
+				ev.endDate && ev.endDate.trim() !== "" ? new Date(ev.endDate + "T00:00:00") : start;
 			return { event: ev, startDate: start, endDate: end };
 		});
 	}, [events]);
@@ -237,6 +238,9 @@ function WeekRow({
 		return { assigned, laneCount: laneEnds.length };
 	}, [weekEvents, weekStart, weekEnd]);
 
+	// Calculate the height needed for the event lanes area
+	const eventAreaHeight = lanes.laneCount * 18;
+
 	return (
 		<div className="grid grid-cols-7">
 			{week.map((day, dayIdx) => {
@@ -249,7 +253,7 @@ function WeekRow({
 					<div
 						key={dayIdx}
 						className={cn(
-							"relative min-h-[4.5rem] border-r border-b p-1 text-xs md:min-h-[5rem]",
+							"relative border-r border-b p-1 text-xs",
 							!isCurrentMonth && "bg-muted/30 text-muted-foreground",
 						)}
 					>
@@ -276,33 +280,35 @@ function WeekRow({
 							</div>
 						)}
 
-						{/* Event banners for this day */}
-						<div className="mt-0.5 space-y-0.5">
+						{/* Event lanes area — reserves space for all lanes */}
+						<div
+							className="relative mt-0.5"
+							style={{ minHeight: `${Math.max(eventAreaHeight, 0)}px` }}
+						>
 							{lanes.assigned
-								.filter((a) => {
-									// Show banner start on this day (or first day of week if continues from prior week)
-									return a.colStart === dayIdx;
-								})
+								.filter((a) => a.colStart === dayIdx)
 								.map((a) => {
-									const spanPx = a.colSpan > 1;
+									const isMultiDay = a.colSpan > 1;
 									return (
 										<div
 											key={a.pe.event.id}
 											className={cn(
-												"truncate rounded-sm px-1 py-0.5 text-[10px] leading-tight font-medium",
+												"absolute right-0 left-0 z-10 truncate rounded-sm px-1 py-0.5 text-[10px] leading-tight font-medium",
 												getColor(a.pe.event.category),
-												spanPx && "absolute z-10",
 											)}
-											style={
-												spanPx
+											style={{
+												top: `${a.lane * 18}px`,
+												...(isMultiDay
 													? {
-															left: 0,
 															right: `calc(-${(a.colSpan - 1) * 100}% - ${a.colSpan - 1}px)`,
-															marginTop: `${a.lane * 18}px`,
 														}
-													: undefined
+													: {}),
+											}}
+											title={
+												a.pe.startDate.getTime() === a.pe.endDate.getTime()
+													? `${a.pe.event.title} (${a.pe.startDate.toLocaleDateString()})`
+													: `${a.pe.event.title} (${a.pe.startDate.toLocaleDateString()} – ${a.pe.endDate.toLocaleDateString()})`
 											}
-											title={`${a.pe.event.title} (${a.pe.startDate.toLocaleDateString()} – ${a.pe.endDate.toLocaleDateString()})`}
 										>
 											{a.pe.event.title}
 										</div>

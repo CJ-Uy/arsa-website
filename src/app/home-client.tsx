@@ -25,12 +25,7 @@ import {
 import { EventCard } from "@/components/features/event-card";
 import { EventCalendar } from "@/components/features/event-calendar";
 import { cn } from "@/lib/utils";
-import type {
-	HeroContent,
-	EventItem,
-	QuickAction,
-	SocialLink,
-} from "./admin/landing/actions";
+import type { HeroContent, EventItem, QuickAction, SocialLink } from "./admin/landing/actions";
 
 const iconLookup: Record<string, React.ComponentType<{ className?: string }>> = {
 	calendar: CalendarIcon,
