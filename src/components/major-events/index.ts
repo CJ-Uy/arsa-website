@@ -15,9 +15,7 @@ export const majorEvents: MajorEventConfig[] = [
 	{
 		slug: "sso-2026",
 		label: "Seniors' Send-Off 2026",
-		component: dynamic(() =>
-			import("./sso-2026").then((m) => m.SSO2026Landing),
-		),
+		component: dynamic(() => import("./sso-2026").then((m) => m.SSO2026Landing)),
 	},
 ];
 

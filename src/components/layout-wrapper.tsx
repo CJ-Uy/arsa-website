@@ -84,11 +84,14 @@ export function LayoutWrapper({ children, banner, activeMajorEvent }: LayoutWrap
 			{showHeader && (
 				<div
 					className={`transition-transform duration-500 ease-out ${
-						headerRevealed
-							? "translate-y-0"
-							: "-translate-y-full"
+						headerRevealed ? "translate-y-0" : "-translate-y-full"
 					}`}
-					style={{ position: headerRevealed ? "sticky" : "fixed", top: 0, zIndex: 50, width: "100%" }}
+					style={{
+						position: headerRevealed ? "sticky" : "fixed",
+						top: 0,
+						zIndex: 50,
+						width: "100%",
+					}}
 				>
 					<Header />
 				</div>

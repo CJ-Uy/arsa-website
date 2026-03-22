@@ -117,7 +117,11 @@ export default async function RootLayout({
 		const setting = await prisma.siteContent.findUnique({
 			where: { key: "homepage-active-major-event" },
 		});
-		if (setting?.data && typeof setting.data === "object" && "slug" in (setting.data as Record<string, unknown>)) {
+		if (
+			setting?.data &&
+			typeof setting.data === "object" &&
+			"slug" in (setting.data as Record<string, unknown>)
+		) {
 			activeMajorEvent = (setting.data as { slug: string }).slug || null;
 		}
 	} catch {
@@ -126,14 +130,18 @@ export default async function RootLayout({
 
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<body className={`${geistSans.variable} ${geistMono.variable} ${gentlemensScript.variable} ${farmToMarket.variable} antialiased`}>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable} ${gentlemensScript.variable} ${farmToMarket.variable} antialiased`}
+			>
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="light"
 					enableSystem
 					disableTransitionOnChange
 				>
-					<LayoutWrapper banner={banner} activeMajorEvent={activeMajorEvent}>{children}</LayoutWrapper>
+					<LayoutWrapper banner={banner} activeMajorEvent={activeMajorEvent}>
+						{children}
+					</LayoutWrapper>
 					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>

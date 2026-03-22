@@ -128,9 +128,7 @@ export function BalloonAnimation({ className }: { className?: string }) {
 			ctx.globalAlpha = 1;
 
 			// Remove balloons that are off screen and add new ones
-			balloonsRef.current = balloonsRef.current.filter(
-				(b) => b.y + b.size + b.stringLength > -50,
-			);
+			balloonsRef.current = balloonsRef.current.filter((b) => b.y + b.size + b.stringLength > -50);
 			while (balloonsRef.current.length < count) {
 				balloonsRef.current.push(createBalloon(true));
 			}

@@ -88,7 +88,15 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
 	);
 }
 
-function ScrapbookFrame({ children, className = "", rotate = 0 }: { children: React.ReactNode; className?: string; rotate?: number }) {
+function ScrapbookFrame({
+	children,
+	className = "",
+	rotate = 0,
+}: {
+	children: React.ReactNode;
+	className?: string;
+	rotate?: number;
+}) {
 	return (
 		<div
 			className={`relative bg-white p-3 shadow-lg ${className}`}
@@ -138,7 +146,10 @@ function MerchCard({
 						/>
 					</div>
 					{/* Back */}
-					<div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+					<div
+						className="absolute inset-0"
+						style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+					>
 						<Image
 							src={backImg}
 							alt={`${label} - Back`}
@@ -217,8 +228,13 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 				</div>
 
 				{/* Cloud decorations */}
-				<div className="absolute bottom-0 left-0 right-0 z-[1]">
-					<svg viewBox="0 0 1440 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+				<div className="absolute right-0 bottom-0 left-0 z-[1]">
+					<svg
+						viewBox="0 0 1440 200"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						className="w-full"
+					>
 						<path
 							d="M0 200V120C120 100 180 60 300 80C400 95 420 40 540 50C640 58 700 90 800 70C900 50 960 80 1080 60C1200 40 1300 80 1440 100V200H0Z"
 							fill="#E7E2CE"
@@ -287,42 +303,42 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 				style={{ background: "linear-gradient(180deg, #ECDEBC 0%, #E7E2CE 100%)" }}
 			>
 				{/* Washi tape top border */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[repeating-linear-gradient(90deg,#C89D58_0px,#C89D58_20px,transparent_20px,transparent_24px,#859893_24px,#859893_44px,transparent_44px,transparent_48px,#DD7142_48px,#DD7142_68px,transparent_68px,transparent_72px)] opacity-60" />
+				<div className="absolute top-0 right-0 left-0 h-4 bg-[repeating-linear-gradient(90deg,#C89D58_0px,#C89D58_20px,transparent_20px,transparent_24px,#859893_24px,#859893_44px,transparent_44px,transparent_48px,#DD7142_48px,#DD7142_68px,transparent_68px,transparent_72px)] opacity-60" />
 
 				{/* Scrapbook decorations reaching in from edges */}
 				<div className="pointer-events-none absolute inset-0">
 					{/* Left side — reaching inward */}
-					<div className="absolute left-[2%] top-[8%] opacity-40 rotate-[-12deg]">
+					<div className="absolute top-[8%] left-[2%] rotate-[-12deg] opacity-40">
 						<Image src={DORMER_STICKERS[1].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute left-[6%] top-[45%] opacity-35 rotate-[18deg]">
+					<div className="absolute top-[45%] left-[6%] rotate-[18deg] opacity-35">
 						<Image src={SSO_IMAGES.bottleCap} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute left-[3%] bottom-[10%] opacity-30 rotate-[-8deg]">
+					<div className="absolute bottom-[10%] left-[3%] rotate-[-8deg] opacity-30">
 						<Image src={GRAD_STICKERS[2].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute left-[8%] top-[70%] opacity-25 rotate-[22deg]">
+					<div className="absolute top-[70%] left-[8%] rotate-[22deg] opacity-25">
 						<Image src={SSO_IMAGES.keyFob} alt="" width={65} height={65} />
 					</div>
 
 					{/* Right side — reaching inward */}
-					<div className="absolute right-[2%] top-[12%] opacity-40 rotate-[15deg]">
+					<div className="absolute top-[12%] right-[2%] rotate-[15deg] opacity-40">
 						<Image src={GRAD_STICKERS[0].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute right-[7%] top-[50%] opacity-30 rotate-[-20deg]">
+					<div className="absolute top-[50%] right-[7%] rotate-[-20deg] opacity-30">
 						<Image src={DORMER_STICKERS[4].src} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute right-[3%] bottom-[8%] opacity-35 rotate-[10deg]">
+					<div className="absolute right-[3%] bottom-[8%] rotate-[10deg] opacity-35">
 						<Image src={SSO_IMAGES.bottleCap} alt="" width={70} height={70} />
 					</div>
-					<div className="absolute right-[9%] top-[25%] opacity-25 rotate-[-6deg]">
+					<div className="absolute top-[25%] right-[9%] rotate-[-6deg] opacity-25">
 						<Image src={GRAD_STICKERS[4].src} alt="" width={65} height={65} />
 					</div>
 
 					{/* Washi tape reaching in diagonally */}
-					<div className="absolute left-[0%] top-[20%] h-5 w-32 rotate-[-20deg] bg-[#C89D58]/30" />
-					<div className="absolute right-[0%] top-[35%] h-5 w-28 rotate-[22deg] bg-[#859893]/25" />
-					<div className="absolute left-[0%] bottom-[20%] h-5 w-36 rotate-[15deg] bg-[#DD7142]/20" />
+					<div className="absolute top-[20%] left-[0%] h-5 w-32 rotate-[-20deg] bg-[#C89D58]/30" />
+					<div className="absolute top-[35%] right-[0%] h-5 w-28 rotate-[22deg] bg-[#859893]/25" />
+					<div className="absolute bottom-[20%] left-[0%] h-5 w-36 rotate-[15deg] bg-[#DD7142]/20" />
 					<div className="absolute right-[0%] bottom-[25%] h-5 w-30 rotate-[-18deg] bg-[#C89D58]/25" />
 				</div>
 
@@ -368,84 +384,84 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 				{/* Scrapbook decorations — reaching in from edges, barely touching content */}
 				<div className="pointer-events-none absolute inset-0">
 					{/* ========== LEFT SIDE — reaching inward ========== */}
-					<div className="absolute left-[1%] top-[2%] opacity-45 rotate-[-18deg]">
+					<div className="absolute top-[2%] left-[1%] rotate-[-18deg] opacity-45">
 						<Image src={SSO_IMAGES.bottleCap} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute left-[6%] top-[1%] opacity-35 rotate-[12deg]">
+					<div className="absolute top-[1%] left-[6%] rotate-[12deg] opacity-35">
 						<Image src={DORMER_STICKERS[0].src} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute left-[0%] top-[10%] opacity-30 rotate-[15deg]">
+					<div className="absolute top-[10%] left-[0%] rotate-[15deg] opacity-30">
 						<Image src={GRAD_STICKERS[4].src} alt="" width={90} height={90} />
 					</div>
-					<div className="absolute left-[3%] top-[20%] opacity-40 rotate-[-10deg]">
+					<div className="absolute top-[20%] left-[3%] rotate-[-10deg] opacity-40">
 						<Image src={DORMER_STICKERS[2].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute left-[0%] top-[30%] opacity-35 rotate-[20deg]">
+					<div className="absolute top-[30%] left-[0%] rotate-[20deg] opacity-35">
 						<Image src={SSO_IMAGES.keyFob} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute left-[5%] top-[40%] opacity-30 rotate-[-14deg]">
+					<div className="absolute top-[40%] left-[5%] rotate-[-14deg] opacity-30">
 						<Image src={GRAD_STICKERS[5].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute left-[1%] top-[50%] opacity-40 rotate-[8deg]">
+					<div className="absolute top-[50%] left-[1%] rotate-[8deg] opacity-40">
 						<Image src={DORMER_STICKERS[4].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute left-[0%] top-[60%] opacity-35 rotate-[-22deg]">
+					<div className="absolute top-[60%] left-[0%] rotate-[-22deg] opacity-35">
 						<Image src={SSO_IMAGES.bottleCap} alt="" width={70} height={70} />
 					</div>
-					<div className="absolute left-[4%] top-[70%] opacity-30 rotate-[16deg]">
+					<div className="absolute top-[70%] left-[4%] rotate-[16deg] opacity-30">
 						<Image src={GRAD_STICKERS[1].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute left-[1%] top-[80%] opacity-35 rotate-[-6deg]">
+					<div className="absolute top-[80%] left-[1%] rotate-[-6deg] opacity-35">
 						<Image src={DORMER_STICKERS[5].src} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute left-[6%] top-[90%] opacity-30 rotate-[12deg]">
+					<div className="absolute top-[90%] left-[6%] rotate-[12deg] opacity-30">
 						<Image src={SSO_IMAGES.keyFob} alt="" width={65} height={65} />
 					</div>
 
 					{/* ========== RIGHT SIDE — reaching inward ========== */}
-					<div className="absolute right-[2%] top-[1%] opacity-40 rotate-[22deg]">
+					<div className="absolute top-[1%] right-[2%] rotate-[22deg] opacity-40">
 						<Image src={GRAD_STICKERS[1].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute right-[6%] top-[4%] opacity-30 rotate-[-8deg]">
+					<div className="absolute top-[4%] right-[6%] rotate-[-8deg] opacity-30">
 						<Image src={SSO_IMAGES.keyFob} alt="" width={70} height={70} />
 					</div>
-					<div className="absolute right-[1%] top-[12%] opacity-35 rotate-[-15deg]">
+					<div className="absolute top-[12%] right-[1%] rotate-[-15deg] opacity-35">
 						<Image src={DORMER_STICKERS[3].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute right-[0%] top-[22%] opacity-30 rotate-[10deg]">
+					<div className="absolute top-[22%] right-[0%] rotate-[10deg] opacity-30">
 						<Image src={GRAD_STICKERS[2].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute right-[4%] top-[32%] opacity-40 rotate-[-18deg]">
+					<div className="absolute top-[32%] right-[4%] rotate-[-18deg] opacity-40">
 						<Image src={DORMER_STICKERS[1].src} alt="" width={85} height={85} />
 					</div>
-					<div className="absolute right-[0%] top-[42%] opacity-35 rotate-[14deg]">
+					<div className="absolute top-[42%] right-[0%] rotate-[14deg] opacity-35">
 						<Image src={SSO_IMAGES.bottleCap} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute right-[5%] top-[52%] opacity-30 rotate-[-8deg]">
+					<div className="absolute top-[52%] right-[5%] rotate-[-8deg] opacity-30">
 						<Image src={GRAD_STICKERS[0].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute right-[1%] top-[62%] opacity-40 rotate-[20deg]">
+					<div className="absolute top-[62%] right-[1%] rotate-[20deg] opacity-40">
 						<Image src={DORMER_STICKERS[0].src} alt="" width={75} height={75} />
 					</div>
-					<div className="absolute right-[0%] top-[72%] opacity-30 rotate-[-12deg]">
+					<div className="absolute top-[72%] right-[0%] rotate-[-12deg] opacity-30">
 						<Image src={SSO_IMAGES.keyFob} alt="" width={70} height={70} />
 					</div>
-					<div className="absolute right-[3%] top-[82%] opacity-35 rotate-[6deg]">
+					<div className="absolute top-[82%] right-[3%] rotate-[6deg] opacity-35">
 						<Image src={GRAD_STICKERS[3].src} alt="" width={80} height={80} />
 					</div>
-					<div className="absolute right-[6%] top-[92%] opacity-25 rotate-[-15deg]">
+					<div className="absolute top-[92%] right-[6%] rotate-[-15deg] opacity-25">
 						<Image src={DORMER_STICKERS[5].src} alt="" width={70} height={70} />
 					</div>
 
 					{/* ========== WASHI TAPE — long, diagonal, reaching inward ========== */}
-					<div className="absolute left-[0%] top-[6%] h-5 w-36 rotate-[-20deg] bg-[#C89D58]/35" />
-					<div className="absolute left-[0%] top-[28%] h-5 w-32 rotate-[12deg] bg-[#DD7142]/25" />
-					<div className="absolute left-[0%] top-[55%] h-5 w-40 rotate-[-8deg] bg-[#859893]/30" />
-					<div className="absolute left-[0%] top-[78%] h-5 w-28 rotate-[18deg] bg-[#C89D58]/25" />
-					<div className="absolute right-[0%] top-[8%] h-5 w-32 rotate-[18deg] bg-[#859893]/30" />
-					<div className="absolute right-[0%] top-[38%] h-5 w-36 rotate-[-12deg] bg-[#C89D58]/25" />
-					<div className="absolute right-[0%] top-[65%] h-5 w-40 rotate-[10deg] bg-[#DD7142]/20" />
-					<div className="absolute right-[0%] top-[88%] h-5 w-28 rotate-[-20deg] bg-[#859893]/25" />
+					<div className="absolute top-[6%] left-[0%] h-5 w-36 rotate-[-20deg] bg-[#C89D58]/35" />
+					<div className="absolute top-[28%] left-[0%] h-5 w-32 rotate-[12deg] bg-[#DD7142]/25" />
+					<div className="absolute top-[55%] left-[0%] h-5 w-40 rotate-[-8deg] bg-[#859893]/30" />
+					<div className="absolute top-[78%] left-[0%] h-5 w-28 rotate-[18deg] bg-[#C89D58]/25" />
+					<div className="absolute top-[8%] right-[0%] h-5 w-32 rotate-[18deg] bg-[#859893]/30" />
+					<div className="absolute top-[38%] right-[0%] h-5 w-36 rotate-[-12deg] bg-[#C89D58]/25" />
+					<div className="absolute top-[65%] right-[0%] h-5 w-40 rotate-[10deg] bg-[#DD7142]/20" />
+					<div className="absolute top-[88%] right-[0%] h-5 w-28 rotate-[-20deg] bg-[#859893]/25" />
 				</div>
 
 				<div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -457,10 +473,16 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 					</p>
 
 					{/* Reveal Posters — hero center + 4 scattered around */}
-					<div className="relative mb-24 mx-auto max-w-4xl flex items-center justify-center" style={{ minHeight: "420px", height: "clamp(420px, 80vw, 550px)" }}>
+					<div
+						className="relative mx-auto mb-24 flex max-w-4xl items-center justify-center"
+						style={{ minHeight: "420px", height: "clamp(420px, 80vw, 550px)" }}
+					>
 						{/* Center hero poster — big, absolutely centered */}
-						<div className="absolute left-1/2 top-1/2 z-[2] w-64 -translate-x-1/2 -translate-y-1/2 sm:w-80 md:w-96">
-							<ScrapbookFrame rotate={-1} className="transition-transform duration-300 hover:scale-105">
+						<div className="absolute top-1/2 left-1/2 z-[2] w-64 -translate-x-1/2 -translate-y-1/2 sm:w-80 md:w-96">
+							<ScrapbookFrame
+								rotate={-1}
+								className="transition-transform duration-300 hover:scale-105"
+							>
 								<div className="relative aspect-square w-full overflow-hidden">
 									<Image
 										src={SSO_IMAGES.reveal1}
@@ -474,37 +496,73 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 						</div>
 
 						{/* Top-left */}
-						<div className="absolute left-0 top-0 z-[1] w-32 sm:w-44 md:w-52">
-							<ScrapbookFrame rotate={-5} className="transition-transform duration-300 hover:scale-110 hover:z-10">
+						<div className="absolute top-0 left-0 z-[1] w-32 sm:w-44 md:w-52">
+							<ScrapbookFrame
+								rotate={-5}
+								className="transition-transform duration-300 hover:z-10 hover:scale-110"
+							>
 								<div className="relative aspect-square w-full overflow-hidden">
-									<Image src={SSO_IMAGES.reveal2} alt="SSO Shirt Blue" fill className="object-cover" sizes="(max-width: 640px) 30vw, 208px" />
+									<Image
+										src={SSO_IMAGES.reveal2}
+										alt="SSO Shirt Blue"
+										fill
+										className="object-cover"
+										sizes="(max-width: 640px) 30vw, 208px"
+									/>
 								</div>
 							</ScrapbookFrame>
 						</div>
 
 						{/* Top-right */}
-						<div className="absolute right-0 top-0 z-[1] w-32 sm:w-44 md:w-52">
-							<ScrapbookFrame rotate={4} className="transition-transform duration-300 hover:scale-110 hover:z-10">
+						<div className="absolute top-0 right-0 z-[1] w-32 sm:w-44 md:w-52">
+							<ScrapbookFrame
+								rotate={4}
+								className="transition-transform duration-300 hover:z-10 hover:scale-110"
+							>
 								<div className="relative aspect-square w-full overflow-hidden">
-									<Image src={SSO_IMAGES.reveal3} alt="SSO Shirt White" fill className="object-cover" sizes="(max-width: 640px) 30vw, 208px" />
+									<Image
+										src={SSO_IMAGES.reveal3}
+										alt="SSO Shirt White"
+										fill
+										className="object-cover"
+										sizes="(max-width: 640px) 30vw, 208px"
+									/>
 								</div>
 							</ScrapbookFrame>
 						</div>
 
 						{/* Bottom-left */}
 						<div className="absolute bottom-0 left-[3%] z-[3] w-32 sm:w-44 md:w-52">
-							<ScrapbookFrame rotate={3} className="transition-transform duration-300 hover:scale-110 hover:z-10">
+							<ScrapbookFrame
+								rotate={3}
+								className="transition-transform duration-300 hover:z-10 hover:scale-110"
+							>
 								<div className="relative aspect-square w-full overflow-hidden">
-									<Image src={SSO_IMAGES.reveal4} alt="SSO Stickers" fill className="object-cover" sizes="(max-width: 640px) 30vw, 208px" />
+									<Image
+										src={SSO_IMAGES.reveal4}
+										alt="SSO Stickers"
+										fill
+										className="object-cover"
+										sizes="(max-width: 640px) 30vw, 208px"
+									/>
 								</div>
 							</ScrapbookFrame>
 						</div>
 
 						{/* Bottom-right */}
-						<div className="absolute bottom-0 right-[3%] z-[3] w-32 sm:w-44 md:w-52">
-							<ScrapbookFrame rotate={-3} className="transition-transform duration-300 hover:scale-110 hover:z-10">
+						<div className="absolute right-[3%] bottom-0 z-[3] w-32 sm:w-44 md:w-52">
+							<ScrapbookFrame
+								rotate={-3}
+								className="transition-transform duration-300 hover:z-10 hover:scale-110"
+							>
 								<div className="relative aspect-square w-full overflow-hidden">
-									<Image src={SSO_IMAGES.reveal5} alt="SSO Stickers" fill className="object-cover" sizes="(max-width: 640px) 35vw, 208px" />
+									<Image
+										src={SSO_IMAGES.reveal5}
+										alt="SSO Stickers"
+										fill
+										className="object-cover"
+										sizes="(max-width: 640px) 35vw, 208px"
+									/>
 								</div>
 							</ScrapbookFrame>
 						</div>
@@ -538,18 +596,19 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 							Sticker Sets
 						</h3>
 						<p className="mx-auto mb-12 max-w-md text-center font-[family-name:var(--font-farm-to-market)] text-base text-stone-400">
-							Two collectible sets of scout-style badges — relive the dormer life & celebrate what&apos;s next!
+							Two collectible sets of scout-style badges — relive the dormer life & celebrate
+							what&apos;s next!
 						</p>
 					</div>
 
 					{/* Dormer Experience Collection */}
 					<div className="mb-14">
 						<div className="mb-8 flex items-center justify-center gap-3">
-							<div className="h-px flex-1 max-w-20 bg-[#845942]/30" />
+							<div className="h-px max-w-20 flex-1 bg-[#845942]/30" />
 							<h4 className="font-[family-name:var(--font-farm-to-market)] text-xl tracking-wide text-[#845942]">
 								Dormer Experience
 							</h4>
-							<div className="h-px flex-1 max-w-20 bg-[#845942]/30" />
+							<div className="h-px max-w-20 flex-1 bg-[#845942]/30" />
 						</div>
 						<div className="grid grid-cols-3 gap-5 sm:grid-cols-6 sm:gap-8">
 							{DORMER_STICKERS.map((sticker, i) => {
@@ -580,11 +639,11 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 					{/* After Graduation Collection */}
 					<div className="mb-14">
 						<div className="mb-8 flex items-center justify-center gap-3">
-							<div className="h-px flex-1 max-w-20 bg-[#845942]/30" />
+							<div className="h-px max-w-20 flex-1 bg-[#845942]/30" />
 							<h4 className="font-[family-name:var(--font-farm-to-market)] text-xl tracking-wide text-[#845942]">
 								After Graduation
 							</h4>
-							<div className="h-px flex-1 max-w-20 bg-[#845942]/30" />
+							<div className="h-px max-w-20 flex-1 bg-[#845942]/30" />
 						</div>
 						<div className="grid grid-cols-3 gap-5 sm:grid-cols-6 sm:gap-8">
 							{GRAD_STICKERS.map((sticker, i) => {
@@ -632,7 +691,8 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 				<div
 					className="absolute inset-0"
 					style={{
-						background: "linear-gradient(180deg, #ECDEBC 0%, #C2A785 30%, #60797E 70%, #374752 100%)",
+						background:
+							"linear-gradient(180deg, #ECDEBC 0%, #C2A785 30%, #60797E 70%, #374752 100%)",
 					}}
 				/>
 
@@ -642,8 +702,13 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 				</div>
 
 				{/* Cloud top */}
-				<div className="absolute top-0 left-0 right-0 z-[1] rotate-180">
-					<svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+				<div className="absolute top-0 right-0 left-0 z-[1] rotate-180">
+					<svg
+						viewBox="0 0 1440 120"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						className="w-full"
+					>
 						<path
 							d="M0 120V60C200 40 350 80 500 60C650 40 750 70 900 55C1050 40 1200 70 1440 50V120H0Z"
 							fill="#ECDEBC"

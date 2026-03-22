@@ -17,7 +17,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Plus, Trash2, Save, GripVertical, Upload, X, Loader2, Crop, RotateCw, Sparkles } from "lucide-react";
+import {
+	Plus,
+	Trash2,
+	Save,
+	GripVertical,
+	Upload,
+	X,
+	Loader2,
+	Crop,
+	RotateCw,
+	Sparkles,
+} from "lucide-react";
 import { ImageCropEditor, type CropPosition } from "@/components/features/image-crop-editor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -175,9 +186,9 @@ export function HomeContentManagement({ initialContent }: { initialContent: Home
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<p className="text-muted-foreground text-sm">
-								Select a major event to display as a full landing page above the homepage.
-								When active, visitors will see the event landing first and the header will
-								reveal as they scroll down to the main site.
+								Select a major event to display as a full landing page above the homepage. When
+								active, visitors will see the event landing first and the header will reveal as they
+								scroll down to the main site.
 							</p>
 							<div className="space-y-2">
 								<Label>Active Event</Label>
@@ -200,17 +211,14 @@ export function HomeContentManagement({ initialContent }: { initialContent: Home
 							</div>
 							{activeMajorEvent && activeMajorEvent !== "none" && (
 								<div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-									<strong>
-										{majorEvents.find((e) => e.slug === activeMajorEvent)?.label}
-									</strong>{" "}
-									is currently active. Visitors will see the event landing page above the
-									homepage.
+									<strong>{majorEvents.find((e) => e.slug === activeMajorEvent)?.label}</strong> is
+									currently active. Visitors will see the event landing page above the homepage.
 								</div>
 							)}
 							{(!activeMajorEvent || activeMajorEvent === "none") && (
 								<div className="text-muted-foreground rounded-md border p-3 text-sm">
-									No major event is active. The homepage will display normally without an
-									event landing section.
+									No major event is active. The homepage will display normally without an event
+									landing section.
 								</div>
 							)}
 						</CardContent>

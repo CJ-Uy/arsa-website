@@ -139,10 +139,7 @@ export function HomepageContentManagement({ initialContentJson }: { initialConte
 							</p>
 							<div className="space-y-2">
 								<Label>Active Event</Label>
-								<Select
-									value={activeMajorEvent}
-									onValueChange={(val) => setActiveMajorEvent(val)}
-								>
+								<Select value={activeMajorEvent} onValueChange={(val) => setActiveMajorEvent(val)}>
 									<SelectTrigger className="w-full max-w-md">
 										<SelectValue placeholder="None (disabled)" />
 									</SelectTrigger>
