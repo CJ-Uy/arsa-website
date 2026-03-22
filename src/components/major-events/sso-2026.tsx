@@ -9,37 +9,37 @@ import { Button } from "@/components/ui/button";
 const STICKER_BASE = "/images/major event landing/2026/sso/merch/STICKERS";
 
 const SSO_IMAGES = {
-	logo: "/images/major event landing/2026/sso/Main_Logo_White-removebg-preview.png",
-	logoLong: "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.png",
-	shirtBlue: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/FRONT BLUE.png",
-	shirtBlueback: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/BACK BLUE.png",
-	shirtWhite: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/FRONT WHITE.png",
-	shirtWhiteback: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/BACK WHITE.png",
-	bottleCap: "/images/major event landing/2026/sso/Bottle_Cap_Custom-removebg-preview.png",
-	keyFob: "/images/major event landing/2026/sso/Key_Fob-removebg-preview.png",
-	reveal1: "/images/major event landing/2026/sso/merch/REVEAL/1.png",
-	reveal2: "/images/major event landing/2026/sso/merch/REVEAL/2.png",
-	reveal3: "/images/major event landing/2026/sso/merch/REVEAL/3.png",
-	reveal4: "/images/major event landing/2026/sso/merch/REVEAL/4.png",
-	reveal5: "/images/major event landing/2026/sso/merch/REVEAL/5.png",
+	logo: "/images/major event landing/2026/sso/Main_Logo_White-removebg-preview.webp",
+	logoLong: "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.webp",
+	shirtBlue: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/FRONT BLUE.webp",
+	shirtBlueback: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/BACK BLUE.webp",
+	shirtWhite: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/FRONT WHITE.webp",
+	shirtWhiteback: "/images/major event landing/2026/sso/merch/TSHIRT MOCKUP/BACK WHITE.webp",
+	bottleCap: "/images/major event landing/2026/sso/Bottle_Cap_Custom-removebg-preview.webp",
+	keyFob: "/images/major event landing/2026/sso/Key_Fob-removebg-preview.webp",
+	reveal1: "/images/major event landing/2026/sso/merch/REVEAL/1.webp",
+	reveal2: "/images/major event landing/2026/sso/merch/REVEAL/2.webp",
+	reveal3: "/images/major event landing/2026/sso/merch/REVEAL/3.webp",
+	reveal4: "/images/major event landing/2026/sso/merch/REVEAL/4.webp",
+	reveal5: "/images/major event landing/2026/sso/merch/REVEAL/5.webp",
 };
 
 const DORMER_STICKERS = [
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE.png`, label: "Finally Did My Laundry!" },
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (2).png`, label: "Packed My Last Balikbayan Box!" },
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (3).png`, label: "Cat Attacked My Group Order!" },
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (4).png`, label: "More Coffee Buns!" },
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (5).png`, label: "Made It Before Curfew!" },
-	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (6).png`, label: "Dorm Speakers Woke Me Up!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE.webp`, label: "Finally Did My Laundry!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (2).webp`, label: "Packed My Last Balikbayan Box!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (3).webp`, label: "Cat Attacked My Group Order!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (4).webp`, label: "More Coffee Buns!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (5).webp`, label: "Made It Before Curfew!" },
+	{ src: `${STICKER_BASE}/DORMER EXPERIENCE (6).webp`, label: "Dorm Speakers Woke Me Up!" },
 ];
 
 const GRAD_STICKERS = [
-	{ src: `${STICKER_BASE}/AFTER GRADUATION.png`, label: "CV Sent!" },
-	{ src: `${STICKER_BASE}/AFTER GRADUATION (2).png`, label: "First Paycheck!" },
-	{ src: `${STICKER_BASE}/AFTER GRADUATION (3).png`, label: "First Bill!" },
-	{ src: `${STICKER_BASE}/AFTER GRADUATION (4).png`, label: "No More Canvas Deadlines!" },
-	{ src: `${STICKER_BASE}/AFTER GRADUATION (5).png`, label: "Considering My Masters!" },
-	{ src: `${STICKER_BASE}/AFTER GRADUATION (6).png`, label: "Moved Out!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION.webp`, label: "CV Sent!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION (2).webp`, label: "First Paycheck!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION (3).webp`, label: "First Bill!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION (4).webp`, label: "No More Canvas Deadlines!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION (5).webp`, label: "Considering My Masters!" },
+	{ src: `${STICKER_BASE}/AFTER GRADUATION (6).webp`, label: "Moved Out!" },
 ];
 
 function CountdownTimer({ targetDate }: { targetDate: Date }) {
