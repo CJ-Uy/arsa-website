@@ -17,7 +17,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Plus, Trash2, Save, GripVertical, Upload, X, Loader2, Crop, RotateCw } from "lucide-react";
+import { Plus, Trash2, Save, GripVertical, Upload, X, Loader2, Crop, RotateCw, Sparkles } from "lucide-react";
 import { ImageCropEditor, type CropPosition } from "@/components/features/image-crop-editor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -27,12 +27,14 @@ import {
 	type QuickAction,
 	type SocialLink,
 } from "@/app/admin/landing/actions";
+import { majorEvents } from "@/components/major-events";
 
 type HomeContent = {
 	hero: HeroContent;
 	events: EventItem[];
 	quickActions: QuickAction[];
 	socials: SocialLink[];
+	activeMajorEvent: string;
 };
 
 export function HomeContentManagement({ initialContent }: { initialContent: HomeContent }) {
@@ -40,6 +42,9 @@ export function HomeContentManagement({ initialContent }: { initialContent: Home
 	const [events, setEvents] = useState<EventItem[]>(initialContent.events);
 	const [quickActions, setQuickActions] = useState<QuickAction[]>(initialContent.quickActions);
 	const [socials, setSocials] = useState<SocialLink[]>(initialContent.socials);
+	const [activeMajorEvent, setActiveMajorEvent] = useState<string>(
+		initialContent.activeMajorEvent ?? "",
+	);
 	const [saving, setSaving] = useState<string | null>(null);
 	const [uploadingEventImage, setUploadingEventImage] = useState<string | null>(null);
 	const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
@@ -129,13 +134,88 @@ export function HomeContentManagement({ initialContent }: { initialContent: Home
 				</p>
 			</div>
 
-			<Tabs defaultValue="hero">
+			<Tabs defaultValue="majorEvent">
 				<TabsList className="mb-6 flex flex-wrap">
+					<TabsTrigger value="majorEvent">
+						<Sparkles className="mr-1 h-3.5 w-3.5" />
+						Major Event
+					</TabsTrigger>
 					<TabsTrigger value="hero">Hero</TabsTrigger>
 					<TabsTrigger value="events">Events</TabsTrigger>
 					<TabsTrigger value="quickActions">Quick Actions</TabsTrigger>
 					<TabsTrigger value="socials">Socials</TabsTrigger>
 				</TabsList>
+
+				{/* ===== MAJOR EVENT ===== */}
+				<TabsContent value="majorEvent">
+					<Card>
+						<CardHeader>
+							<CardTitle className="flex items-center justify-between">
+								Active Major Event
+								<Button
+									onClick={async () => {
+										setSaving("majorEvent");
+										const slug = activeMajorEvent === "none" ? "" : activeMajorEvent;
+										const result = await saveSiteContent("homepage-active-major-event", {
+											slug,
+										});
+										if (result.success) {
+											toast.success("Major event setting saved");
+										} else {
+											toast.error(result.message || "Failed to save");
+										}
+										setSaving(null);
+									}}
+									disabled={saving === "majorEvent"}
+								>
+									<Save className="mr-2 h-4 w-4" />
+									{saving === "majorEvent" ? "Saving..." : "Save"}
+								</Button>
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<p className="text-muted-foreground text-sm">
+								Select a major event to display as a full landing page above the homepage.
+								When active, visitors will see the event landing first and the header will
+								reveal as they scroll down to the main site.
+							</p>
+							<div className="space-y-2">
+								<Label>Active Event</Label>
+								<Select
+									value={activeMajorEvent || "none"}
+									onValueChange={(val) => setActiveMajorEvent(val)}
+								>
+									<SelectTrigger className="w-full max-w-md">
+										<SelectValue placeholder="None (disabled)" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">None (disabled)</SelectItem>
+										{majorEvents.map((event) => (
+											<SelectItem key={event.slug} value={event.slug}>
+												{event.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							{activeMajorEvent && activeMajorEvent !== "none" && (
+								<div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+									<strong>
+										{majorEvents.find((e) => e.slug === activeMajorEvent)?.label}
+									</strong>{" "}
+									is currently active. Visitors will see the event landing page above the
+									homepage.
+								</div>
+							)}
+							{(!activeMajorEvent || activeMajorEvent === "none") && (
+								<div className="text-muted-foreground rounded-md border p-3 text-sm">
+									No major event is active. The homepage will display normally without an
+									event landing section.
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
 
 				{/* ===== HERO ===== */}
 				<TabsContent value="hero">

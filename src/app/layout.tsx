@@ -32,6 +32,33 @@ const geistSans = localFont({
 	variable: "--font-geist-sans",
 });
 
+const gentlemensScript = localFont({
+	src: [
+		{
+			path: "../../public/fonts/gentlemens-script/Gentlemens Script.otf",
+			weight: "400",
+			style: "normal",
+		},
+	],
+	variable: "--font-gentlemens-script",
+});
+
+const farmToMarket = localFont({
+	src: [
+		{
+			path: "../../public/fonts/farm_to_market/Farm to Market.ttf",
+			weight: "400",
+			style: "normal",
+		},
+		{
+			path: "../../public/fonts/farm_to_market/Farm to Market Bold Demo.ttf",
+			weight: "700",
+			style: "normal",
+		},
+	],
+	variable: "--font-farm-to-market",
+});
+
 const geistMono = localFont({
 	src: [
 		{
@@ -74,6 +101,7 @@ export default async function RootLayout({
 }>) {
 	// Fetch active banner (gracefully handle DB unavailability during build)
 	let banner = null;
+	let activeMajorEvent: string | null = null;
 	try {
 		banner = await prisma.banner.findFirst({
 			where: { isActive: true },
@@ -84,16 +112,28 @@ export default async function RootLayout({
 		console.log("Banner fetch skipped:", error instanceof Error ? error.message : "Unknown error");
 	}
 
+	// Fetch active major event for homepage
+	try {
+		const setting = await prisma.siteContent.findUnique({
+			where: { key: "homepage-active-major-event" },
+		});
+		if (setting?.data && typeof setting.data === "object" && "slug" in (setting.data as Record<string, unknown>)) {
+			activeMajorEvent = (setting.data as { slug: string }).slug || null;
+		}
+	} catch {
+		// No active major event
+	}
+
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+			<body className={`${geistSans.variable} ${geistMono.variable} ${gentlemensScript.variable} ${farmToMarket.variable} antialiased`}>
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="light"
 					enableSystem
 					disableTransitionOnChange
 				>
-					<LayoutWrapper banner={banner}>{children}</LayoutWrapper>
+					<LayoutWrapper banner={banner} activeMajorEvent={activeMajorEvent}>{children}</LayoutWrapper>
 					<Toaster position="top-center" />
 				</ThemeProvider>
 			</body>
