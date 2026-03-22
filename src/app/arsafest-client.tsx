@@ -30,32 +30,53 @@ import Autoplay from "embla-carousel-autoplay";
 
 // ─── Image Paths ────────────────────────────────────────────────────
 const IMAGES = {
-	banner: "/images/arsafest/%5BAF26%5D%20Banner.webp",
-	fbCover: "/images/arsafest/%5BARSAFEST%5D%20Performer%20FB%20Cover.webp",
+	banner: "/images/major%20event%20landing/2026/arsafest/%5BAF26%5D%20Banner.webp",
+	fbCover:
+		"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Performer%20FB%20Cover.webp",
 	lineup: [
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/16.webp", name: "Sugarcane" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/17.webp", name: "Noah Alejandre" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/18.webp", name: "Edsa Xxtra" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/19.webp", name: "Dree Yap" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/20.webp", name: "ARSA DT" },
-		{ src: "/images/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/21.webp", name: "Arsaound" },
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/16.webp",
+			name: "Sugarcane",
+		},
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/17.webp",
+			name: "Noah Alejandre",
+		},
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/18.webp",
+			name: "Edsa Xxtra",
+		},
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/19.webp",
+			name: "Dree Yap",
+		},
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/20.webp",
+			name: "ARSA DT",
+		},
+		{
+			src: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20Lineup%20(Square)/21.webp",
+			name: "Arsaound",
+		},
 	],
 	kulturarsa: [
-		"/images/arsafest/KulturARSA%20pubmat/1.webp",
-		"/images/arsafest/KulturARSA%20pubmat/2.webp",
-		"/images/arsafest/KulturARSA%20pubmat/3.webp",
-		"/images/arsafest/KulturARSA%20pubmat/4.webp",
+		"/images/major%20event%20landing/2026/arsafest/KulturARSA%20pubmat/1.webp",
+		"/images/major%20event%20landing/2026/arsafest/KulturARSA%20pubmat/2.webp",
+		"/images/major%20event%20landing/2026/arsafest/KulturARSA%20pubmat/3.webp",
+		"/images/major%20event%20landing/2026/arsafest/KulturARSA%20pubmat/4.webp",
 	],
 	events: {
-		bao: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BAO%20(030126).webp",
+		bao: "/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BAO%20(030126).webp",
 		bingo:
-			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).webp",
+			"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/BINGO%20NIGHT%20(030226).webp",
 		fleaMarket:
-			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/FLEA%20MARKET%20(030326).webp",
-		gimmicks: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/GIMMICKS%20(030326).webp",
-		henna: "/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/HENNA%20(030426).webp",
+			"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/FLEA%20MARKET%20(030326).webp",
+		gimmicks:
+			"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/GIMMICKS%20(030326).webp",
+		henna:
+			"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/HENNA%20(030426).webp",
 		pancitCanton:
-			"/images/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/PANCIT%20CANTON%20(030126).webp",
+			"/images/major%20event%20landing/2026/arsafest/%5BARSAFEST%5D%20FM%26A%20Prog%20Pubmats/PANCIT%20CANTON%20(030126).webp",
 	},
 };
 
