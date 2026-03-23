@@ -1,0 +1,112 @@
+/* SSO 2026 - Up: Adventure is Out There */
+
+.sso-container {
+	--sso-primary: #845942;
+	--sso-secondary: #859893;
+	--sso-accent: #c89d58;
+	--sso-dark: #374752;
+	--sso-warm: #dd7142;
+	--sso-cream: #ecdebc;
+	--sso-sand: #e7e2ce;
+}
+
+/* Card styling */
+.sso-card {
+	border: none;
+	border-radius: 0.5rem;
+	overflow: hidden;
+	transition:
+		transform 0.3s ease,
+		box-shadow 0.3s ease;
+	background: white;
+	box-shadow:
+		0 2px 8px rgba(55, 71, 82, 0.08),
+		0 1px 3px rgba(55, 71, 82, 0.06);
+}
+
+.sso-card:hover {
+	transform: translateY(-4px);
+	box-shadow:
+		0 12px 24px rgba(55, 71, 82, 0.12),
+		0 4px 12px rgba(55, 71, 82, 0.08);
+}
+
+/* Section titles */
+.sso-section-title {
+	color: var(--sso-dark);
+	font-family: var(--font-farm-to-market), sans-serif;
+	letter-spacing: 0.02em;
+}
+
+/* Hero section */
+.sso-hero {
+	border-radius: 0.75rem;
+	position: relative;
+}
+
+/* Balloon float animation for UI elements */
+@keyframes sso-float {
+	0%,
+	100% {
+		transform: translateY(0px);
+	}
+	50% {
+		transform: translateY(-8px);
+	}
+}
+
+.sso-float {
+	animation: sso-float 3s ease-in-out infinite;
+}
+
+/* Rising balloon for background decoration */
+@keyframes sso-balloon-rise {
+	0% {
+		transform: translateY(100vh) rotate(0deg);
+		opacity: 0;
+	}
+	10% {
+		opacity: 0.6;
+	}
+	90% {
+		opacity: 0.6;
+	}
+	100% {
+		transform: translateY(-120px) rotate(15deg);
+		opacity: 0;
+	}
+}
+
+.sso-balloon {
+	position: absolute;
+	border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+	animation: sso-balloon-rise linear infinite;
+	pointer-events: none;
+}
+
+/* Washi tape decorative strip */
+.sso-washi {
+	height: 6px;
+	background: repeating-linear-gradient(
+		90deg,
+		var(--sso-accent) 0px,
+		var(--sso-accent) 14px,
+		transparent 14px,
+		transparent 18px,
+		var(--sso-secondary) 18px,
+		var(--sso-secondary) 32px,
+		transparent 32px,
+		transparent 36px,
+		var(--sso-warm) 36px,
+		var(--sso-warm) 50px,
+		transparent 50px,
+		transparent 54px
+	);
+	opacity: 0.5;
+}
+
+/* Scrapbook paper texture */
+.sso-paper-texture {
+	background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+	opacity: 0.06;
+}

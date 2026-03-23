@@ -6,7 +6,8 @@ import type { EventComponentProps } from "./types";
 
 // Lazy load event components to keep bundle size small
 const eventComponents: Record<string, ComponentType<EventComponentProps>> = {
-	// Example: "flower-fest-2026": lazy(() => import("./2026/flower-fest-2026")),
+	// "flower-fest-2026": lazy(() => import("./2026/flower-fest-2026")),
+	"sso-2026": lazy(() => import("./2026/sso-2026")),
 };
 
 export function getEventComponent(slug: string): ComponentType<EventComponentProps> | null {
