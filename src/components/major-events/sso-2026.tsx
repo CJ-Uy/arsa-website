@@ -210,7 +210,7 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 					className="absolute inset-0"
 					style={{
 						background:
-							"linear-gradient(180deg, #374752 0%, #60797E 25%, #859893 50%, #C2A785 75%, #ECDEBC 100%)",
+							"linear-gradient(180deg, #2d3a44 0%, #4e6a70 25%, #7a8e88 50%, #C2A785 75%, #ECDEBC 100%)",
 					}}
 				/>
 
@@ -250,13 +250,13 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 
 				{/* Content */}
 				<div className="relative z-10 flex flex-col items-center px-4 text-center">
-					{/* Logo */}
-					<div className="mb-8 h-56 w-56 sm:h-72 sm:w-72 md:h-80 md:w-80">
+					{/* Logo — long variant for readability */}
+					<div className="mb-8 w-72 sm:w-96 md:w-[480px]">
 						<Image
-							src={SSO_IMAGES.logo}
+							src={SSO_IMAGES.logoLong}
 							alt="SSO 2026 - Adventure Is Out There!"
-							width={400}
-							height={400}
+							width={600}
+							height={200}
 							className="h-full w-full object-contain drop-shadow-2xl"
 							priority
 						/>
@@ -265,22 +265,19 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 					<h1 className="mb-3 font-[family-name:var(--font-gentlemens-script)] text-5xl text-white drop-shadow-lg sm:text-6xl md:text-7xl">
 						Seniors&apos; Send-Off 2026
 					</h1>
-					<p className="mb-8 font-[family-name:var(--font-farm-to-market)] text-xl tracking-widest text-white/90 uppercase drop-shadow-md sm:text-2xl">
-						Adventure Is Out There!
-					</p>
 
-					{/* Date & Venue — much bigger */}
-					<div className="mb-10 flex flex-col items-center gap-3 sm:flex-row sm:gap-8">
+					{/* Date, Time & Venue */}
+					<div className="mb-10 flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
 						<span className="flex items-center gap-2 rounded-full bg-white/15 px-5 py-2.5 backdrop-blur-sm">
 							<Calendar className="h-5 w-5 text-white" />
 							<span className="font-[family-name:var(--font-farm-to-market)] text-lg font-bold tracking-wide text-white sm:text-xl">
-								April 26, 2026
+								April 26, 2026 &middot; 4&ndash;10 PM
 							</span>
 						</span>
 						<span className="flex items-center gap-2 rounded-full bg-white/15 px-5 py-2.5 backdrop-blur-sm">
 							<MapPin className="h-5 w-5 text-white" />
 							<span className="font-[family-name:var(--font-farm-to-market)] text-lg font-bold tracking-wide text-white sm:text-xl">
-								MVP Roofdeck + Zen Garden
+								MVP Roofdeck
 							</span>
 						</span>
 					</div>
@@ -360,8 +357,8 @@ export function SSO2026Landing({ onScrollEnd }: { onScrollEnd?: () => void }) {
 						/>
 						<FeatureCard
 							icon={<BookOpen className="h-7 w-7" />}
-							title="Senior Study Room"
-							description="An exclusive study space just for seniors during finals season. Opening with a pizza party!"
+							title="Exclusive Seniors' Lounge"
+							description="A study space just for seniors during finals season. Opening in mid-April with a pizza party!"
 							badge="Opening Soon"
 							accentColor="#859893"
 						/>
