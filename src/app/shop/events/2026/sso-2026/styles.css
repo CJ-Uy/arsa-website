@@ -1,112 +1,655 @@
-/* SSO 2026 - Up: Adventure is Out There */
+/* ============================================
+   SSO 2026 - Up: Adventure is Out There
+   ============================================
+   Light: cream/sand bg, dark text, brown accents
+   Dark:  deep teal/navy bg, cream text, gold accents
+   ============================================ */
 
-.sso-container {
-	--sso-primary: #845942;
-	--sso-secondary: #859893;
-	--sso-accent: #c89d58;
-	--sso-dark: #374752;
-	--sso-warm: #dd7142;
-	--sso-cream: #ecdebc;
-	--sso-sand: #e7e2ce;
+/* ============================================
+   FULL-PAGE BACKGROUND
+   ============================================ */
+
+/* Light mode */
+body:has(.sso-up-container) {
+	background-color: #e7e2ce !important;
+	background-image:
+		radial-gradient(ellipse 80% 60% at 10% 10%, rgba(96, 121, 126, 0.2) 0%, transparent 55%),
+		radial-gradient(ellipse 70% 50% at 90% 30%, rgba(133, 152, 147, 0.15) 0%, transparent 50%),
+		radial-gradient(ellipse 90% 70% at 50% 90%, rgba(200, 157, 88, 0.12) 0%, transparent 45%),
+		linear-gradient(180deg, #ecdebc 0%, #e7e2ce 30%, #e7e2ce 70%, #ecdebc 100%) !important;
+	background-attachment: fixed !important;
 }
 
-/* Card styling */
-.sso-card {
-	border: none;
+/* Dark mode */
+:is(.dark) body:has(.sso-up-container),
+body.dark:has(.sso-up-container) {
+	background-color: #1e2e34 !important;
+	background-image:
+		radial-gradient(ellipse 80% 60% at 10% 10%, rgba(55, 71, 82, 0.5) 0%, transparent 55%),
+		radial-gradient(ellipse 70% 50% at 90% 30%, rgba(96, 121, 126, 0.25) 0%, transparent 50%),
+		radial-gradient(ellipse 90% 70% at 50% 90%, rgba(132, 89, 66, 0.15) 0%, transparent 45%),
+		linear-gradient(180deg, #1a2930 0%, #1e2e34 30%, #1e2e34 70%, #1a2930 100%) !important;
+	background-attachment: fixed !important;
+}
+
+/* Paper texture overlay */
+body:has(.sso-up-container)::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 500 500' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+	opacity: 0.08;
+	pointer-events: none;
+	z-index: 0;
+	mix-blend-mode: multiply;
+}
+
+:is(.dark) body:has(.sso-up-container)::before,
+body.dark:has(.sso-up-container)::before {
+	opacity: 0.12;
+	mix-blend-mode: soft-light;
+}
+
+/* Ensure all content above texture */
+body:has(.sso-up-container) > * {
+	position: relative;
+	z-index: 2;
+}
+
+/* ============================================
+   HEADER STYLING
+   ============================================ */
+
+body:has(.sso-up-container) header {
+	background: rgba(55, 71, 82, 0.95) !important;
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid rgba(200, 157, 88, 0.25) !important;
+}
+
+body:has(.sso-up-container) header a,
+body:has(.sso-up-container) header span,
+body:has(.sso-up-container) header button {
+	color: #ecdebc !important;
+}
+
+body:has(.sso-up-container) header a:hover {
+	color: #c89d58 !important;
+}
+
+body:has(.sso-up-container) header svg {
+	color: #ecdebc !important;
+}
+
+body:has(.sso-up-container) header [class*="font-bold"],
+body:has(.sso-up-container) header [class*="font-semibold"] {
+	color: #ecdebc !important;
+}
+
+body:has(.sso-up-container) header [href*="cart"] {
+	color: #ecdebc !important;
+}
+
+/* ============================================
+   PAGE TITLE STYLING
+   ============================================ */
+
+body:has(.sso-up-container) main h1 {
+	color: #374752 !important;
+	text-shadow: 0 1px 3px rgba(55, 71, 82, 0.15);
+	letter-spacing: 0.02em;
+}
+
+:is(.dark) body:has(.sso-up-container) main h1,
+body.dark:has(.sso-up-container) main h1 {
+	color: #ecdebc !important;
+	text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+body:has(.sso-up-container) main > div > div > p.text-muted-foreground {
+	color: #60797e !important;
+}
+
+:is(.dark) body:has(.sso-up-container) main > div > div > p.text-muted-foreground,
+body.dark:has(.sso-up-container) main > div > div > p.text-muted-foreground {
+	color: #859893 !important;
+}
+
+/* ============================================
+   FOOTER STYLING
+   ============================================ */
+
+body:has(.sso-up-container) footer {
+	background: rgba(55, 71, 82, 0.95) !important;
+	border-top: 1px solid rgba(200, 157, 88, 0.25) !important;
+}
+
+body:has(.sso-up-container) footer,
+body:has(.sso-up-container) footer a,
+body:has(.sso-up-container) footer span,
+body:has(.sso-up-container) footer p,
+body:has(.sso-up-container) footer h3,
+body:has(.sso-up-container) footer h4 {
+	color: #ecdebc !important;
+}
+
+body:has(.sso-up-container) footer a:hover {
+	color: #c89d58 !important;
+}
+
+body:has(.sso-up-container) footer .text-muted-foreground {
+	color: #859893 !important;
+}
+
+/* ============================================
+   CONTAINER
+   ============================================ */
+
+.sso-up-container {
+	position: relative;
+	min-height: auto;
+}
+
+.sso-up-container > * {
+	position: relative;
+	z-index: 1;
+}
+
+/* ============================================
+   CARD STYLING
+   ============================================ */
+
+/* Light mode cards */
+.sso-up-card {
+	background: linear-gradient(
+		145deg,
+		rgba(236, 222, 188, 0.6) 0%,
+		rgba(231, 226, 206, 0.55) 50%,
+		rgba(236, 222, 188, 0.5) 100%
+	);
+	border: 1px solid rgba(200, 157, 88, 0.3);
 	border-radius: 0.5rem;
 	overflow: hidden;
 	transition:
 		transform 0.3s ease,
 		box-shadow 0.3s ease;
-	background: white;
 	box-shadow:
-		0 2px 8px rgba(55, 71, 82, 0.08),
+		0 2px 8px rgba(55, 71, 82, 0.1),
 		0 1px 3px rgba(55, 71, 82, 0.06);
 }
 
-.sso-card:hover {
+/* Dark mode cards */
+:is(.dark) .sso-up-card {
+	background: linear-gradient(
+		145deg,
+		rgba(55, 71, 82, 0.7) 0%,
+		rgba(42, 58, 66, 0.65) 50%,
+		rgba(55, 71, 82, 0.6) 100%
+	) !important;
+	border-color: rgba(200, 157, 88, 0.2) !important;
+	box-shadow:
+		0 2px 8px rgba(0, 0, 0, 0.25),
+		0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.sso-up-card:hover {
 	transform: translateY(-4px);
 	box-shadow:
-		0 12px 24px rgba(55, 71, 82, 0.12),
-		0 4px 12px rgba(55, 71, 82, 0.08);
+		0 12px 24px rgba(55, 71, 82, 0.15),
+		0 4px 12px rgba(132, 89, 66, 0.1);
+	border-color: rgba(200, 157, 88, 0.5);
 }
 
-/* Section titles */
-.sso-section-title {
-	color: var(--sso-dark);
-	font-family: var(--font-farm-to-market), sans-serif;
+:is(.dark) .sso-up-card:hover {
+	box-shadow:
+		0 12px 24px rgba(0, 0, 0, 0.35),
+		0 4px 12px rgba(0, 0, 0, 0.2) !important;
+	border-color: rgba(200, 157, 88, 0.4) !important;
+}
+
+/* Card text — light */
+.sso-up-card h3,
+.sso-up-card [class*="CardTitle"] {
+	color: #374752 !important;
+}
+
+.sso-up-card p {
+	color: #60797e !important;
+}
+
+/* Card text — dark */
+:is(.dark) .sso-up-card h3,
+:is(.dark) .sso-up-card [class*="CardTitle"] {
+	color: #ecdebc !important;
+}
+
+:is(.dark) .sso-up-card p {
+	color: #a5b5b0 !important;
+}
+
+/* Card price */
+.sso-up-card .text-2xl {
+	color: #845942 !important;
+}
+
+:is(.dark) .sso-up-card .text-2xl {
+	color: #c89d58 !important;
+}
+
+/* Card button */
+.sso-up-card button.w-full {
+	background: linear-gradient(135deg, #845942 0%, #6e4a37 100%) !important;
+	color: #ecdebc !important;
+	border: none;
+	box-shadow: 0 2px 8px rgba(132, 89, 66, 0.3);
+}
+
+.sso-up-card button.w-full:hover {
+	box-shadow: 0 4px 12px rgba(132, 89, 66, 0.4);
+}
+
+/* Card select inputs */
+.sso-up-card select,
+.sso-up-card [data-radix-select-trigger] {
+	border-color: rgba(200, 157, 88, 0.4) !important;
+	background: rgba(255, 255, 255, 0.8) !important;
+	color: #374752 !important;
+}
+
+:is(.dark) .sso-up-card select,
+:is(.dark) .sso-up-card [data-radix-select-trigger] {
+	border-color: rgba(200, 157, 88, 0.3) !important;
+	background: rgba(30, 46, 52, 0.8) !important;
+	color: #ecdebc !important;
+}
+
+/* Card badges */
+.sso-up-card .absolute .inline-flex,
+.sso-up-card [class*="Badge"] {
+	background: linear-gradient(135deg, #845942, #6e4a37) !important;
+	color: #ecdebc !important;
+}
+
+/* ============================================
+   SECTION TITLES
+   ============================================ */
+
+.sso-up-section-title {
+	color: #374752 !important;
 	letter-spacing: 0.02em;
+	text-shadow: 0 1px 2px rgba(55, 71, 82, 0.1);
 }
 
-/* Hero section */
-.sso-hero {
-	border-radius: 0.75rem;
-	position: relative;
+:is(.dark) .sso-up-section-title {
+	color: #ecdebc !important;
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Balloon float animation for UI elements */
-@keyframes sso-float {
-	0%,
-	100% {
-		transform: translateY(0px);
-	}
-	50% {
-		transform: translateY(-8px);
-	}
+.sso-up-section-title svg {
+	color: #c89d58 !important;
+	filter: drop-shadow(0 1px 3px rgba(200, 157, 88, 0.4));
 }
 
-.sso-float {
-	animation: sso-float 3s ease-in-out infinite;
+/* ============================================
+   TABS AND NAVIGATION
+   ============================================ */
+
+.sso-up-container [role="tablist"] {
+	background: rgba(55, 71, 82, 0.85) !important;
+	border: 1px solid rgba(200, 157, 88, 0.3) !important;
+	border-radius: 0.5rem;
+	backdrop-filter: blur(8px);
 }
 
-/* Rising balloon for background decoration */
-@keyframes sso-balloon-rise {
-	0% {
-		transform: translateY(100vh) rotate(0deg);
-		opacity: 0;
-	}
-	10% {
-		opacity: 0.6;
-	}
-	90% {
-		opacity: 0.6;
-	}
-	100% {
-		transform: translateY(-120px) rotate(15deg);
-		opacity: 0;
-	}
+.sso-up-container [role="tab"] {
+	color: #ecdebc !important;
+	transition: all 0.2s ease;
 }
 
-.sso-balloon {
-	position: absolute;
-	border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-	animation: sso-balloon-rise linear infinite;
-	pointer-events: none;
+.sso-up-container [role="tab"]:hover {
+	color: #c89d58 !important;
+	background: rgba(200, 157, 88, 0.15) !important;
 }
 
-/* Washi tape decorative strip */
-.sso-washi {
-	height: 6px;
-	background: repeating-linear-gradient(
+.sso-up-container [role="tab"][data-state="active"] {
+	color: #ecdebc !important;
+	background: rgba(132, 89, 66, 0.7) !important;
+	box-shadow: 0 2px 6px rgba(132, 89, 66, 0.3);
+}
+
+.sso-up-container [role="tab"] svg {
+	color: #c89d58 !important;
+}
+
+/* Search input — light */
+.sso-up-container input,
+.sso-up-container input[type="search"],
+.sso-up-container input[type="text"] {
+	background: rgba(255, 255, 255, 0.6) !important;
+	border-color: rgba(200, 157, 88, 0.3) !important;
+	color: #374752 !important;
+}
+
+/* Search input — dark */
+:is(.dark) .sso-up-container input,
+:is(.dark) .sso-up-container input[type="search"],
+:is(.dark) .sso-up-container input[type="text"] {
+	background: rgba(30, 46, 52, 0.7) !important;
+	border-color: rgba(200, 157, 88, 0.25) !important;
+	color: #ecdebc !important;
+}
+
+.sso-up-container input::placeholder {
+	color: #859893 !important;
+}
+
+.sso-up-container input:focus {
+	border-color: rgba(200, 157, 88, 0.6) !important;
+	box-shadow: 0 0 0 2px rgba(200, 157, 88, 0.2);
+}
+
+.sso-up-container .relative > svg.text-muted-foreground {
+	color: #859893 !important;
+}
+
+/* Select/dropdown trigger — light */
+.sso-up-container button[role="combobox"],
+.sso-up-container [data-radix-select-trigger] {
+	background: rgba(255, 255, 255, 0.6) !important;
+	border-color: rgba(200, 157, 88, 0.3) !important;
+	color: #374752 !important;
+}
+
+/* Select/dropdown trigger — dark */
+:is(.dark) .sso-up-container button[role="combobox"],
+:is(.dark) .sso-up-container [data-radix-select-trigger] {
+	background: rgba(30, 46, 52, 0.7) !important;
+	border-color: rgba(200, 157, 88, 0.25) !important;
+	color: #ecdebc !important;
+}
+
+.sso-up-container button[role="combobox"] svg,
+.sso-up-container [data-radix-select-trigger] svg {
+	color: #374752 !important;
+}
+
+:is(.dark) .sso-up-container button[role="combobox"] svg,
+:is(.dark) .sso-up-container [data-radix-select-trigger] svg {
+	color: #ecdebc !important;
+}
+
+/* Cart button */
+.sso-up-container a[href="/shop/cart"] button {
+	background: rgba(55, 71, 82, 0.8) !important;
+	border-color: rgba(200, 157, 88, 0.4) !important;
+	color: #ecdebc !important;
+	backdrop-filter: blur(8px);
+}
+
+.sso-up-container a[href="/shop/cart"] button:hover {
+	background: rgba(132, 89, 66, 0.8) !important;
+	border-color: rgba(200, 157, 88, 0.6) !important;
+	color: #ecdebc !important;
+	box-shadow: 0 2px 8px rgba(132, 89, 66, 0.3);
+}
+
+.sso-up-container a[href="/shop/cart"] button svg {
+	color: #ecdebc !important;
+}
+
+/* Category filter buttons — light */
+.sso-up-container .flex.flex-wrap.gap-2 button {
+	background: rgba(255, 255, 255, 0.5) !important;
+	border-color: rgba(200, 157, 88, 0.3) !important;
+	color: #374752 !important;
+}
+
+/* Category filter buttons — dark */
+:is(.dark) .sso-up-container .flex.flex-wrap.gap-2 button {
+	background: rgba(30, 46, 52, 0.6) !important;
+	border-color: rgba(200, 157, 88, 0.2) !important;
+	color: #ecdebc !important;
+}
+
+.sso-up-container .flex.flex-wrap.gap-2 button:hover {
+	background: rgba(200, 157, 88, 0.2) !important;
+	border-color: rgba(200, 157, 88, 0.5) !important;
+}
+
+:is(.dark) .sso-up-container .flex.flex-wrap.gap-2 button:hover {
+	background: rgba(200, 157, 88, 0.15) !important;
+	border-color: rgba(200, 157, 88, 0.4) !important;
+}
+
+.sso-up-container .flex.flex-wrap.gap-2 button[data-state="active"],
+.sso-up-container .flex.flex-wrap.gap-2 button.bg-primary {
+	background: linear-gradient(135deg, #845942 0%, #6e4a37 100%) !important;
+	border: 1px solid rgba(200, 157, 88, 0.5) !important;
+	color: #ecdebc !important;
+	box-shadow: 0 2px 8px rgba(132, 89, 66, 0.3);
+}
+
+/* Sign-in card — light */
+.sso-up-container .border-primary,
+.sso-up-container [class*="border-primary"] {
+	background: rgba(255, 255, 255, 0.7) !important;
+	border-color: rgba(132, 89, 66, 0.5) !important;
+	backdrop-filter: blur(12px);
+	box-shadow: 0 4px 20px rgba(55, 71, 82, 0.15);
+}
+
+/* Sign-in card — dark */
+:is(.dark) .sso-up-container .border-primary,
+:is(.dark) .sso-up-container [class*="border-primary"] {
+	background: rgba(30, 46, 52, 0.8) !important;
+	border-color: rgba(200, 157, 88, 0.3) !important;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.sso-up-container .border-primary h3,
+.sso-up-container [class*="border-primary"] h3 {
+	color: #374752 !important;
+}
+
+:is(.dark) .sso-up-container .border-primary h3,
+:is(.dark) .sso-up-container [class*="border-primary"] h3 {
+	color: #ecdebc !important;
+}
+
+.sso-up-container .border-primary p,
+.sso-up-container [class*="border-primary"] p {
+	color: #60797e !important;
+}
+
+:is(.dark) .sso-up-container .border-primary p,
+:is(.dark) .sso-up-container [class*="border-primary"] p {
+	color: #a5b5b0 !important;
+}
+
+.sso-up-container .border-primary button,
+.sso-up-container [class*="border-primary"] button {
+	background: linear-gradient(135deg, #845942 0%, #6e4a37 100%) !important;
+	color: #ecdebc !important;
+	border: 1px solid rgba(200, 157, 88, 0.4) !important;
+	box-shadow: 0 4px 15px rgba(132, 89, 66, 0.3);
+}
+
+/* Muted text */
+.sso-up-container .text-muted-foreground {
+	color: #859893 !important;
+}
+
+:is(.dark) .sso-up-container .text-muted-foreground {
+	color: #7a9590 !important;
+}
+
+/* ============================================
+   SKELETON / LOADING STYLES
+   ============================================ */
+
+body:has(.sso-up-container) .animate-pulse,
+.sso-up-container .animate-pulse {
+	background: linear-gradient(
 		90deg,
-		var(--sso-accent) 0px,
-		var(--sso-accent) 14px,
-		transparent 14px,
-		transparent 18px,
-		var(--sso-secondary) 18px,
-		var(--sso-secondary) 32px,
-		transparent 32px,
-		transparent 36px,
-		var(--sso-warm) 36px,
-		var(--sso-warm) 50px,
-		transparent 50px,
-		transparent 54px
-	);
-	opacity: 0.5;
+		rgba(200, 157, 88, 0.1) 0%,
+		rgba(200, 157, 88, 0.2) 50%,
+		rgba(200, 157, 88, 0.1) 100%
+	) !important;
+	background-size: 200% 100% !important;
 }
 
-/* Scrapbook paper texture */
-.sso-paper-texture {
-	background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
-	opacity: 0.06;
+:is(.dark) body:has(.sso-up-container) .animate-pulse,
+:is(.dark) .sso-up-container .animate-pulse {
+	background: linear-gradient(
+		90deg,
+		rgba(200, 157, 88, 0.05) 0%,
+		rgba(200, 157, 88, 0.12) 50%,
+		rgba(200, 157, 88, 0.05) 100%
+	) !important;
+}
+
+body:has(.sso-up-container) [class*="skeleton"],
+body:has(.sso-up-container) .bg-muted,
+.sso-up-container [class*="skeleton"],
+.sso-up-container .bg-muted {
+	background: linear-gradient(
+		90deg,
+		rgba(200, 157, 88, 0.15) 0%,
+		rgba(200, 157, 88, 0.25) 50%,
+		rgba(200, 157, 88, 0.15) 100%
+	) !important;
+	animation: sso-skeleton-loading 2s ease-in-out infinite !important;
+}
+
+@keyframes sso-skeleton-loading {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* ============================================
+   DROPDOWN CONTENT (renders in portal)
+   ============================================ */
+
+/* Light */
+body:has(.sso-up-container) [data-radix-select-content],
+body:has(.sso-up-container) [role="listbox"] {
+	background: rgba(255, 255, 255, 0.98) !important;
+	border-color: rgba(200, 157, 88, 0.4) !important;
+	box-shadow: 0 4px 20px rgba(55, 71, 82, 0.15) !important;
+}
+
+body:has(.sso-up-container) [data-radix-select-item],
+body:has(.sso-up-container) [role="option"] {
+	color: #374752 !important;
+}
+
+body:has(.sso-up-container) [data-radix-select-item]:hover,
+body:has(.sso-up-container) [role="option"]:hover,
+body:has(.sso-up-container) [data-radix-select-item][data-highlighted],
+body:has(.sso-up-container) [role="option"][data-highlighted] {
+	background: rgba(132, 89, 66, 0.12) !important;
+	color: #374752 !important;
+}
+
+body:has(.sso-up-container) [data-radix-select-item][data-state="checked"],
+body:has(.sso-up-container) [role="option"][aria-selected="true"] {
+	background: rgba(132, 89, 66, 0.2) !important;
+}
+
+/* Dark dropdowns */
+:is(.dark) body:has(.sso-up-container) [data-radix-select-content],
+:is(.dark) body:has(.sso-up-container) [role="listbox"],
+body.dark:has(.sso-up-container) [data-radix-select-content],
+body.dark:has(.sso-up-container) [role="listbox"] {
+	background: rgba(30, 46, 52, 0.98) !important;
+	border-color: rgba(200, 157, 88, 0.25) !important;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+:is(.dark) body:has(.sso-up-container) [data-radix-select-item],
+:is(.dark) body:has(.sso-up-container) [role="option"],
+body.dark:has(.sso-up-container) [data-radix-select-item],
+body.dark:has(.sso-up-container) [role="option"] {
+	color: #ecdebc !important;
+}
+
+:is(.dark) body:has(.sso-up-container) [data-radix-select-item]:hover,
+:is(.dark) body:has(.sso-up-container) [role="option"]:hover,
+:is(.dark) body:has(.sso-up-container) [data-radix-select-item][data-highlighted],
+:is(.dark) body:has(.sso-up-container) [role="option"][data-highlighted],
+body.dark:has(.sso-up-container) [data-radix-select-item]:hover,
+body.dark:has(.sso-up-container) [role="option"]:hover {
+	background: rgba(200, 157, 88, 0.15) !important;
+	color: #ecdebc !important;
+}
+
+:is(.dark) body:has(.sso-up-container) [data-radix-select-item][data-state="checked"],
+:is(.dark) body:has(.sso-up-container) [role="option"][aria-selected="true"],
+body.dark:has(.sso-up-container) [data-radix-select-item][data-state="checked"],
+body.dark:has(.sso-up-container) [role="option"][aria-selected="true"] {
+	background: rgba(200, 157, 88, 0.25) !important;
+}
+
+/* ============================================
+   BALLOON CONTAINER — scrolls with page
+   ============================================ */
+
+.sso-balloons-layer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	min-height: 100%;
+	height: auto;
+	overflow: visible;
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* ============================================
+   MOBILE OPTIMIZATIONS
+   ============================================ */
+
+@media (max-width: 768px) {
+	body:has(.sso-up-container) {
+		background-image:
+			radial-gradient(ellipse 90% 70% at 15% 15%, rgba(96, 121, 126, 0.15) 0%, transparent 45%),
+			radial-gradient(ellipse 80% 60% at 85% 85%, rgba(200, 157, 88, 0.1) 0%, transparent 40%),
+			linear-gradient(180deg, #ecdebc 0%, #e7e2ce 50%, #ecdebc 100%) !important;
+	}
+
+	:is(.dark) body:has(.sso-up-container),
+	body.dark:has(.sso-up-container) {
+		background-image:
+			radial-gradient(ellipse 90% 70% at 15% 15%, rgba(55, 71, 82, 0.4) 0%, transparent 45%),
+			radial-gradient(ellipse 80% 60% at 85% 85%, rgba(132, 89, 66, 0.1) 0%, transparent 40%),
+			linear-gradient(180deg, #1a2930 0%, #1e2e34 50%, #1a2930 100%) !important;
+	}
+
+	body:has(.sso-up-container)::before {
+		opacity: 0.05;
+	}
+
+	.sso-up-card {
+		box-shadow:
+			0 2px 12px rgba(55, 71, 82, 0.1),
+			0 1px 4px rgba(55, 71, 82, 0.06);
+	}
+
+	.sso-up-card:hover {
+		transform: none;
+	}
+
+	.sso-up-card:active {
+		transform: scale(0.98);
+	}
+}
+
+@media (max-width: 480px) {
+	body:has(.sso-up-container)::before {
+		opacity: 0.04;
+	}
 }

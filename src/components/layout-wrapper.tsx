@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/main/Header";
 import { Footer } from "@/components/main/Footer";
 import { AnnouncementBanner } from "@/components/main/announcement-banner";
@@ -26,38 +26,8 @@ export function LayoutWrapper({ children, banner, activeMajorEvent }: LayoutWrap
 	const hideDefaultLayout = isAdminRoute;
 	const [isMinimized, setIsMinimized] = useState(false);
 
-	// Header visibility: hidden until user scrolls past the major event section
-	const hasMajorEvent = isHomePage && !!activeMajorEvent;
-	const [headerRevealed, setHeaderRevealed] = useState(!hasMajorEvent);
-
-	// Track scroll position — reveal header when the major event sentinel is passed
-	const handleMajorEventScrollEnd = useCallback(() => {
-		setHeaderRevealed(true);
-	}, []);
-
-	// Also listen to scroll position for the sticky reveal effect
-	useEffect(() => {
-		if (!hasMajorEvent) {
-			setHeaderRevealed(true);
-			return;
-		}
-
-		function onScroll() {
-			const sentinel = document.getElementById("major-event-end");
-			if (!sentinel) return;
-			const rect = sentinel.getBoundingClientRect();
-			// Reveal header once the sentinel is at or above the top of the viewport
-			if (rect.top <= 0) {
-				setHeaderRevealed(true);
-			} else {
-				setHeaderRevealed(false);
-			}
-		}
-
-		window.addEventListener("scroll", onScroll, { passive: true });
-		onScroll(); // check initial position
-		return () => window.removeEventListener("scroll", onScroll);
-	}, [hasMajorEvent]);
+	// Header is always visible and sticky now
+	const headerRevealed = true;
 
 	useEffect(() => {
 		if (banner?.id) {
@@ -82,17 +52,7 @@ export function LayoutWrapper({ children, banner, activeMajorEvent }: LayoutWrap
 				<AnnouncementBanner {...banner} onMinimize={handleMinimize} />
 			)}
 			{showHeader && (
-				<div
-					className={`transition-transform duration-500 ease-out ${
-						headerRevealed ? "translate-y-0" : "-translate-y-full"
-					}`}
-					style={{
-						position: headerRevealed ? "sticky" : "fixed",
-						top: 0,
-						zIndex: 50,
-						width: "100%",
-					}}
-				>
+				<div className="sticky top-0 z-50 w-full">
 					<Header />
 				</div>
 			)}

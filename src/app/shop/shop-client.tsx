@@ -47,6 +47,8 @@ import { cn } from "@/lib/utils";
 // Import event-specific styles and animations
 import "./events/2026/flower-fest-2026/styles.css";
 import { InitialPetalsBurst } from "./events/2026/flower-fest-2026/animations";
+import "./events/2026/sso-2026/styles.css";
+import { SSOBalloonsAnimation } from "./events/2026/sso-2026/animations";
 
 // Helper component to format product descriptions with lists
 function ProductDescription({ description }: { description: string }) {
@@ -653,6 +655,33 @@ export function ShopClient({
 			case "burgundy-grain":
 			case "flower-fest":
 				return "flower-fest-container";
+			case "up-adventure":
+				return "sso-up-container";
+			default:
+				return "";
+		}
+	};
+
+	// Get theme-specific card and section title classes
+	const getCardClass = (event: ShopEvent | null) => {
+		switch (event?.themeConfig?.backgroundPattern) {
+			case "burgundy-grain":
+			case "flower-fest":
+				return "flower-fest-card";
+			case "up-adventure":
+				return "sso-up-card";
+			default:
+				return "";
+		}
+	};
+
+	const getSectionTitleClass = (event: ShopEvent | null) => {
+		switch (event?.themeConfig?.backgroundPattern) {
+			case "burgundy-grain":
+			case "flower-fest":
+				return "flower-fest-section-title";
+			case "up-adventure":
+				return "sso-up-section-title";
 			default:
 				return "";
 		}
@@ -715,10 +744,16 @@ export function ShopClient({
 		activeEvent?.themeConfig?.animation === "petals" ||
 		(!activeEvent && priorityEvent?.themeConfig?.animation === "petals");
 
+	const shouldShowBalloons =
+		activeEvent?.themeConfig?.animation === "balloons" ||
+		(!activeEvent && priorityEvent?.themeConfig?.animation === "balloons");
+
 	return (
 		<div className={cn(eventBackgroundClass)} style={getEventStyles(activeEvent)}>
 			{/* Initial Petals Animation - plays on load/tab switch for Flower Fest */}
 			{shouldShowPetals && <InitialPetalsBurst key={petalAnimationKey} isActive={true} />}
+			{/* Balloons Animation - continuous floating balloons */}
+			{shouldShowBalloons && <SSOBalloonsAnimation isActive={true} />}
 
 			{/* Event Header */}
 			{activeEvent && activeEvent.themeConfig?.headerText && (
@@ -826,22 +861,7 @@ export function ShopClient({
 								<h3 className="text-lg font-semibold">Sign in to shop</h3>
 								<p className="text-muted-foreground text-sm leading-relaxed">
 									Sign in with Google to shop. If you have trouble, try refreshing or using a
-									different browser/device. Still need help? Contact us at{" "}
-									<a
-										className="text-[#165B95] underline"
-										target="_blank"
-										href="https://www.facebook.com/ARSAFlowerFest"
-									>
-										FlowerFest Help Desk
-									</a>{" "}
-									or email us at{" "}
-									<a
-										className="text-[#165B95] underline"
-										target="_blank"
-										href="mailto:arsa.resgen@gmail.com"
-									>
-										arsa.resgen@gmail.com
-									</a>
+									different browser/device.
 								</p>
 							</div>
 							<Button
@@ -912,7 +932,7 @@ export function ShopClient({
 						<h2
 							className={cn(
 								"mb-4 flex items-center gap-2 text-xl font-bold",
-								eventBackgroundClass && "flower-fest-section-title",
+								eventBackgroundClass && getSectionTitleClass(activeEvent),
 							)}
 						>
 							<Gift className="h-5 w-5" />
@@ -923,7 +943,7 @@ export function ShopClient({
 						<h2
 							className={cn(
 								"mb-4 flex items-center gap-2 text-xl font-bold",
-								eventBackgroundClass && "flower-fest-section-title",
+								eventBackgroundClass && getSectionTitleClass(activeEvent),
 							)}
 						>
 							<Gift className="h-5 w-5" />
@@ -940,7 +960,7 @@ export function ShopClient({
 									key={pkg.id}
 									className={cn(
 										"flex flex-col overflow-hidden",
-										eventBackgroundClass ? "flower-fest-card" : "border-primary/30 border-2",
+										eventBackgroundClass ? getCardClass(activeEvent) : "border-primary/30 border-2",
 									)}
 								>
 									<CardHeader className="pb-3">
@@ -1016,7 +1036,7 @@ export function ShopClient({
 						<h2
 							className={cn(
 								"mb-4 text-xl font-bold",
-								eventBackgroundClass && "flower-fest-section-title",
+								eventBackgroundClass && getSectionTitleClass(activeEvent),
 							)}
 						>
 							Products
@@ -1026,7 +1046,7 @@ export function ShopClient({
 						<h2
 							className={cn(
 								"mb-4 text-xl font-bold",
-								eventBackgroundClass && "flower-fest-section-title",
+								eventBackgroundClass && getSectionTitleClass(activeEvent),
 							)}
 						>
 							{activeEvent.name} Products
@@ -1036,7 +1056,7 @@ export function ShopClient({
 						<h2
 							className={cn(
 								"mb-4 text-xl font-bold",
-								eventBackgroundClass && "flower-fest-section-title",
+								eventBackgroundClass && getSectionTitleClass(activeEvent),
 							)}
 						>
 							Products
@@ -1066,7 +1086,7 @@ export function ShopClient({
 								key={product.id}
 								className={cn(
 									"flex min-w-0 flex-col overflow-hidden",
-									eventBackgroundClass && "flower-fest-card",
+									eventBackgroundClass && getCardClass(activeEvent),
 								)}
 							>
 								<CardHeader className="min-w-0 overflow-hidden pb-3">

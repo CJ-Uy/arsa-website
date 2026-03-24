@@ -3,7 +3,7 @@
 export type ThemeConfig = {
 	primaryColor?: string;
 	secondaryColor?: string;
-	animation?: "confetti" | "hearts" | "snow" | "sparkles" | "petals" | "none";
+	animation?: "confetti" | "hearts" | "snow" | "sparkles" | "petals" | "balloons" | "none";
 	backgroundPattern?: string;
 	tabGlow?: boolean;
 	headerText?: string;

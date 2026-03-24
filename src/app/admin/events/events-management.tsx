@@ -450,6 +450,7 @@ const animationOptions = [
 	{ value: "snow", label: "Snow" },
 	{ value: "sparkles", label: "Sparkles" },
 	{ value: "petals", label: "Flower Petals" },
+	{ value: "balloons", label: "Balloons" },
 ];
 
 /**
@@ -2014,6 +2015,7 @@ export function EventsManagement({
 										<SelectContent>
 											<SelectItem value="none">None (Default)</SelectItem>
 											<SelectItem value="burgundy-grain">Burgundy Grain (FlowerFest)</SelectItem>
+											<SelectItem value="up-adventure">Up: Adventure is Out There (SSO)</SelectItem>
 										</SelectContent>
 									</Select>
 									<p className="text-muted-foreground mt-1 text-xs">

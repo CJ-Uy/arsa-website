@@ -1,118 +1,195 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-// Floating balloons background animation for the SSO shop page
-// Uses canvas for performance — balloons rise continuously
 const BALLOON_COLORS = ["#6399A0", "#966C95", "#EACA5B", "#ACAA7E", "#D1733F", "#CE886E"];
 
 type Balloon = {
-	x: number;
-	y: number;
-	radius: number;
+	id: number;
+	x: number; // percentage (0-100)
+	y: number; // pixels from top of container
+	size: number;
 	color: string;
-	speed: number;
 	wobbleOffset: number;
 	wobbleSpeed: number;
+	wobbleAmount: number;
+	speed: number; // px per frame
 	opacity: number;
+	rotation: number;
 };
 
+let balloonIdCounter = 0;
+
+function createBalloon(containerHeight: number, startFromBottom: boolean): Balloon {
+	const size = 30 + Math.random() * 35;
+	return {
+		id: balloonIdCounter++,
+		x: 2 + Math.random() * 96,
+		y: startFromBottom
+			? containerHeight + size + Math.random() * 200
+			: Math.random() * containerHeight,
+		size,
+		color: BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)],
+		wobbleOffset: Math.random() * Math.PI * 2,
+		wobbleSpeed: 0.008 + Math.random() * 0.015,
+		wobbleAmount: 15 + Math.random() * 25,
+		speed: 0.4 + Math.random() * 0.6,
+		opacity: 0.15 + Math.random() * 0.2,
+		rotation: -10 + Math.random() * 20,
+	};
+}
+
+function BalloonElement({ balloon }: { balloon: Balloon }) {
+	const wobbleX = Math.sin(balloon.wobbleOffset) * balloon.wobbleAmount;
+
+	return (
+		<div
+			className="absolute"
+			style={{
+				left: `${balloon.x}%`,
+				top: balloon.y,
+				opacity: balloon.opacity,
+				transform: `translateX(${wobbleX}px) rotate(${balloon.rotation}deg)`,
+				transition: "none",
+				willChange: "transform, top",
+			}}
+		>
+			{/* Balloon body */}
+			<svg
+				width={balloon.size}
+				height={balloon.size * 1.25 + 30}
+				viewBox="0 0 40 80"
+				fill="none"
+			>
+				{/* Balloon shape */}
+				<ellipse cx="20" cy="22" rx="17" ry="22" fill={balloon.color} />
+				{/* Shine highlight */}
+				<ellipse
+					cx="13"
+					cy="15"
+					rx="4"
+					ry="6"
+					fill="white"
+					opacity="0.35"
+					transform="rotate(-15 13 15)"
+				/>
+				{/* Knot */}
+				<polygon points="18,44 22,44 20,47" fill={balloon.color} />
+				{/* String */}
+				<path
+					d="M20 47 Q22 58 19 68 Q17 75 20 80"
+					stroke={balloon.color}
+					strokeWidth="0.8"
+					fill="none"
+					opacity="0.5"
+				/>
+			</svg>
+		</div>
+	);
+}
+
 export function SSOBalloonsAnimation({ isActive }: { isActive: boolean }) {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const [balloons, setBalloons] = useState<Balloon[]>([]);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const animFrameRef = useRef<number>(0);
+	const balloonsRef = useRef<Balloon[]>([]);
+	const initialBurstDone = useRef<boolean>(false);
+
+	// Sync ref with state
+	useEffect(() => {
+		balloonsRef.current = balloons;
+	}, [balloons]);
+
+	const animate = useCallback(() => {
+		const container = containerRef.current;
+		if (!container) {
+			animFrameRef.current = requestAnimationFrame(animate);
+			return;
+		}
+
+		const updated = balloonsRef.current
+			.map((b) => ({
+				...b,
+				y: b.y - b.speed,
+				wobbleOffset: b.wobbleOffset + b.wobbleSpeed,
+			}))
+			.filter((b) => b.y > -100); // Remove balloons that floated off top
+
+		balloonsRef.current = updated;
+		setBalloons([...updated]);
+		animFrameRef.current = requestAnimationFrame(animate);
+	}, []);
 
 	useEffect(() => {
 		if (!isActive) return;
 
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
+		// Check reduced motion
+		const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		if (prefersReduced) return;
 
-		const resize = () => {
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
-		};
-		resize();
-		window.addEventListener("resize", resize);
+		const container = containerRef.current;
+		if (!container) return;
 
-		const balloons: Balloon[] = Array.from({ length: 12 }, () =>
-			makeBalloon(canvas.width, canvas.height, true),
-		);
+		// Initial burst: spawn many balloons spread across the page
+		if (!initialBurstDone.current) {
+			initialBurstDone.current = true;
+			const containerHeight = container.scrollHeight || 3000;
+			const initialBalloons: Balloon[] = [];
 
-		let animId: number;
-
-		function makeBalloon(w: number, h: number, randomY: boolean): Balloon {
-			return {
-				x: Math.random() * w,
-				y: randomY ? Math.random() * h : h + 30 + Math.random() * 60,
-				radius: 14 + Math.random() * 10,
-				color: BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)],
-				speed: 0.3 + Math.random() * 0.4,
-				wobbleOffset: Math.random() * Math.PI * 2,
-				wobbleSpeed: 0.005 + Math.random() * 0.008,
-				opacity: 0.25 + Math.random() * 0.2,
-			};
-		}
-
-		function draw() {
-			if (!canvas || !ctx) return;
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-			for (const b of balloons) {
-				b.y -= b.speed;
-				b.wobbleOffset += b.wobbleSpeed;
-				const wx = Math.sin(b.wobbleOffset) * 20;
-
-				if (b.y + b.radius < -40) {
-					Object.assign(b, makeBalloon(canvas.width, canvas.height, false));
-				}
-
-				ctx.save();
-				ctx.globalAlpha = b.opacity;
-
-				// Balloon body
-				ctx.beginPath();
-				ctx.ellipse(b.x + wx, b.y, b.radius, b.radius * 1.25, 0, 0, Math.PI * 2);
-				ctx.fillStyle = b.color;
-				ctx.fill();
-
-				// Shine
-				ctx.beginPath();
-				ctx.ellipse(
-					b.x + wx - b.radius * 0.3,
-					b.y - b.radius * 0.35,
-					b.radius * 0.18,
-					b.radius * 0.28,
-					-0.4,
-					0,
-					Math.PI * 2,
-				);
-				ctx.fillStyle = "rgba(255,255,255,0.4)";
-				ctx.fill();
-
-				// String
-				ctx.beginPath();
-				ctx.moveTo(b.x + wx, b.y + b.radius * 1.25);
-				ctx.lineTo(b.x + wx + Math.sin(b.wobbleOffset * 0.7) * 5, b.y + b.radius * 1.25 + 25);
-				ctx.strokeStyle = `rgba(0,0,0,${b.opacity * 0.5})`;
-				ctx.lineWidth = 0.8;
-				ctx.stroke();
-
-				ctx.restore();
+			// Spread ~25 balloons across the full page height
+			for (let i = 0; i < 25; i++) {
+				const b = createBalloon(containerHeight, false);
+				// Distribute evenly across the page
+				b.y = (containerHeight * i) / 25 + Math.random() * (containerHeight / 25);
+				initialBalloons.push(b);
 			}
 
-			animId = requestAnimationFrame(draw);
+			balloonsRef.current = initialBalloons;
+			setBalloons(initialBalloons);
 		}
 
-		draw();
+		// Start animation loop
+		animFrameRef.current = requestAnimationFrame(animate);
+
+		// Passive spawning: add a new balloon every 2-4 seconds
+		// Spawns near current scroll position so they appear throughout the whole page
+		const spawnInterval = setInterval(() => {
+			const containerHeight = container.scrollHeight || 3000;
+			const scrollY = window.scrollY || 0;
+			const viewportHeight = window.innerHeight;
+
+			// Spawn balloon somewhere within/around the current viewport
+			// Randomly pick between: just below viewport (rises into view)
+			// or at a random position across the full page
+			const spawnNearViewport = Math.random() > 0.3;
+			const newBalloon = createBalloon(containerHeight, false);
+
+			if (spawnNearViewport) {
+				// Spawn just below the current viewport so it rises into view
+				newBalloon.y = scrollY + viewportHeight + 50 + Math.random() * 150;
+			} else {
+				// Spawn at a random position across the full page height
+				newBalloon.y = Math.random() * containerHeight;
+			}
+
+			newBalloon.opacity = 0.12 + Math.random() * 0.18;
+			balloonsRef.current = [...balloonsRef.current, newBalloon];
+			setBalloons([...balloonsRef.current]);
+		}, 2000 + Math.random() * 2000);
 
 		return () => {
-			cancelAnimationFrame(animId);
-			window.removeEventListener("resize", resize);
+			if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+			clearInterval(spawnInterval);
 		};
-	}, [isActive]);
+	}, [isActive, animate]);
 
 	if (!isActive) return null;
 
-	return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-0" />;
+	return (
+		<div ref={containerRef} className="sso-balloons-layer" aria-hidden="true">
+			{balloons.map((b) => (
+				<BalloonElement key={b.id} balloon={b} />
+			))}
+		</div>
+	);
 }
