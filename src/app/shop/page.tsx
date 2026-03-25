@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-	title: "FlowerFest 2026",
+	title: "Seniors' Send-Off 2026",
 };
 
 // Cache for 5 minutes for remote DB - products don't change that often

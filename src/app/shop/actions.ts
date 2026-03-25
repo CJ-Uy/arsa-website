@@ -862,14 +862,16 @@ export async function createOrder(
 
 		// Send order confirmation email (non-blocking)
 		try {
-			// Get event name if applicable
+			// Get event name and slug if applicable
 			let eventName: string | undefined;
+			let eventSlug: string | undefined;
 			if (eventId) {
 				const event = await prisma.shopEvent.findUnique({
 					where: { id: eventId },
-					select: { name: true },
+					select: { name: true, slug: true },
 				});
 				eventName = event?.name;
+				eventSlug = event?.slug;
 			}
 
 			// Build email data from cart items
@@ -896,6 +898,7 @@ export async function createOrder(
 				items: emailItems,
 				totalAmount,
 				eventName,
+				eventSlug,
 				orderDate: new Date(),
 				eventData: {
 					eventName,

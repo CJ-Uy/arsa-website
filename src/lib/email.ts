@@ -37,6 +37,7 @@ type OrderEmailData = {
 	items: OrderItem[];
 	totalAmount: number;
 	eventName?: string;
+	eventSlug?: string;
 	orderDate: Date;
 	eventData?: EventData; // Checkout field responses including claiming method, delivery details, payment
 };
@@ -154,18 +155,65 @@ async function logEmail(
 	}
 }
 
-// Generate order confirmation email HTML with burgundy FlowerFest theme
-function generateOrderConfirmationHtml(data: OrderEmailData): string {
-	// FlowerFest Color Palette - matching the actual theme
-	const colors = {
-		darkRed: "#7A1520", // Brighter burgundy for main backgrounds (flower fest palette)
-		burgundy: "#AA1A1A", // Burgundy red (flower fest accent)
-		red: "#AA1A1A", // Accent red
-		lightRed: "#c42020",
+// Email color themes per event
+type EmailTheme = {
+	primary: string; // Main background gradient start
+	secondary: string; // Main background gradient end
+	accent: string; // Accent color (buttons, links)
+	cream: string; // Light background
+	border: string; // Borders and dividers
+	muted: string; // Muted text
+	gold: string; // Notice/warning accent
+	helpUrl?: string; // Help page link
+	helpLabel?: string; // Help page label
+};
+
+const EMAIL_THEMES: Record<string, EmailTheme> = {
+	default: {
+		primary: "#7A1520",
+		secondary: "#AA1A1A",
+		accent: "#AA1A1A",
 		cream: "#F2ECE0",
-		pastelOrange: "#D9C3A9",
-		pastelRed: "#D3B3AD",
+		border: "#D3B3AD",
+		muted: "#6b5c52",
 		gold: "#D6A134",
+		helpUrl: "https://www.facebook.com/ARSAFlowerFest",
+		helpLabel: "FlowerFest Help Desk",
+	},
+	"sso-2026": {
+		primary: "#374752",
+		secondary: "#60797E",
+		accent: "#845942",
+		cream: "#ECDEBC",
+		border: "#C2A785",
+		muted: "#60797E",
+		gold: "#C89D58",
+		helpUrl: "",
+		helpLabel: "",
+	},
+};
+
+function getEmailTheme(eventSlug?: string): EmailTheme {
+	if (eventSlug && EMAIL_THEMES[eventSlug]) {
+		return EMAIL_THEMES[eventSlug];
+	}
+	return EMAIL_THEMES.default;
+}
+
+// Generate order confirmation email HTML with event-aware theming
+function generateOrderConfirmationHtml(data: OrderEmailData): string {
+	const theme = getEmailTheme(data.eventSlug);
+
+	// Map theme to template color variables
+	const colors = {
+		darkRed: theme.primary,
+		burgundy: theme.accent,
+		red: theme.accent,
+		lightRed: theme.secondary,
+		cream: theme.cream,
+		pastelOrange: theme.border,
+		pastelRed: theme.border,
+		gold: theme.gold,
 	};
 
 	const itemsHtml = data.items
@@ -398,10 +446,10 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
     <!-- Help Section -->
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: ${colors.burgundy};">Need Help?</h3>
-      <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
-		Contact us at the <a href="https://www.facebook.com/ARSAFlowerFest" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">FlowerFest Help Desk</a><br>
-	  </p> 
-	  <p style="margin: 0; color: #5a3a3a; font-size: 14px; line-height: 1.8;">
+      <p style="margin: 0; color: ${theme.muted}; font-size: 14px; line-height: 1.8;">
+		Contact us at the <a href="${theme.helpUrl || "https://www.facebook.com/ARSAOfficial"}" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">${theme.helpLabel || "ARSA Help Desk"}</a><br>
+	  </p>
+	  <p style="margin: 0; color: ${theme.muted}; font-size: 14px; line-height: 1.8;">
 		or email us at <a href="mailto:arsa.resgen@gmail.com" style="color: ${colors.red}; font-weight: 600; text-decoration: none;">arsa.resgen@gmail.com</a><br>
 	  </p>
     </div>
