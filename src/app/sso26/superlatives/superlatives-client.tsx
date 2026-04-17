@@ -85,6 +85,19 @@ function SeniorCombobox({
 							No senior found. Try &quot;Other&quot; below.
 						</CommandEmpty>
 						<CommandGroup>
+							<CommandItem
+								value="OTHER"
+								onSelect={() => {
+									onChange("OTHER");
+									setOpen(false);
+								}}
+								className="font-[family-name:var(--font-farm-to-market)] text-[#845942]"
+							>
+								<Check
+									className={`mr-2 h-4 w-4 ${value === "OTHER" ? "opacity-100" : "opacity-0"}`}
+								/>
+								Other – my senior is not listed
+							</CommandItem>
 							{seniors.map((senior) => (
 								<CommandItem
 									key={senior}
@@ -101,19 +114,6 @@ function SeniorCombobox({
 									{senior}
 								</CommandItem>
 							))}
-							<CommandItem
-								value="OTHER"
-								onSelect={() => {
-									onChange("OTHER");
-									setOpen(false);
-								}}
-								className="font-[family-name:var(--font-farm-to-market)] text-[#845942]"
-							>
-								<Check
-									className={`mr-2 h-4 w-4 ${value === "OTHER" ? "opacity-100" : "opacity-0"}`}
-								/>
-								Other – my senior is not listed
-							</CommandItem>
 						</CommandGroup>
 					</CommandList>
 				</Command>
