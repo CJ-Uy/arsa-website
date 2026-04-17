@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import { HelpCircle, Users2, BookOpen, PhoneCall, FilePlus2 } from "lucide-react";
+import { HelpCircle, Users2, BookOpen, PhoneCall, FilePlus2, GraduationCap } from "lucide-react";
 
 const iconMap = {
 	orders: ShoppingCart,
@@ -67,6 +67,7 @@ const iconMap = {
 	bridges: BookOpen,
 	contact: PhoneCall,
 	otherpages: FilePlus2,
+	sso26: GraduationCap,
 } as const;
 
 export type NavItemDef = {

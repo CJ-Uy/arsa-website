@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			isEventsAdmin: true,
 			isTicketsAdmin: true,
 			isRedirectsAdmin: true,
+			isSSO26Admin: true,
 			isSuperAdmin: true,
 			eventAdmins: {
 				select: { eventId: true },
@@ -37,12 +38,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	const isEventsAdmin = user?.isEventsAdmin ?? false;
 	const isTicketsAdmin = user?.isTicketsAdmin ?? false;
 	const isRedirectsAdmin = user?.isRedirectsAdmin ?? false;
+	const isSSO26Admin = user?.isSSO26Admin ?? false;
 	const isSuperAdmin = user?.isSuperAdmin ?? false;
 	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
 
 	// Must have at least one admin permission to access
-	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isRedirectsAdmin && !isSuperAdmin) {
+	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isRedirectsAdmin && !isSSO26Admin && !isSuperAdmin) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
@@ -161,6 +163,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 						label: "Settings",
 						iconKey: "settings" as const,
 						group: "Tools",
+					},
+				]
+			: []),
+		...(isSSO26Admin
+			? [
+					{
+						href: "/admin/sso26",
+						label: "SSO 2026",
+						iconKey: "sso26" as const,
+						group: "SSO 2026",
 					},
 				]
 			: []),

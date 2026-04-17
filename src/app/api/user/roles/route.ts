@@ -20,6 +20,7 @@ export async function GET() {
 				isEventsAdmin: true,
 				isRedirectsAdmin: true,
 				isTicketsAdmin: true,
+				isSSO26Admin: true,
 				isSuperAdmin: true,
 				eventAdmins: {
 					select: {
@@ -43,6 +44,7 @@ export async function GET() {
 				isEventsAdmin: hasEventAdminAccess,
 				isRedirectsAdmin: user.isRedirectsAdmin,
 				isTicketsAdmin: user.isTicketsAdmin,
+				isSSO26Admin: user.isSSO26Admin,
 				isSuperAdmin: user.isSuperAdmin,
 				// Include specific event IDs for fine-grained access control
 				eventAdminIds: user.eventAdmins.map((ea) => ea.eventId),
