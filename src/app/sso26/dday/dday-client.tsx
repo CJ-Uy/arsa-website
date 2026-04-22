@@ -14,14 +14,18 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Label } from "@/components/ui/label";
 import { submitDdayVotes } from "../actions";
+import type { SSO26Question } from "@/app/admin/sso26/actions";
 
 const SSO_LOGO = "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.webp";
 
 interface Props {
-	questions: string[];
+	questions: SSO26Question[];
 	seniors: string[];
+}
+
+function toTitleCase(str: string) {
+	return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
 
 function ScrapbookCard({ children, rotate = 0 }: { children: React.ReactNode; rotate?: number }) {
@@ -57,7 +61,7 @@ function SeniorCombobox({
 					className="w-full justify-between border-[#C89D58]/40 bg-white font-[family-name:var(--font-farm-to-market)] text-base hover:border-[#845942] hover:bg-amber-50"
 				>
 					<span className={value ? "text-[#374752]" : "text-stone-400"}>
-						{value || "Search for a senior..."}
+						{value ? toTitleCase(value) : "Search for a senior..."}
 					</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-stone-400" />
 				</Button>
@@ -81,12 +85,12 @@ function SeniorCombobox({
 										onChange(senior);
 										setOpen(false);
 									}}
-									className="font-[family-name:var(--font-farm-to-market)]"
+									className="font-[family-name:var(--font-farm-to-market)] tracking-wide"
 								>
 									<Check
-										className={`mr-2 h-4 w-4 ${value === senior ? "opacity-100" : "opacity-0"}`}
+										className={`mr-2 h-4 w-4 shrink-0 ${value === senior ? "opacity-100" : "opacity-0"}`}
 									/>
-									{senior}
+									{toTitleCase(senior)}
 								</CommandItem>
 							))}
 						</CommandGroup>
@@ -99,7 +103,7 @@ function SeniorCombobox({
 
 export function SSO26DdayClient({ questions, seniors }: Props) {
 	const [votes, setVotes] = useState<Record<string, string>>(() =>
-		Object.fromEntries(questions.map((q) => [q, ""])),
+		Object.fromEntries(questions.map((q) => [q.title, ""])),
 	);
 	const [voteCount, setVoteCount] = useState(0);
 	const [isPending, startTransition] = useTransition();
@@ -123,8 +127,7 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 			if (result.success) {
 				toast.success("Votes submitted! Vote again anytime 🎉");
 				setVoteCount((c) => c + 1);
-				// Reset for next round
-				setVotes(Object.fromEntries(questions.map((q) => [q, ""])));
+				setVotes(Object.fromEntries(questions.map((q) => [q.title, ""])));
 			} else {
 				toast.error(result.message);
 			}
@@ -182,17 +185,23 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 			{/* Form */}
 			<div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
 				<div className="space-y-6">
-					{questions.map((question, i) => {
+					{questions.map((q, i) => {
+						const key = q.title;
 						const rotations = [-0.5, 0.5, -0.3, 0.4, -0.6, 0.3];
 						return (
-							<ScrapbookCard key={question} rotate={rotations[i % rotations.length]}>
+							<ScrapbookCard key={key} rotate={rotations[i % rotations.length]}>
 								<div className="space-y-3">
-									<Label className="font-[family-name:var(--font-farm-to-market)] text-base font-semibold text-[#374752]">
-										{question}
-									</Label>
+									<p className="font-[family-name:var(--font-gentlemens-script)] text-xl font-bold uppercase tracking-widest text-[#374752]">
+										{q.title}
+									</p>
+									{q.description && (
+										<p className="font-mono text-xs leading-relaxed text-stone-400">
+											{q.description}
+										</p>
+									)}
 									<SeniorCombobox
-										value={votes[question] ?? ""}
-										onChange={(v) => setVote(question, v)}
+										value={votes[key] ?? ""}
+										onChange={(v) => setVote(key, v)}
 										seniors={seniors}
 									/>
 								</div>

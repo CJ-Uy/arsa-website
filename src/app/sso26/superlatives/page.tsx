@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getSSO26Config } from "@/app/admin/sso26/actions";
+import { getSSO26Config, type SSO26Question } from "@/app/admin/sso26/actions";
 import { getUserNominations } from "../actions";
 import { SSO26Gate } from "../sso26-gate";
 import { SSO26SuperlativesClient } from "./superlatives-client";

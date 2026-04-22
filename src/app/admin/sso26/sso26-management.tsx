@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, BarChart2, Settings, Users, Vote, Trash2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { RefreshCw, BarChart2, Settings, Users, Vote, Trash2, ChevronDown, ChevronUp, AlertTriangle, Plus, GripVertical } from "lucide-react";
 import {
 	saveSSO26Config,
 	getSuperlativesResults,
@@ -24,6 +24,7 @@ import {
 	clearAllNominations,
 	clearAllDdayVotes,
 	type SSO26Config,
+	type SSO26Question,
 	type QuestionResult,
 	type RawNomination,
 	type RawDdayVote,
@@ -403,6 +404,74 @@ function ResultsChart({ results, emptyMessage }: { results: QuestionResult[]; em
 	);
 }
 
+function QuestionsEditor({
+	questions,
+	onChange,
+	label,
+}: {
+	questions: SSO26Question[];
+	onChange: (qs: SSO26Question[]) => void;
+	label: string;
+}) {
+	const add = () => onChange([...questions, { title: "", description: "" }]);
+	const remove = (i: number) => onChange(questions.filter((_, idx) => idx !== i));
+	const update = (i: number, field: keyof SSO26Question, value: string) => {
+		const updated = [...questions];
+		updated[i] = { ...updated[i], [field]: value };
+		onChange(updated);
+	};
+
+	return (
+		<div className="space-y-2">
+			<div className="flex items-center justify-between">
+				<Label className="text-sm font-medium">
+					{label}{" "}
+					<span className="text-muted-foreground font-normal">({questions.length} entries)</span>
+				</Label>
+				<Button type="button" variant="outline" size="sm" onClick={add} className="h-7 text-xs">
+					<Plus className="mr-1 h-3.5 w-3.5" />
+					Add
+				</Button>
+			</div>
+			<div className="space-y-2">
+				{questions.length === 0 && (
+					<p className="text-muted-foreground rounded-lg border border-dashed py-4 text-center text-sm">
+						No categories yet. Click Add to create one.
+					</p>
+				)}
+				{questions.map((q, i) => (
+					<div key={i} className="flex gap-2 rounded-lg border bg-amber-50/30 p-3">
+						<GripVertical className="mt-2.5 h-4 w-4 shrink-0 text-stone-300" />
+						<div className="flex flex-1 flex-col gap-2">
+							<input
+								value={q.title}
+								onChange={(e) => update(i, "title", e.target.value)}
+								placeholder="Award title (e.g. MOST LIKELY TO BECOME PRESIDENT)"
+								className="rounded-md border border-input bg-white px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-[#845942]"
+							/>
+							<input
+								value={q.description ?? ""}
+								onChange={(e) => update(i, "description", e.target.value)}
+								placeholder="Optional description (e.g. The one everyone predicts will run for office someday)"
+								className="rounded-md border border-input bg-white px-3 py-1.5 text-sm text-stone-500 focus:outline-none focus:ring-1 focus:ring-[#845942]"
+							/>
+						</div>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => remove(i)}
+							className="h-8 w-8 shrink-0 p-0 text-red-400 hover:text-red-600"
+						>
+							<Trash2 className="h-3.5 w-3.5" />
+						</Button>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
 export function SSO26Management({ initialConfig, initialSuperlativesResults, initialDdayResults, initialStats, initialNominations, initialDdayVotes }: Props) {
 	// Config state
 	const [superlativesOpen, setSuperlativesOpen] = useState(initialConfig.superlativesOpen);
@@ -410,11 +479,11 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 	const [superlativesSeniorsText, setSuperlativesSeniorsText] = useState(
 		initialConfig.superlativesSeniors.join("\n"),
 	);
-	const [superlativesQuestionsText, setSuperlativesQuestionsText] = useState(
-		initialConfig.superlativesQuestions.join("\n"),
+	const [superlativesQuestions, setSuperlativesQuestions] = useState<SSO26Question[]>(
+		initialConfig.superlativesQuestions,
 	);
 	const [ddaySeniorsText, setDdaySeniorsText] = useState(initialConfig.ddaySeniors.join("\n"));
-	const [ddayQuestionsText, setDdayQuestionsText] = useState(initialConfig.ddayQuestions.join("\n"));
+	const [ddayQuestions, setDdayQuestions] = useState<SSO26Question[]>(initialConfig.ddayQuestions);
 
 	// Results state
 	const [superlativesResults, setSuperlativesResults] = useState(initialSuperlativesResults);
@@ -435,41 +504,39 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 			.map((s) => s.trim())
 			.filter(Boolean);
 
+	const buildConfig = useCallback(
+		() => ({
+			superlativesOpen,
+			ddayOpen,
+			superlativesSeniors: parseLines(superlativesSeniorsText),
+			superlativesQuestions: superlativesQuestions.filter((q) => q.title.trim()),
+			ddaySeniors: parseLines(ddaySeniorsText),
+			ddayQuestions: ddayQuestions.filter((q) => q.title.trim()),
+		}),
+		[superlativesOpen, ddayOpen, superlativesSeniorsText, superlativesQuestions, ddaySeniorsText, ddayQuestions],
+	);
+
 	const handleSaveSuperlatives = useCallback(() => {
 		startSavingSuperlatives(async () => {
-			const result = await saveSSO26Config({
-				superlativesOpen,
-				ddayOpen,
-				superlativesSeniors: parseLines(superlativesSeniorsText),
-				superlativesQuestions: parseLines(superlativesQuestionsText),
-				ddaySeniors: parseLines(ddaySeniorsText),
-				ddayQuestions: parseLines(ddayQuestionsText),
-			});
+			const result = await saveSSO26Config(buildConfig());
 			if (result.success) {
 				toast.success("Superlatives config saved");
 			} else {
 				toast.error(result.message);
 			}
 		});
-	}, [superlativesOpen, ddayOpen, superlativesSeniorsText, superlativesQuestionsText, ddaySeniorsText, ddayQuestionsText]);
+	}, [buildConfig]);
 
 	const handleSaveDday = useCallback(() => {
 		startSavingDday(async () => {
-			const result = await saveSSO26Config({
-				superlativesOpen,
-				ddayOpen,
-				superlativesSeniors: parseLines(superlativesSeniorsText),
-				superlativesQuestions: parseLines(superlativesQuestionsText),
-				ddaySeniors: parseLines(ddaySeniorsText),
-				ddayQuestions: parseLines(ddayQuestionsText),
-			});
+			const result = await saveSSO26Config(buildConfig());
 			if (result.success) {
 				toast.success("D-Day config saved");
 			} else {
 				toast.error(result.message);
 			}
 		});
-	}, [superlativesOpen, ddayOpen, superlativesSeniorsText, superlativesQuestionsText, ddaySeniorsText, ddayQuestionsText]);
+	}, [buildConfig]);
 
 	const handleRefresh = useCallback(() => {
 		startRefreshing(async () => {
@@ -617,22 +684,11 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 								/>
 							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="s-questions">
-									Superlative Categories{" "}
-									<span className="text-muted-foreground font-normal">
-										(one per line — {parseLines(superlativesQuestionsText).length} categories)
-									</span>
-								</Label>
-								<Textarea
-									id="s-questions"
-									value={superlativesQuestionsText}
-									onChange={(e) => setSuperlativesQuestionsText(e.target.value)}
-									placeholder={"Most likely to become president\nMost likely to go viral\n..."}
-									rows={8}
-									className="font-mono text-sm"
-								/>
-							</div>
+							<QuestionsEditor
+								questions={superlativesQuestions}
+								onChange={setSuperlativesQuestions}
+								label="Superlative Categories"
+							/>
 
 							<Button
 								onClick={handleSaveSuperlatives}
@@ -724,22 +780,11 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 								/>
 							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="d-questions">
-									D-Day Categories{" "}
-									<span className="text-muted-foreground font-normal">
-										(one per line — {parseLines(ddayQuestionsText).length} categories)
-									</span>
-								</Label>
-								<Textarea
-									id="d-questions"
-									value={ddayQuestionsText}
-									onChange={(e) => setDdayQuestionsText(e.target.value)}
-									placeholder={"Best dressed\nMost likely to be famous\n..."}
-									rows={8}
-									className="font-mono text-sm"
-								/>
-							</div>
+							<QuestionsEditor
+								questions={ddayQuestions}
+								onChange={setDdayQuestions}
+								label="D-Day Categories"
+							/>
 
 							<Button
 								onClick={handleSaveDday}

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Check, ChevronsUpDown, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Command,
@@ -17,6 +16,7 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { submitNominations } from "../actions";
+import type { SSO26Question } from "@/app/admin/sso26/actions";
 
 const SSO_LOGO = "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.webp";
 
@@ -26,9 +26,13 @@ interface NominationState {
 }
 
 interface Props {
-	questions: string[];
+	questions: SSO26Question[];
 	seniors: string[];
 	initialNominations: Record<string, { nominee: string; otherText: string | null }>;
+}
+
+function toTitleCase(str: string) {
+	return str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
 
 function ScrapbookCard({ children, rotate = 0 }: { children: React.ReactNode; rotate?: number }) {
@@ -58,8 +62,10 @@ function SeniorCombobox({
 
 	const displayLabel =
 		value === "OTHER"
-			? "Other – not listed"
-			: value || "Search for a senior...";
+			? "✦ Other – not listed"
+			: value
+				? toTitleCase(value)
+				: "Search for a senior...";
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -91,12 +97,12 @@ function SeniorCombobox({
 									onChange("OTHER");
 									setOpen(false);
 								}}
-								className="font-[family-name:var(--font-farm-to-market)] text-[#845942]"
+								className="mx-1 mb-1 rounded-md border border-[#C89D58]/40 bg-amber-50 font-[family-name:var(--font-farm-to-market)] font-semibold italic text-[#845942] hover:bg-amber-100"
 							>
 								<Check
-									className={`mr-2 h-4 w-4 ${value === "OTHER" ? "opacity-100" : "opacity-0"}`}
+									className={`mr-2 h-4 w-4 shrink-0 ${value === "OTHER" ? "opacity-100" : "opacity-0"}`}
 								/>
-								Other – my senior is not listed
+								✦ Other – my senior is not listed
 							</CommandItem>
 							{seniors.map((senior) => (
 								<CommandItem
@@ -106,12 +112,12 @@ function SeniorCombobox({
 										onChange(senior);
 										setOpen(false);
 									}}
-									className="font-[family-name:var(--font-farm-to-market)]"
+									className="font-[family-name:var(--font-farm-to-market)] tracking-wide"
 								>
 									<Check
-										className={`mr-2 h-4 w-4 ${value === senior ? "opacity-100" : "opacity-0"}`}
+										className={`mr-2 h-4 w-4 shrink-0 ${value === senior ? "opacity-100" : "opacity-0"}`}
 									/>
-									{senior}
+									{toTitleCase(senior)}
 								</CommandItem>
 							))}
 						</CommandGroup>
@@ -126,9 +132,10 @@ export function SSO26SuperlativesClient({ questions, seniors, initialNominations
 	const [nominations, setNominations] = useState<Record<string, NominationState>>(() => {
 		const init: Record<string, NominationState> = {};
 		for (const q of questions) {
-			init[q] = {
-				nominee: initialNominations[q]?.nominee ?? "",
-				otherText: initialNominations[q]?.otherText ?? "",
+			const key = q.title;
+			init[key] = {
+				nominee: initialNominations[key]?.nominee ?? "",
+				otherText: initialNominations[key]?.otherText ?? "",
 			};
 		}
 		return init;
@@ -239,25 +246,31 @@ export function SSO26SuperlativesClient({ questions, seniors, initialNominations
 					</ScrapbookCard>
 				) : (
 					<div className="space-y-6">
-						{questions.map((question, i) => {
-							const state = nominations[question] ?? { nominee: "", otherText: "" };
+						{questions.map((q, i) => {
+							const key = q.title;
+							const state = nominations[key] ?? { nominee: "", otherText: "" };
 							const rotations = [-0.5, 0.5, -0.3, 0.4, -0.6, 0.3];
 							return (
-								<ScrapbookCard key={question} rotate={rotations[i % rotations.length]}>
+								<ScrapbookCard key={key} rotate={rotations[i % rotations.length]}>
 									<div className="space-y-3">
-										<Label className="font-[family-name:var(--font-farm-to-market)] text-base font-semibold text-[#374752]">
-											{question}
-										</Label>
+										<p className="font-[family-name:var(--font-gentlemens-script)] text-xl font-bold uppercase tracking-widest text-[#374752]">
+											{q.title}
+										</p>
+										{q.description && (
+											<p className="font-mono text-xs leading-relaxed text-stone-400">
+												{q.description}
+											</p>
+										)}
 										<SeniorCombobox
-											question={question}
+											question={key}
 											value={state.nominee}
-											onChange={(v) => setNominee(question, v)}
+											onChange={(v) => setNominee(key, v)}
 											seniors={seniors}
 										/>
 										{state.nominee === "OTHER" && (
 											<Input
 												value={state.otherText}
-												onChange={(e) => setOtherText(question, e.target.value)}
+												onChange={(e) => setOtherText(key, e.target.value)}
 												placeholder="Type the senior's name..."
 												className="border-[#C89D58]/40 font-[family-name:var(--font-farm-to-market)] focus:border-[#845942]"
 											/>

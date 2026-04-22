@@ -5,13 +5,18 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+export interface SSO26Question {
+	title: string;
+	description?: string;
+}
+
 export interface SSO26Config {
 	superlativesOpen: boolean;
 	ddayOpen: boolean;
 	superlativesSeniors: string[];
-	superlativesQuestions: string[];
+	superlativesQuestions: SSO26Question[];
 	ddaySeniors: string[];
-	ddayQuestions: string[];
+	ddayQuestions: SSO26Question[];
 }
 
 const SSO26_CONFIG_KEY = "sso26Config";
@@ -39,9 +44,9 @@ export async function getSSO26Config(): Promise<SSO26Config> {
 			superlativesOpen: false,
 			ddayOpen: false,
 			superlativesSeniors: [],
-			superlativesQuestions: [],
+			superlativesQuestions: [] as SSO26Question[],
 			ddaySeniors: [],
-			ddayQuestions: [],
+			ddayQuestions: [] as SSO26Question[],
 		};
 	}
 	return row.value as unknown as SSO26Config;

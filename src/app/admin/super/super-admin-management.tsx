@@ -46,6 +46,7 @@ type UserWithRoles = {
 	isEventsAdmin: boolean;
 	isRedirectsAdmin: boolean;
 	isTicketsAdmin: boolean;
+	isSSO26Admin: boolean;
 	isSuperAdmin: boolean;
 };
 
@@ -54,6 +55,7 @@ type RoleEdits = {
 	isEventsAdmin: boolean;
 	isRedirectsAdmin: boolean;
 	isTicketsAdmin: boolean;
+	isSSO26Admin: boolean;
 };
 
 type SortKey = "name" | "email" | "roles";
@@ -65,6 +67,7 @@ function countRoles(user: UserWithRoles) {
 		(user.isEventsAdmin ? 1 : 0) +
 		(user.isRedirectsAdmin ? 1 : 0) +
 		(user.isTicketsAdmin ? 1 : 0) +
+		(user.isSSO26Admin ? 1 : 0) +
 		(user.isSuperAdmin ? 1 : 0)
 	);
 }
@@ -91,6 +94,7 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 		isEventsAdmin: false,
 		isRedirectsAdmin: false,
 		isTicketsAdmin: false,
+		isSSO26Admin: false,
 	});
 	const [saving, setSaving] = useState(false);
 
@@ -153,6 +157,7 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 			isEventsAdmin: user.isEventsAdmin,
 			isRedirectsAdmin: user.isRedirectsAdmin,
 			isTicketsAdmin: user.isTicketsAdmin,
+			isSSO26Admin: user.isSSO26Admin,
 		});
 	};
 
@@ -169,6 +174,7 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 					updated.isEventsAdmin ||
 					updated.isRedirectsAdmin ||
 					updated.isTicketsAdmin ||
+					updated.isSSO26Admin ||
 					updated.isSuperAdmin;
 
 				if (hasAnyRole) {
@@ -221,6 +227,7 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 			isEventsAdmin: user.isEventsAdmin,
 			isRedirectsAdmin: user.isRedirectsAdmin,
 			isTicketsAdmin: user.isTicketsAdmin,
+			isSSO26Admin: user.isSSO26Admin,
 		});
 	};
 
@@ -236,7 +243,8 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 					updated.isShopAdmin ||
 					updated.isEventsAdmin ||
 					updated.isRedirectsAdmin ||
-					updated.isTicketsAdmin;
+					updated.isTicketsAdmin ||
+					updated.isSSO26Admin;
 
 				if (hasAnyRole) {
 					// Add to admin list if not already there
@@ -336,6 +344,7 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 													<RoleBadge active={user.isEventsAdmin} label="Events" />
 													<RoleBadge active={user.isRedirectsAdmin} label="Redirects" />
 													<RoleBadge active={user.isTicketsAdmin} label="Tickets" />
+													<RoleBadge active={user.isSSO26Admin} label="SSO26" />
 												</div>
 											</TableCell>
 										</TableRow>
@@ -402,6 +411,16 @@ export function SuperAdminManagement({ initialAdmins }: { initialAdmins: UserWit
 									id="role-tickets"
 									checked={roleEdits.isTicketsAdmin}
 									onCheckedChange={(v) => setRoleEdits((r) => ({ ...r, isTicketsAdmin: v }))}
+								/>
+							</div>
+							<div className="flex items-center justify-between rounded-md border p-3">
+								<Label htmlFor="role-sso26" className="cursor-pointer">
+									SSO 2026 Admin
+								</Label>
+								<Switch
+									id="role-sso26"
+									checked={roleEdits.isSSO26Admin}
+									onCheckedChange={(v) => setRoleEdits((r) => ({ ...r, isSSO26Admin: v }))}
 								/>
 							</div>
 						</div>

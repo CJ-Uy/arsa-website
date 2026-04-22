@@ -41,6 +41,7 @@ export async function getAllAdmins() {
 					{ isEventsAdmin: true },
 					{ isRedirectsAdmin: true },
 					{ isTicketsAdmin: true },
+					{ isSSO26Admin: true },
 					{ isSuperAdmin: true },
 				],
 			},
@@ -53,6 +54,7 @@ export async function getAllAdmins() {
 				isEventsAdmin: true,
 				isRedirectsAdmin: true,
 				isTicketsAdmin: true,
+				isSSO26Admin: true,
 				isSuperAdmin: true,
 			},
 			orderBy: { name: "asc" },
@@ -90,6 +92,7 @@ export async function searchUsersForAdmin(query: string) {
 				isEventsAdmin: true,
 				isRedirectsAdmin: true,
 				isTicketsAdmin: true,
+				isSSO26Admin: true,
 				isSuperAdmin: true,
 			},
 			take: 20,
@@ -112,6 +115,7 @@ export async function updateUserRoles(
 		isEventsAdmin: boolean;
 		isRedirectsAdmin: boolean;
 		isTicketsAdmin: boolean;
+		isSSO26Admin: boolean;
 	},
 ) {
 	try {
@@ -130,6 +134,7 @@ export async function updateUserRoles(
 				isEventsAdmin: roles.isEventsAdmin,
 				isRedirectsAdmin: roles.isRedirectsAdmin,
 				isTicketsAdmin: roles.isTicketsAdmin,
+				isSSO26Admin: roles.isSSO26Admin,
 			},
 		});
 
