@@ -191,7 +191,7 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 						return (
 							<ScrapbookCard key={key} rotate={rotations[i % rotations.length]}>
 								<div className="space-y-3">
-									<p className="font-[family-name:var(--font-gentlemens-script)] text-xl font-bold uppercase tracking-widest text-[#374752]">
+									<p className="font-serif text-lg font-semibold italic text-[#374752]">
 										{q.title}
 									</p>
 									{q.description && (
