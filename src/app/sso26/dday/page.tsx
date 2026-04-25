@@ -1,27 +1,9 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { getSSO26Config } from "@/app/admin/sso26/actions";
-import { SSO26Gate } from "../sso26-gate";
 import { SSO26DdayClient } from "./dday-client";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_DOMAINS = ["@student.ateneo.edu", "@ateneo.edu"];
-
 export default async function SSO26DdayPage() {
-	const session = await auth.api.getSession({ headers: await headers() });
-
-	if (!session?.user) {
-		return <SSO26Gate callbackURL="/sso26/dday" />;
-	}
-
-	const email = session.user.email ?? "";
-	const isAllowed = ALLOWED_DOMAINS.some((d) => email.endsWith(d));
-
-	if (!isAllowed) {
-		return <SSO26Gate wrongDomain email={email} callbackURL="/sso26/dday" />;
-	}
-
 	const config = await getSSO26Config();
 
 	if (!config.ddayOpen) {
@@ -43,5 +25,5 @@ export default async function SSO26DdayPage() {
 		);
 	}
 
-	return <SSO26DdayClient questions={config.ddayQuestions} seniors={config.ddaySeniors} />;
+	return <SSO26DdayClient questions={config.ddayQuestions} />;
 }

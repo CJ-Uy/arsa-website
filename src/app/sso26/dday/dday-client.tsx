@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useRef } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Check, ChevronsUpDown, Sparkles, RefreshCw } from "lucide-react";
@@ -15,13 +15,13 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import { submitDdayVotes } from "../actions";
+import { BalloonCaptchaModal } from "@/components/features/balloon-captcha/balloon-captcha-modal";
 import type { SSO26Question } from "@/app/admin/sso26/actions";
 
 const SSO_LOGO = "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.webp";
 
 interface Props {
 	questions: SSO26Question[];
-	seniors: string[];
 }
 
 function toTitleCase(str: string) {
@@ -101,12 +101,14 @@ function SeniorCombobox({
 	);
 }
 
-export function SSO26DdayClient({ questions, seniors }: Props) {
+export function SSO26DdayClient({ questions }: Props) {
 	const [votes, setVotes] = useState<Record<string, string>>(() =>
 		Object.fromEntries(questions.map((q) => [q.title, ""])),
 	);
 	const [voteCount, setVoteCount] = useState(0);
+	const [captchaOpen, setCaptchaOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
+	const pendingPayload = useRef<{ question: string; nominee: string }[]>([]);
 
 	const setVote = useCallback((question: string, nominee: string) => {
 		setVotes((prev) => ({ ...prev, [question]: nominee }));
@@ -122,6 +124,13 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 			return;
 		}
 
+		pendingPayload.current = payload;
+		setCaptchaOpen(true);
+	};
+
+	const handleCaptchaSuccess = useCallback(() => {
+		setCaptchaOpen(false);
+		const payload = pendingPayload.current;
 		startTransition(async () => {
 			const result = await submitDdayVotes(payload);
 			if (result.success) {
@@ -132,7 +141,7 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 				toast.error(result.message);
 			}
 		});
-	};
+	}, [questions, startTransition]);
 
 	const answeredCount = Object.values(votes).filter(Boolean).length;
 
@@ -202,7 +211,7 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 									<SeniorCombobox
 										value={votes[key] ?? ""}
 										onChange={(v) => setVote(key, v)}
-										seniors={seniors}
+										seniors={q.nominees ?? []}
 									/>
 								</div>
 							</ScrapbookCard>
@@ -237,6 +246,12 @@ export function SSO26DdayClient({ questions, seniors }: Props) {
 
 			{/* Bottom washi tape */}
 			<div className="h-4 bg-[repeating-linear-gradient(90deg,#859893_0px,#859893_20px,transparent_20px,transparent_24px,#DD7142_24px,#DD7142_44px,transparent_44px,transparent_48px,#C89D58_48px,#C89D58_68px,transparent_68px,transparent_72px)] opacity-60" />
+
+			<BalloonCaptchaModal
+				open={captchaOpen}
+				onSuccess={handleCaptchaSuccess}
+				onClose={() => setCaptchaOpen(false)}
+			/>
 		</div>
 	);
 }

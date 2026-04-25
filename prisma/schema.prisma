@@ -584,12 +584,12 @@ model SSO26Nomination {
 
 model SSO26DdayVote {
   id        String   @id @default(uuid())
-  userId    String
+  userId    String?
   question  String
   nominee   String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([question])

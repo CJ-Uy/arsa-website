@@ -74,12 +74,8 @@ export type DdayVoteInput = {
 
 export async function submitDdayVotes(votes: DdayVoteInput) {
 	try {
-		const authResult = await verifyAteneoUser();
-		if (!authResult.authorized) return { success: false, message: authResult.message };
-
 		await prisma.sSO26DdayVote.createMany({
 			data: votes.map(({ question, nominee }) => ({
-				userId: authResult.userId,
 				question,
 				nominee,
 			})),

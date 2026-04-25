@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 export interface SSO26Question {
 	title: string;
 	description?: string;
+	nominees?: string[];
 }
 
 export interface SSO26Config {
@@ -146,7 +147,7 @@ export type RawDdayVote = {
 	id: string;
 	question: string;
 	nominee: string;
-	userEmail: string;
+	userEmail: string | null;
 	createdAt: Date;
 };
 
@@ -195,7 +196,7 @@ export async function getRawDdayVotes(): Promise<RawDdayVote[]> {
 		id: r.id,
 		question: r.question,
 		nominee: r.nominee,
-		userEmail: r.user.email,
+		userEmail: r.user?.email ?? null,
 		createdAt: r.createdAt,
 	}));
 }
@@ -256,7 +257,7 @@ export async function getSSO26Stats() {
 		prisma.sSO26Nomination.count(),
 		prisma.sSO26DdayVote.count(),
 		prisma.sSO26Nomination.groupBy({ by: ["userId"], _count: { id: true } }).then((r) => r.length),
-		prisma.sSO26DdayVote.groupBy({ by: ["userId"], _count: { id: true } }).then((r) => r.length),
+		prisma.sSO26DdayVote.groupBy({ by: ["userId"], where: { userId: { not: null } }, _count: { id: true } }).then((r) => r.length),
 	]);
 
 	return { nominationCount, ddayVoteCount, uniqueNominators, uniqueDdayVoters };

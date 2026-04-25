@@ -268,7 +268,7 @@ function DdayVotesTable({
 									<tr key={v.id} className="border-b border-stone-100 hover:bg-stone-50">
 										<td className="px-4 py-2 text-xs text-stone-500">{v.question}</td>
 										<td className="px-4 py-2 font-medium text-[#374752]">{v.nominee}</td>
-										<td className="px-4 py-2 text-xs text-stone-400">{v.userEmail}</td>
+										<td className="px-4 py-2 text-xs text-stone-400">{v.userEmail ?? "Anonymous"}</td>
 										<td className="px-4 py-2 text-xs text-stone-400">
 											{new Date(v.createdAt).toLocaleString()}
 										</td>
@@ -408,16 +408,25 @@ function QuestionsEditor({
 	questions,
 	onChange,
 	label,
+	showNominees = false,
 }: {
 	questions: SSO26Question[];
 	onChange: (qs: SSO26Question[]) => void;
 	label: string;
+	showNominees?: boolean;
 }) {
-	const add = () => onChange([...questions, { title: "", description: "" }]);
+	const add = () => onChange([...questions, { title: "", description: "", nominees: showNominees ? [] : undefined }]);
 	const remove = (i: number) => onChange(questions.filter((_, idx) => idx !== i));
-	const update = (i: number, field: keyof SSO26Question, value: string) => {
+	const update = (i: number, field: "title" | "description", value: string) => {
 		const updated = [...questions];
 		updated[i] = { ...updated[i], [field]: value };
+		onChange(updated);
+	};
+	const updateNominees = (i: number, text: string) => {
+		const updated = [...questions];
+		// Keep raw text (including empty lines) so the textarea stays editable.
+		// Empty lines are stripped only in buildConfig before saving.
+		updated[i] = { ...updated[i], nominees: text.split("\n") };
 		onChange(updated);
 	};
 
@@ -452,9 +461,26 @@ function QuestionsEditor({
 							<input
 								value={q.description ?? ""}
 								onChange={(e) => update(i, "description", e.target.value)}
-								placeholder="Optional description (e.g. The one everyone predicts will run for office someday)"
+								placeholder="Optional description"
 								className="rounded-md border border-input bg-white px-3 py-1.5 text-sm text-stone-500 focus:outline-none focus:ring-1 focus:ring-[#845942]"
 							/>
+							{showNominees && (
+								<div className="space-y-1">
+									<p className="text-xs font-medium text-stone-400">
+										Nominees (one per line) —{" "}
+										<span className="text-[#845942]">
+											{q.nominees?.filter(Boolean).length ?? 0} names
+										</span>
+									</p>
+									<textarea
+										value={q.nominees?.join("\n") ?? ""}
+										onChange={(e) => updateNominees(i, e.target.value)}
+										placeholder={"Juan dela Cruz\nMaria Santos\n..."}
+										rows={5}
+										className="w-full rounded-md border border-input bg-white px-3 py-1.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-[#845942]"
+									/>
+								</div>
+							)}
 						</div>
 						<Button
 							type="button"
@@ -482,7 +508,6 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 	const [superlativesQuestions, setSuperlativesQuestions] = useState<SSO26Question[]>(
 		initialConfig.superlativesQuestions,
 	);
-	const [ddaySeniorsText, setDdaySeniorsText] = useState(initialConfig.ddaySeniors.join("\n"));
 	const [ddayQuestions, setDdayQuestions] = useState<SSO26Question[]>(initialConfig.ddayQuestions);
 
 	// Results state
@@ -510,11 +535,43 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 			ddayOpen,
 			superlativesSeniors: parseLines(superlativesSeniorsText),
 			superlativesQuestions: superlativesQuestions.filter((q) => q.title.trim()),
-			ddaySeniors: parseLines(ddaySeniorsText),
-			ddayQuestions: ddayQuestions.filter((q) => q.title.trim()),
+			ddaySeniors: [] as string[],
+			ddayQuestions: ddayQuestions.filter((q) => q.title.trim()).map((q) => ({
+				...q,
+				nominees: q.nominees?.map((s) => s.trim()).filter(Boolean),
+			})),
 		}),
-		[superlativesOpen, ddayOpen, superlativesSeniorsText, superlativesQuestions, ddaySeniorsText, ddayQuestions],
+		[superlativesOpen, ddayOpen, superlativesSeniorsText, superlativesQuestions, ddayQuestions],
 	);
+
+	const handleImportNominees = useCallback(() => {
+		const getTop5WithTies = (data: { name: string; count: number }[]) => {
+			const cleaned = data.filter((d) => d.name !== "OTHER" && d.name !== "Other");
+			if (cleaned.length === 0) return [];
+			const top5 = cleaned.slice(0, 5);
+			const threshold = top5[top5.length - 1].count;
+			return cleaned.filter((d) => d.count >= threshold).map((d) => d.name);
+		};
+
+		if (superlativesQuestions.length === 0) {
+			toast.error("No superlatives questions configured yet.");
+			return;
+		}
+
+		const imported = superlativesQuestions.map((sq) => {
+			const result = superlativesResults.find(
+				(r) => r.question.trim().toLowerCase() === sq.title.trim().toLowerCase(),
+			);
+			return {
+				title: sq.title,
+				description: sq.description ?? "",
+				nominees: result ? getTop5WithTies(result.data) : [],
+			};
+		});
+
+		setDdayQuestions(imported);
+		toast.success(`Imported ${imported.length} categories from superlatives. Review and save.`);
+	}, [superlativesQuestions, superlativesResults]);
 
 	const handleSaveSuperlatives = useCallback(() => {
 		startSavingSuperlatives(async () => {
@@ -763,27 +820,31 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 								</div>
 							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="d-seniors">
-									Senior Names{" "}
-									<span className="text-muted-foreground font-normal">
-										(one per line — {parseLines(ddaySeniorsText).length} entries)
-									</span>
-								</Label>
-								<Textarea
-									id="d-seniors"
-									value={ddaySeniorsText}
-									onChange={(e) => setDdaySeniorsText(e.target.value)}
-									placeholder={"Juan dela Cruz\nMaria Santos\n..."}
-									rows={10}
-									className="font-mono text-sm"
-								/>
+							<div className="rounded-lg border border-[#C89D58]/30 bg-amber-50/40 p-4">
+								<div className="flex items-start justify-between gap-4">
+									<div>
+										<p className="text-sm font-medium text-[#374752]">Import from Superlatives</p>
+										<p className="mt-0.5 text-xs text-stone-500">
+											Fills each category&apos;s nominees with the top 5 from superlatives results (ties included). Question titles must match. You can still edit after importing.
+										</p>
+									</div>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={handleImportNominees}
+										className="shrink-0 border-[#C89D58]/50 text-[#845942] hover:bg-amber-100"
+									>
+										Import Top 5
+									</Button>
+								</div>
 							</div>
 
 							<QuestionsEditor
 								questions={ddayQuestions}
 								onChange={setDdayQuestions}
 								label="D-Day Categories"
+								showNominees
 							/>
 
 							<Button
