@@ -5,6 +5,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Check, ChevronsUpDown, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Command,
@@ -19,6 +20,11 @@ import { BalloonCaptchaModal } from "@/components/features/balloon-captcha/ballo
 import type { SSO26Question } from "@/app/admin/sso26/actions";
 
 const SSO_LOGO = "/images/major event landing/2026/sso/Long_Logo_White-removebg-preview.webp";
+
+interface VoteState {
+	nominee: string;
+	otherText: string;
+}
 
 interface Props {
 	questions: SSO26Question[];
@@ -51,6 +57,13 @@ function SeniorCombobox({
 }) {
 	const [open, setOpen] = useState(false);
 
+	const displayLabel =
+		value === "OTHER"
+			? "✦ Other – not listed"
+			: value
+				? toTitleCase(value)
+				: "Search for a senior...";
+
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
@@ -60,9 +73,7 @@ function SeniorCombobox({
 					aria-expanded={open}
 					className="w-full justify-between border-[#C89D58]/40 bg-white font-[family-name:var(--font-farm-to-market)] text-base hover:border-[#845942] hover:bg-amber-50"
 				>
-					<span className={value ? "text-[#374752]" : "text-stone-400"}>
-						{value ? toTitleCase(value) : "Search for a senior..."}
-					</span>
+					<span className={value ? "text-[#374752]" : "text-stone-400"}>{displayLabel}</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-stone-400" />
 				</Button>
 			</PopoverTrigger>
@@ -74,9 +85,22 @@ function SeniorCombobox({
 					/>
 					<CommandList>
 						<CommandEmpty className="py-4 text-center text-sm text-stone-500">
-							No senior found.
+							No senior found. Try &quot;Other&quot; below.
 						</CommandEmpty>
 						<CommandGroup>
+							<CommandItem
+								value="OTHER"
+								onSelect={() => {
+									onChange("OTHER");
+									setOpen(false);
+								}}
+								className="mx-1 mb-1 rounded-md border border-[#C89D58]/40 bg-amber-50 font-[family-name:var(--font-farm-to-market)] font-semibold italic text-[#845942] hover:bg-amber-100"
+							>
+								<Check
+									className={`mr-2 h-4 w-4 shrink-0 ${value === "OTHER" ? "opacity-100" : "opacity-0"}`}
+								/>
+								✦ Other – my senior is not listed
+							</CommandItem>
 							{seniors.map((senior) => (
 								<CommandItem
 									key={senior}
@@ -102,22 +126,30 @@ function SeniorCombobox({
 }
 
 export function SSO26DdayClient({ questions }: Props) {
-	const [votes, setVotes] = useState<Record<string, string>>(() =>
-		Object.fromEntries(questions.map((q) => [q.title, ""])),
+	const [votes, setVotes] = useState<Record<string, VoteState>>(() =>
+		Object.fromEntries(questions.map((q) => [q.title, { nominee: "", otherText: "" }])),
 	);
 	const [voteCount, setVoteCount] = useState(0);
 	const [captchaOpen, setCaptchaOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
 	const pendingPayload = useRef<{ question: string; nominee: string }[]>([]);
 
-	const setVote = useCallback((question: string, nominee: string) => {
-		setVotes((prev) => ({ ...prev, [question]: nominee }));
+	const setNominee = useCallback((question: string, nominee: string) => {
+		setVotes((prev) => ({ ...prev, [question]: { ...prev[question], nominee } }));
+	}, []);
+
+	const setOtherText = useCallback((question: string, text: string) => {
+		setVotes((prev) => ({ ...prev, [question]: { ...prev[question], otherText: text } }));
 	}, []);
 
 	const handleSubmit = () => {
 		const payload = Object.entries(votes)
-			.filter(([, nominee]) => nominee)
-			.map(([question, nominee]) => ({ question, nominee }));
+			.filter(([, v]) => v.nominee)
+			.map(([question, v]) => ({
+				question,
+				// Submit the typed name directly — no otherText column needed
+				nominee: v.nominee === "OTHER" ? (v.otherText.trim() || "Other (unlisted)") : v.nominee,
+			}));
 
 		if (payload.length === 0) {
 			toast.error("Pick at least one category before voting!");
@@ -136,14 +168,14 @@ export function SSO26DdayClient({ questions }: Props) {
 			if (result.success) {
 				toast.success("Votes submitted! Vote again anytime 🎉");
 				setVoteCount((c) => c + 1);
-				setVotes(Object.fromEntries(questions.map((q) => [q.title, ""])));
+				setVotes(Object.fromEntries(questions.map((q) => [q.title, { nominee: "", otherText: "" }])));
 			} else {
 				toast.error(result.message);
 			}
 		});
 	}, [questions, startTransition]);
 
-	const answeredCount = Object.values(votes).filter(Boolean).length;
+	const answeredCount = Object.values(votes).filter((v) => v.nominee).length;
 
 	return (
 		<div
@@ -157,8 +189,7 @@ export function SSO26DdayClient({ questions }: Props) {
 			<div
 				className="relative flex flex-col items-center justify-center py-16 text-center"
 				style={{
-					background:
-						"linear-gradient(180deg, #2d3a44 0%, #4e6a70 50%, #ECDEBC 100%)",
+					background: "linear-gradient(180deg, #2d3a44 0%, #4e6a70 50%, #ECDEBC 100%)",
 				}}
 			>
 				<div className="mb-6 w-64 sm:w-80">
@@ -196,6 +227,7 @@ export function SSO26DdayClient({ questions }: Props) {
 				<div className="space-y-6">
 					{questions.map((q, i) => {
 						const key = q.title;
+						const state = votes[key] ?? { nominee: "", otherText: "" };
 						const rotations = [-0.5, 0.5, -0.3, 0.4, -0.6, 0.3];
 						return (
 							<ScrapbookCard key={key} rotate={rotations[i % rotations.length]}>
@@ -209,10 +241,18 @@ export function SSO26DdayClient({ questions }: Props) {
 										</p>
 									)}
 									<SeniorCombobox
-										value={votes[key] ?? ""}
-										onChange={(v) => setVote(key, v)}
+										value={state.nominee}
+										onChange={(v) => setNominee(key, v)}
 										seniors={q.nominees ?? []}
 									/>
+									{state.nominee === "OTHER" && (
+										<Input
+											value={state.otherText}
+											onChange={(e) => setOtherText(key, e.target.value)}
+											placeholder="Type the senior's name..."
+											className="border-[#C89D58]/40 font-[family-name:var(--font-farm-to-market)] focus:border-[#845942]"
+										/>
+									)}
 								</div>
 							</ScrapbookCard>
 						);

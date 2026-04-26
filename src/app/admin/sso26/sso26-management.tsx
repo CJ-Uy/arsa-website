@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, BarChart2, Settings, Users, Vote, Trash2, ChevronDown, ChevronUp, AlertTriangle, Plus, GripVertical } from "lucide-react";
+import { RefreshCw, BarChart2, Settings, Users, Vote, Trash2, ChevronDown, ChevronUp, AlertTriangle, Plus, GripVertical, Maximize2, X } from "lucide-react";
 import {
 	saveSSO26Config,
 	getSuperlativesResults,
@@ -29,6 +29,12 @@ import {
 	type RawNomination,
 	type RawDdayVote,
 } from "./actions";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -517,6 +523,33 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 	const [nominations, setNominations] = useState(initialNominations);
 	const [ddayVotes, setDdayVotes] = useState(initialDdayVotes);
 
+	// Live results view
+	const [isLiveOpen, setIsLiveOpen] = useState(false);
+	const [liveResults, setLiveResults] = useState(initialDdayResults);
+	const [liveVoteCount, setLiveVoteCount] = useState(initialDdayResults.reduce((s, q) => s + q.data.reduce((a, d) => a + d.count, 0), 0));
+	const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+	const liveOpenRef = useRef(false);
+
+	useEffect(() => {
+		liveOpenRef.current = isLiveOpen;
+	}, [isLiveOpen]);
+
+	useEffect(() => {
+		if (!isLiveOpen) return;
+
+		const refresh = async () => {
+			if (!liveOpenRef.current) return;
+			const results = await getDdayResults();
+			setLiveResults(results);
+			setLiveVoteCount(results.reduce((s, q) => s + q.data.reduce((a, d) => a + d.count, 0), 0));
+			setLastRefreshed(new Date());
+		};
+
+		refresh();
+		const id = setInterval(refresh, 10_000);
+		return () => clearInterval(id);
+	}, [isLiveOpen]);
+
 	const [isSavingSuperlatives, startSavingSuperlatives] = useTransition();
 	const [isSavingDday, startSavingDday] = useTransition();
 	const [isRefreshing, startRefreshing] = useTransition();
@@ -867,15 +900,26 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 									</CardTitle>
 									<CardDescription>Total vote counts per category.</CardDescription>
 								</div>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleRefresh}
-									disabled={isRefreshing}
-								>
-									<RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-									Refresh
-								</Button>
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+									>
+										<RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+										Refresh
+									</Button>
+									<Button
+										variant="default"
+										size="sm"
+										onClick={() => setIsLiveOpen(true)}
+										className="bg-[#845942] hover:bg-[#6e4a37]"
+									>
+										<Maximize2 className="mr-2 h-4 w-4" />
+										Live View
+									</Button>
+								</div>
 							</div>
 						</CardHeader>
 						<CardContent>
@@ -892,6 +936,53 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 					</Card>
 				</TabsContent>
 			</Tabs>
+
+			{/* Fullscreen live results dialog */}
+			<Dialog open={isLiveOpen} onOpenChange={setIsLiveOpen}>
+				<DialogContent
+					showCloseButton={false}
+					className="top-0 left-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0"
+				>
+					<DialogHeader className="shrink-0 border-b border-[#C89D58]/20 bg-[#2d3a44] px-6 py-4">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<DialogTitle className="font-[family-name:var(--font-gentlemens-script)] text-2xl text-white">
+									D-Day Live Results
+								</DialogTitle>
+								<span className="flex items-center gap-1.5 rounded-full bg-red-500/20 px-3 py-0.5 text-xs font-semibold text-red-300">
+									<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+									LIVE
+								</span>
+								<span className="rounded-full bg-white/10 px-3 py-0.5 text-xs text-white/70">
+									{liveVoteCount} total vote{liveVoteCount !== 1 ? "s" : ""}
+								</span>
+							</div>
+							<div className="flex items-center gap-3">
+								{lastRefreshed && (
+									<span className="text-xs text-white/40">
+										Updated {lastRefreshed.toLocaleTimeString()}
+									</span>
+								)}
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setIsLiveOpen(false)}
+									className="h-8 w-8 p-0 text-white/60 hover:bg-white/10 hover:text-white"
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							</div>
+						</div>
+					</DialogHeader>
+
+					<div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#ECDEBC]/30 to-white p-6">
+						<ResultsChart
+							results={liveResults}
+							emptyMessage="No D-Day votes yet. Waiting for votes to come in..."
+						/>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
