@@ -249,6 +249,28 @@ export async function clearAllDdayVotes() {
 	}
 }
 
+export async function importSuperlativesToDday(): Promise<{ success: boolean; message: string; count?: number }> {
+	try {
+		const authResult = await verifySSO26Admin();
+		if (!authResult.authorized) return { success: false, message: authResult.message };
+
+		const nominations = await prisma.sSO26Nomination.findMany({
+			select: { userId: true, question: true, nominee: true, otherText: true },
+		});
+
+		const data = nominations.map((n) => ({
+			userId: n.userId,
+			question: n.question,
+			nominee: n.nominee === "OTHER" ? (n.otherText?.trim() || "Other (unlisted)") : n.nominee,
+		}));
+
+		const result = await prisma.sSO26DdayVote.createMany({ data });
+		return { success: true, message: `Imported ${result.count} vote${result.count !== 1 ? "s" : ""}`, count: result.count };
+	} catch {
+		return { success: false, message: "Failed to import votes" };
+	}
+}
+
 export async function getSSO26Stats() {
 	const authResult = await verifySSO26Admin();
 	if (!authResult.authorized) return null;

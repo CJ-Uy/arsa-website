@@ -23,6 +23,7 @@ import {
 	deleteDdayVote,
 	clearAllNominations,
 	clearAllDdayVotes,
+	importSuperlativesToDday,
 	type SSO26Config,
 	type SSO26Question,
 	type QuestionResult,
@@ -555,6 +556,7 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 	const [isRefreshing, startRefreshing] = useTransition();
 	const [isClearingNominations, startClearingNominations] = useTransition();
 	const [isClearingDday, startClearingDday] = useTransition();
+	const [isImporting, startImporting] = useTransition();
 
 	const parseLines = (text: string) =>
 		text
@@ -668,6 +670,25 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 				setDdayResults([]);
 				setStats((s) => s ? { ...s, ddayVoteCount: 0, uniqueDdayVoters: 0 } : s);
 				toast.success("All D-Day votes cleared");
+			} else {
+				toast.error(result.message);
+			}
+		});
+	}, []);
+
+	const handleImportSuperlatives = useCallback(() => {
+		startImporting(async () => {
+			const result = await importSuperlativesToDday();
+			if (result.success) {
+				const [dResults, newStats, rawVotes] = await Promise.all([
+					getDdayResults(),
+					getSSO26Stats(),
+					getRawDdayVotes(),
+				]);
+				setDdayResults(dResults);
+				setStats(newStats);
+				setDdayVotes(rawVotes);
+				toast.success(result.message ?? "Imported");
 			} else {
 				toast.error(result.message);
 			}
@@ -901,24 +922,44 @@ export function SSO26Management({ initialConfig, initialSuperlativesResults, ini
 									<CardDescription>Total vote counts per category.</CardDescription>
 								</div>
 								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={handleRefresh}
-										disabled={isRefreshing}
-									>
-										<RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-										Refresh
-									</Button>
-									<Button
-										variant="default"
-										size="sm"
-										onClick={() => setIsLiveOpen(true)}
-										className="bg-[#845942] hover:bg-[#6e4a37]"
-									>
-										<Maximize2 className="mr-2 h-4 w-4" />
-										Live View
-									</Button>
+									<AlertDialog>
+									<AlertDialogTrigger asChild>
+										<Button variant="outline" size="sm" disabled={isImporting}>
+											{isImporting ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Vote className="mr-2 h-4 w-4" />}
+											Import from Superlatives
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Import superlative votes?</AlertDialogTitle>
+											<AlertDialogDescription>
+												This will copy all current superlative nominations into D-Day votes. Existing D-Day votes are kept — this only adds, not replaces.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<AlertDialogFooter>
+											<AlertDialogCancel>Cancel</AlertDialogCancel>
+											<AlertDialogAction onClick={handleImportSuperlatives}>Import</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleRefresh}
+									disabled={isRefreshing}
+								>
+									<RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+									Refresh
+								</Button>
+								<Button
+									variant="default"
+									size="sm"
+									onClick={() => setIsLiveOpen(true)}
+									className="bg-[#845942] hover:bg-[#6e4a37]"
+								>
+									<Maximize2 className="mr-2 h-4 w-4" />
+									Live View
+								</Button>
 								</div>
 							</div>
 						</CardHeader>
