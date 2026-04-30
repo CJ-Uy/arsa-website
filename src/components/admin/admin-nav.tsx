@@ -16,6 +16,7 @@ import {
 	Ticket,
 	Link2,
 	FileText,
+	DatabaseBackup,
 	ChevronsUpDown,
 	LogOut,
 	Home,
@@ -68,6 +69,7 @@ const iconMap = {
 	contact: PhoneCall,
 	otherpages: FilePlus2,
 	sso26: GraduationCap,
+	backup: DatabaseBackup,
 } as const;
 
 export type NavItemDef = {

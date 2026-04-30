@@ -75,6 +75,7 @@ model User {
   isRedirectsAdmin Boolean  @default(false)
   isTicketsAdmin   Boolean  @default(false)
   isSSO26Admin     Boolean  @default(false)
+  isBackupAdmin    Boolean  @default(false)
   isSuperAdmin     Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

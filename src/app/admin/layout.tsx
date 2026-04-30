@@ -27,6 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			isTicketsAdmin: true,
 			isRedirectsAdmin: true,
 			isSSO26Admin: true,
+			isBackupAdmin: true,
 			isSuperAdmin: true,
 			eventAdmins: {
 				select: { eventId: true },
@@ -39,12 +40,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	const isTicketsAdmin = user?.isTicketsAdmin ?? false;
 	const isRedirectsAdmin = user?.isRedirectsAdmin ?? false;
 	const isSSO26Admin = user?.isSSO26Admin ?? false;
+	const isBackupAdmin = user?.isBackupAdmin ?? false;
 	const isSuperAdmin = user?.isSuperAdmin ?? false;
 	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
+	const canAccessBackup = isBackupAdmin || isSuperAdmin;
 
 	// Must have at least one admin permission to access
-	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isRedirectsAdmin && !isSSO26Admin && !isSuperAdmin) {
+	if (!isShopAdmin && !canAccessEvents && !isTicketsAdmin && !isRedirectsAdmin && !isSSO26Admin && !canAccessBackup && !isSuperAdmin) {
 		return <Unauthorized isLoggedIn={true} />;
 	}
 
@@ -173,6 +176,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 						label: "SSO 2026",
 						iconKey: "sso26" as const,
 						group: "SSO 2026",
+					},
+				]
+			: []),
+		...(canAccessBackup
+			? [
+					{
+						href: "/admin/backup",
+						label: "Backup",
+						iconKey: "backup" as const,
+						group: "System",
 					},
 				]
 			: []),
