@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { shopClick } from "@/db/schema";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -10,16 +11,11 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ success: false, message: "Path is required" }, { status: 400 });
 		}
 
-		const userAgent = request.headers.get("user-agent") || null;
-		const referer = request.headers.get("referer") || null;
-
-		await prisma.shopClick.create({
-			data: {
-				path,
-				eventId: eventId || null,
-				userAgent,
-				referer,
-			},
+		await db.insert(shopClick).values({
+			path,
+			eventId: eventId || null,
+			userAgent: request.headers.get("user-agent") || null,
+			referer: request.headers.get("referer") || null,
 		});
 
 		return NextResponse.json({ success: true });

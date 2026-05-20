@@ -1,30 +1,23 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, product, eventProduct } from "@/db/schema";
 import { cache } from "@/lib/cache";
 
 async function checkShopAdmin() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) throw new Error("Unauthorized");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true },
 	});
-
-	if (!session?.user) {
-		throw new Error("Unauthorized");
-	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true },
-	});
-
-	if (!user?.isShopAdmin) {
-		throw new Error("Forbidden: Admin access required");
-	}
-
+	if (!u?.isShopAdmin) throw new Error("Forbidden: Admin access required");
 	return session;
 }
 
@@ -63,29 +56,26 @@ const productSchema = z.object({
 export async function createProduct(data: z.infer<typeof productSchema>) {
 	try {
 		await checkShopAdmin();
-
 		const validated = productSchema.parse(data);
 		const { assignedEvents, ...productData } = validated;
 
-		await prisma.product.create({
-			data: {
-				...productData,
-				// Create event assignments
-				eventProducts: {
-					create: assignedEvents.map((event, index) => ({
-						eventId: event.eventId,
-						eventPrice: event.eventPrice,
-						productCode: event.productCode ?? null,
-						categoryId: event.categoryId ?? null,
-						sortOrder: index,
-					})),
-				},
-			},
-		});
+		const inserted = await db.insert(product).values(productData).returning();
+		const productId = inserted[0].id;
 
-		// Invalidate product cache so changes show immediately
-		cache.deletePattern("products:.*");
+		if (assignedEvents.length > 0) {
+			await db.insert(eventProduct).values(
+				assignedEvents.map((event, index) => ({
+					eventId: event.eventId,
+					productId,
+					eventPrice: event.eventPrice,
+					productCode: event.productCode ?? null,
+					categoryId: event.categoryId ?? null,
+					sortOrder: index,
+				})),
+			);
+		}
 
+		await cache.deletePattern("products:.*");
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
 		return { success: true };
@@ -97,35 +87,26 @@ export async function createProduct(data: z.infer<typeof productSchema>) {
 export async function updateProduct(id: string, data: z.infer<typeof productSchema>) {
 	try {
 		await checkShopAdmin();
-
 		const validated = productSchema.parse(data);
 		const { assignedEvents, ...productData } = validated;
 
-		// Delete existing event assignments
-		await prisma.eventProduct.deleteMany({
-			where: { productId: id },
-		});
+		await db.delete(eventProduct).where(eq(eventProduct.productId, id));
+		await db.update(product).set(productData).where(eq(product.id, id));
 
-		await prisma.product.update({
-			where: { id },
-			data: {
-				...productData,
-				// Recreate event assignments
-				eventProducts: {
-					create: assignedEvents.map((event, index) => ({
-						eventId: event.eventId,
-						eventPrice: event.eventPrice,
-						productCode: event.productCode ?? null,
-						categoryId: event.categoryId ?? null,
-						sortOrder: index,
-					})),
-				},
-			},
-		});
+		if (assignedEvents.length > 0) {
+			await db.insert(eventProduct).values(
+				assignedEvents.map((event, index) => ({
+					eventId: event.eventId,
+					productId: id,
+					eventPrice: event.eventPrice,
+					productCode: event.productCode ?? null,
+					categoryId: event.categoryId ?? null,
+					sortOrder: index,
+				})),
+			);
+		}
 
-		// Invalidate product cache so changes show immediately
-		cache.deletePattern("products:.*");
-
+		await cache.deletePattern("products:.*");
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
 		return { success: true };
@@ -137,14 +118,8 @@ export async function updateProduct(id: string, data: z.infer<typeof productSche
 export async function deleteProduct(id: string) {
 	try {
 		await checkShopAdmin();
-
-		await prisma.product.delete({
-			where: { id },
-		});
-
-		// Invalidate product cache so changes show immediately
-		cache.deletePattern("products:.*");
-
+		await db.delete(product).where(eq(product.id, id));
+		await cache.deletePattern("products:.*");
 		revalidatePath("/admin/products");
 		revalidatePath("/shop");
 		return { success: true };

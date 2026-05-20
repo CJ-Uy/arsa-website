@@ -1,14 +1,15 @@
 "use server";
 
-import nodemailer from "nodemailer";
 import { Resend } from "resend";
-import { prisma } from "./prisma";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { shopSettings, emailLog } from "@/db/schema";
 
-export type EmailProvider = "smtp" | "resend";
+export type EmailProvider = "resend";
 
 export type EmailSettings = {
 	enabled: boolean;
-	provider: EmailProvider; // "smtp" or "resend"
+	provider: EmailProvider;
 	fromAddress: string;
 	fromName: string;
 	replyTo?: string;
@@ -27,7 +28,7 @@ type RepeaterRowData = Record<string, string>;
 type EventData = {
 	eventName?: string;
 	fields?: Record<string, string | boolean | RepeaterRowData[]>;
-	paymentMethod?: string; // The selected payment option title
+	paymentMethod?: string;
 };
 
 type OrderEmailData = {
@@ -39,45 +40,44 @@ type OrderEmailData = {
 	eventName?: string;
 	eventSlug?: string;
 	orderDate: Date;
-	eventData?: EventData; // Checkout field responses including claiming method, delivery details, payment
+	eventData?: EventData;
 };
 
-// Get email settings from database
 export async function getEmailSettings(): Promise<EmailSettings | null> {
 	try {
-		const settings = await prisma.shopSettings.findUnique({
-			where: { key: "emailSettings" },
+		const row = await db.query.shopSettings.findFirst({
+			where: eq(shopSettings.key, "emailSettings"),
 		});
-
-		if (!settings?.value) {
-			return null;
-		}
-
-		return settings.value as EmailSettings;
+		if (!row?.value) return null;
+		const value = row.value as EmailSettings;
+		return { ...value, provider: "resend" };
 	} catch (error) {
 		console.error("Failed to get email settings:", error);
 		return null;
 	}
 }
 
-// Save email settings to database
 export async function saveEmailSettings(
 	settings: EmailSettings,
 	userId?: string,
 ): Promise<{ success: boolean; message?: string }> {
 	try {
-		await prisma.shopSettings.upsert({
-			where: { key: "emailSettings" },
-			update: {
-				value: settings as any,
-				updatedBy: userId,
-			},
-			create: {
-				key: "emailSettings",
-				value: settings as any,
-				updatedBy: userId,
-			},
+		const existing = await db.query.shopSettings.findFirst({
+			where: eq(shopSettings.key, "emailSettings"),
 		});
+
+		if (existing) {
+			await db
+				.update(shopSettings)
+				.set({ value: settings, updatedBy: userId })
+				.where(eq(shopSettings.key, "emailSettings"));
+		} else {
+			await db.insert(shopSettings).values({
+				key: "emailSettings",
+				value: settings,
+				updatedBy: userId,
+			});
+		}
 
 		return { success: true };
 	} catch (error) {
@@ -86,42 +86,15 @@ export async function saveEmailSettings(
 	}
 }
 
-// Create nodemailer transporter for SMTP
-function createTransporter() {
-	const host = process.env.SMTP_HOST || "smtp.gmail.com";
-	const port = parseInt(process.env.SMTP_PORT || "587");
-	const user = process.env.SMTP_USER;
-	const pass = process.env.SMTP_PASSWORD;
-
-	if (!user || !pass) {
-		console.error("SMTP credentials not configured");
-		return null;
-	}
-
-	return nodemailer.createTransport({
-		host,
-		port,
-		secure: port === 465, // true for 465, false for other ports
-		auth: {
-			user,
-			pass,
-		},
-	});
-}
-
-// Create Resend client
 function createResendClient() {
 	const apiKey = process.env.RESEND_API_KEY;
-
 	if (!apiKey) {
 		console.error("Resend API key not configured");
 		return null;
 	}
-
 	return new Resend(apiKey);
 }
 
-// Log email to database
 async function logEmail(
 	provider: EmailProvider,
 	recipient: string,
@@ -136,36 +109,32 @@ async function logEmail(
 	},
 ) {
 	try {
-		await prisma.emailLog.create({
-			data: {
-				provider,
-				recipient,
-				subject,
-				emailType,
-				status,
-				orderId: options?.orderId,
-				userId: options?.userId,
-				errorMessage: options?.errorMessage,
-				providerId: options?.providerId,
-			},
+		await db.insert(emailLog).values({
+			provider,
+			recipient,
+			subject,
+			emailType,
+			status,
+			orderId: options?.orderId,
+			userId: options?.userId,
+			errorMessage: options?.errorMessage,
+			providerId: options?.providerId,
 		});
 	} catch (error) {
 		console.error("Failed to log email:", error);
-		// Don't throw - logging failure shouldn't block email sending
 	}
 }
 
-// Email color themes per event
 type EmailTheme = {
-	primary: string; // Main background gradient start
-	secondary: string; // Main background gradient end
-	accent: string; // Accent color (buttons, links)
-	cream: string; // Light background
-	border: string; // Borders and dividers
-	muted: string; // Muted text
-	gold: string; // Notice/warning accent
-	helpUrl?: string; // Help page link
-	helpLabel?: string; // Help page label
+	primary: string;
+	secondary: string;
+	accent: string;
+	cream: string;
+	border: string;
+	muted: string;
+	gold: string;
+	helpUrl?: string;
+	helpLabel?: string;
 };
 
 const EMAIL_THEMES: Record<string, EmailTheme> = {
@@ -194,17 +163,12 @@ const EMAIL_THEMES: Record<string, EmailTheme> = {
 };
 
 function getEmailTheme(eventSlug?: string): EmailTheme {
-	if (eventSlug && EMAIL_THEMES[eventSlug]) {
-		return EMAIL_THEMES[eventSlug];
-	}
+	if (eventSlug && EMAIL_THEMES[eventSlug]) return EMAIL_THEMES[eventSlug];
 	return EMAIL_THEMES.default;
 }
 
-// Generate order confirmation email HTML with event-aware theming
 function generateOrderConfirmationHtml(data: OrderEmailData): string {
 	const theme = getEmailTheme(data.eventSlug);
-
-	// Map theme to template color variables
 	const colors = {
 		darkRed: theme.primary,
 		burgundy: theme.accent,
@@ -254,18 +218,15 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 		timeZone: "Asia/Manila",
 	});
 
-	// Extract claiming method and delivery/pickup details from eventData
 	const fields = data.eventData?.fields || {};
 	const claimingMethod = fields["Claiming Method"] as string | undefined;
 	const paymentMethod = data.eventData?.paymentMethod;
 
-	// Build claiming/delivery details section
 	let claimingDetailsHtml = "";
 
 	if (claimingMethod || paymentMethod) {
 		let detailsContent = "";
 
-		// Add claiming method
 		if (claimingMethod) {
 			detailsContent += `
         <tr>
@@ -273,7 +234,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
           <td style="padding: 8px 0; text-align: right; color: ${colors.burgundy}; font-size: 14px; font-weight: 600;">${claimingMethod}</td>
         </tr>`;
 
-			// If Pick Up, show pickup date in a table and add a note
 			if (
 				claimingMethod.toLowerCase().includes("pick up") ||
 				claimingMethod.toLowerCase().includes("pickup")
@@ -302,7 +262,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 				}
 			}
 
-			// If Delivery, show delivery details table
 			if (claimingMethod.toLowerCase().includes("delivery")) {
 				const deliveryDetails = fields["Delivery Details"] as RepeaterRowData[] | undefined;
 				if (deliveryDetails && Array.isArray(deliveryDetails) && deliveryDetails.length > 0) {
@@ -321,7 +280,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
               <tbody>
                 ${deliveryDetails
 									.map((row) => {
-										// Sort keys to ensure consistent column order (col-{timestamp} IDs sort by creation order)
 										const sortedValues = Object.keys(row)
 											.sort()
 											.map((k) => row[k]);
@@ -341,7 +299,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 			}
 		}
 
-		// Add payment method
 		if (paymentMethod) {
 			detailsContent += `
         <tr>
@@ -352,7 +309,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 
 		if (detailsContent) {
 			claimingDetailsHtml = `
-    <!-- Claiming & Payment Details -->
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <h2 style="margin: 0 0 16px 0; font-size: 16px; color: ${colors.burgundy}; border-bottom: 2px solid ${colors.red}; padding-bottom: 8px;">Claiming & Payment</h2>
       <table style="width: 100%;">
@@ -372,18 +328,14 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: ${colors.burgundy}; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
 
-  <!-- Header Banner -->
   <div style="background: linear-gradient(135deg, ${colors.darkRed} 0%, ${colors.burgundy} 50%, ${colors.darkRed} 100%); padding: 32px 20px; text-align: center;">
     <h1 style="color: ${colors.cream}; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.5px;">Order Confirmed!</h1>
     ${data.eventName ? `<p style="color: ${colors.pastelOrange}; margin: 8px 0 0 0; font-size: 16px;">${data.eventName}</p>` : ""}
   </div>
 
-  <!-- Main Content -->
   <div style="background: ${colors.cream}; padding: 32px 24px;">
 
-    <!-- Thank You Message -->
     <div style="background: linear-gradient(135deg, rgba(170, 26, 26, 0.08) 0%, rgba(64, 12, 18, 0.05) 100%); border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; text-align: center;">
-      <!-- Checkmark using table for email compatibility -->
       <table style="margin: 0 auto 12px auto;">
         <tr>
           <td style="width: 48px; height: 48px; background: ${colors.red}; border-radius: 50%; text-align: center; vertical-align: middle;">
@@ -395,7 +347,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
       <p style="margin: 8px 0 0 0; color: #5a3a3a; font-size: 14px;">We've received your order and will process it shortly.</p>
     </div>
 
-    <!-- Order Details Card -->
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <h2 style="margin: 0 0 16px 0; font-size: 16px; color: ${colors.burgundy}; border-bottom: 2px solid ${colors.red}; padding-bottom: 8px;">Order Details</h2>
       <table style="width: 100%;">
@@ -414,7 +365,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 
     ${claimingDetailsHtml}
 
-    <!-- Items Table -->
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; overflow: hidden; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
@@ -436,14 +386,12 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
       </table>
     </div>
 
-    <!-- Important Notice -->
     <div style="background: linear-gradient(135deg, rgba(214, 161, 52, 0.15) 0%, rgba(214, 161, 52, 0.08) 100%); border: 1px solid ${colors.gold}; border-left: 4px solid ${colors.gold}; border-radius: 8px; padding: 16px; margin-bottom: 28px;">
       <p style="margin: 0; color: ${colors.burgundy}; font-size: 13px; line-height: 1.6;">
         <strong style="color: #8B6914;">📌 Important:</strong> Items with separate delivery details should be ordered individually and separately in their own transactions.
       </p>
     </div>
 
-    <!-- Help Section -->
     <div style="background: white; border: 1px solid ${colors.pastelRed}; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(64, 12, 18, 0.08);">
       <h3 style="margin: 0 0 12px 0; font-size: 15px; color: ${colors.burgundy};">Need Help?</h3>
       <p style="margin: 0; color: ${theme.muted}; font-size: 14px; line-height: 1.8;">
@@ -456,7 +404,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
 
   </div>
 
-  <!-- Footer -->
   <div style="background: linear-gradient(135deg, ${colors.darkRed} 0%, ${colors.burgundy} 100%); padding: 20px; text-align: center;">
     <p style="margin: 0; color: ${colors.pastelOrange}; font-size: 12px;">This is an automated email.</p>
     <p style="margin: 8px 0 0 0; color: ${colors.pastelRed}; font-size: 11px;">© ARSA - Ateneo Resident Students Association</p>
@@ -467,7 +414,6 @@ function generateOrderConfirmationHtml(data: OrderEmailData): string {
   `;
 }
 
-// Generate plain text version
 function generateOrderConfirmationText(data: OrderEmailData): string {
 	const itemsList = data.items
 		.map((item) => {
@@ -491,12 +437,10 @@ function generateOrderConfirmationText(data: OrderEmailData): string {
 		timeZone: "Asia/Manila",
 	});
 
-	// Extract claiming method and delivery/pickup details from eventData
 	const fields = data.eventData?.fields || {};
 	const claimingMethod = fields["Claiming Method"] as string | undefined;
 	const paymentMethod = data.eventData?.paymentMethod;
 
-	// Build claiming/delivery details section
 	let claimingDetailsText = "";
 	if (claimingMethod || paymentMethod) {
 		claimingDetailsText = `
@@ -508,7 +452,6 @@ CLAIMING & PAYMENT
 			claimingDetailsText += `
 Claiming Method: ${claimingMethod}`;
 
-			// If Pick Up, show pickup date and add a note
 			if (
 				claimingMethod.toLowerCase().includes("pick up") ||
 				claimingMethod.toLowerCase().includes("pickup")
@@ -523,7 +466,6 @@ Pick Up Details:
 				}
 			}
 
-			// If Delivery, show delivery details
 			if (claimingMethod.toLowerCase().includes("delivery")) {
 				const deliveryDetails = fields["Delivery Details"] as RepeaterRowData[] | undefined;
 				if (deliveryDetails && Array.isArray(deliveryDetails) && deliveryDetails.length > 0) {
@@ -531,7 +473,6 @@ Pick Up Details:
 
 Delivery Details:`;
 					deliveryDetails.forEach((row, index) => {
-						// Sort keys to ensure consistent column order (col-{timestamp} IDs sort by creation order)
 						const sortedValues = Object.keys(row)
 							.sort()
 							.map((k) => row[k]);
@@ -592,14 +533,12 @@ This is an automated email.
   `.trim();
 }
 
-// Send order confirmation email
 export async function sendOrderConfirmationEmail(
 	data: OrderEmailData,
 ): Promise<{ success: boolean; message?: string }> {
 	const subject = `Order Confirmation - ${data.orderId.slice(0, 8)}${data.eventName ? ` (${data.eventName})` : ""}`;
 
 	try {
-		// Get email settings
 		const settings = await getEmailSettings();
 
 		if (!settings?.enabled) {
@@ -607,119 +546,52 @@ export async function sendOrderConfirmationEmail(
 			return { success: true, message: "Email notifications disabled" };
 		}
 
-		// Generate email content
 		const html = generateOrderConfirmationHtml(data);
 		const text = generateOrderConfirmationText(data);
 
-		let providerId: string | undefined;
-
-		// Send via selected provider
-		if (settings.provider === "resend") {
-			// Use Resend API
-			const resend = createResendClient();
-			if (!resend) {
-				await logEmail(
-					settings.provider,
-					data.customerEmail,
-					subject,
-					"order_confirmation",
-					"failed",
-					{
-						orderId: data.orderId,
-						errorMessage: "Resend API key not configured",
-					},
-				);
-				return { success: false, message: "Resend API key not configured" };
-			}
-
-			const result = await resend.emails.send({
-				from: `${settings.fromName} <${settings.fromAddress}>`,
-				to: data.customerEmail,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text,
-				html,
+		const resend = createResendClient();
+		if (!resend) {
+			await logEmail("resend", data.customerEmail, subject, "order_confirmation", "failed", {
+				orderId: data.orderId,
+				errorMessage: "Resend API key not configured",
 			});
-
-			if (result.error) {
-				await logEmail(
-					settings.provider,
-					data.customerEmail,
-					subject,
-					"order_confirmation",
-					"failed",
-					{
-						orderId: data.orderId,
-						errorMessage: result.error.message,
-					},
-				);
-				return { success: false, message: result.error.message };
-			}
-
-			providerId = result.data?.id;
-		} else {
-			// Use SMTP
-			const transporter = createTransporter();
-			if (!transporter) {
-				await logEmail(
-					settings.provider,
-					data.customerEmail,
-					subject,
-					"order_confirmation",
-					"failed",
-					{
-						orderId: data.orderId,
-						errorMessage: "SMTP not configured",
-					},
-				);
-				return { success: false, message: "SMTP not configured" };
-			}
-
-			const info = await transporter.sendMail({
-				from: `"${settings.fromName}" <${settings.fromAddress}>`,
-				to: data.customerEmail,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text,
-				html,
-			});
-
-			providerId = info.messageId;
+			return { success: false, message: "Resend API key not configured" };
 		}
 
-		// Log successful send
-		await logEmail(settings.provider, data.customerEmail, subject, "order_confirmation", "sent", {
-			orderId: data.orderId,
-			providerId,
+		const result = await resend.emails.send({
+			from: `${settings.fromName} <${settings.fromAddress}>`,
+			to: data.customerEmail,
+			replyTo: settings.replyTo || settings.fromAddress,
+			subject,
+			text,
+			html,
 		});
 
-		console.log(`Order confirmation email sent to ${data.customerEmail} via ${settings.provider}`);
+		if (result.error) {
+			await logEmail("resend", data.customerEmail, subject, "order_confirmation", "failed", {
+				orderId: data.orderId,
+				errorMessage: result.error.message,
+			});
+			return { success: false, message: result.error.message };
+		}
+
+		await logEmail("resend", data.customerEmail, subject, "order_confirmation", "sent", {
+			orderId: data.orderId,
+			providerId: result.data?.id,
+		});
+
 		return { success: true };
 	} catch (error) {
 		console.error("Failed to send order confirmation email:", error);
 		const errorMessage = error instanceof Error ? error.message : "Failed to send email";
-
-		// Log failed attempt
-		const settings = await getEmailSettings();
-		if (settings) {
-			await logEmail(
-				settings.provider,
-				data.customerEmail,
-				subject,
-				"order_confirmation",
-				"failed",
-				{
-					orderId: data.orderId,
-					errorMessage,
-				},
-			);
-		}
-
+		await logEmail("resend", data.customerEmail, subject, "order_confirmation", "failed", {
+			orderId: data.orderId,
+			errorMessage,
+		});
 		return { success: false, message: errorMessage };
 	}
 }
 
-// Test email configuration
 export async function sendTestEmail(
 	toEmail: string,
 ): Promise<{ success: boolean; message?: string }> {
@@ -736,84 +608,42 @@ export async function sendTestEmail(
 
 	try {
 		const settings = await getEmailSettings();
+		if (!settings) return { success: false, message: "Email settings not configured" };
 
-		if (!settings) {
-			return { success: false, message: "Email settings not configured" };
+		const resend = createResendClient();
+		if (!resend) {
+			await logEmail("resend", toEmail, subject, "test", "failed", {
+				errorMessage: "Resend API key not configured",
+			});
+			return { success: false, message: "Resend API key not configured in environment" };
 		}
 
-		let providerId: string | undefined;
-
-		// Send via selected provider
-		if (settings.provider === "resend") {
-			const resend = createResendClient();
-			if (!resend) {
-				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
-					errorMessage: "Resend API key not configured",
-				});
-				return { success: false, message: "Resend API key not configured in environment" };
-			}
-
-			const result = await resend.emails.send({
-				from: `${settings.fromName} <${settings.fromAddress}>`,
-				to: toEmail,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text,
-				html,
-			});
-
-			if (result.error) {
-				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
-					errorMessage: result.error.message,
-				});
-				return { success: false, message: result.error.message };
-			}
-
-			providerId = result.data?.id;
-		} else {
-			const transporter = createTransporter();
-			if (!transporter) {
-				await logEmail(settings.provider, toEmail, subject, "test", "failed", {
-					errorMessage: "SMTP credentials not configured",
-				});
-				return { success: false, message: "SMTP credentials not configured in environment" };
-			}
-
-			const info = await transporter.sendMail({
-				from: `"${settings.fromName}" <${settings.fromAddress}>`,
-				to: toEmail,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text,
-				html,
-			});
-
-			providerId = info.messageId;
-		}
-
-		// Log successful send
-		await logEmail(settings.provider, toEmail, subject, "test", "sent", {
-			providerId,
+		const result = await resend.emails.send({
+			from: `${settings.fromName} <${settings.fromAddress}>`,
+			to: toEmail,
+			replyTo: settings.replyTo || settings.fromAddress,
+			subject,
+			text,
+			html,
 		});
 
+		if (result.error) {
+			await logEmail("resend", toEmail, subject, "test", "failed", {
+				errorMessage: result.error.message,
+			});
+			return { success: false, message: result.error.message };
+		}
+
+		await logEmail("resend", toEmail, subject, "test", "sent", { providerId: result.data?.id });
 		return { success: true, message: "Test email sent successfully" };
 	} catch (error) {
 		console.error("Failed to send test email:", error);
 		const errorMessage = error instanceof Error ? error.message : "Failed to send test email";
-
-		// Log failed attempt
-		const settings = await getEmailSettings();
-		if (settings) {
-			await logEmail(settings.provider, toEmail, subject, "test", "failed", {
-				errorMessage,
-			});
-		}
-
+		await logEmail("resend", toEmail, subject, "test", "failed", { errorMessage });
 		return { success: false, message: errorMessage };
 	}
 }
 
-// Send a custom email
 export async function sendCustomEmail(
 	to: string,
 	subject: string,
@@ -821,12 +651,8 @@ export async function sendCustomEmail(
 ): Promise<{ success: boolean; message?: string }> {
 	try {
 		const settings = await getEmailSettings();
+		if (!settings) return { success: false, message: "Email settings not configured" };
 
-		if (!settings) {
-			return { success: false, message: "Email settings not configured" };
-		}
-
-		// Convert plain text body to simple HTML (preserve line breaks)
 		const htmlBody = `
 			<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 0 auto; padding: 20px;">
 				${body
@@ -838,74 +664,36 @@ export async function sendCustomEmail(
 			</div>
 		`;
 
-		let providerId: string | undefined;
-
-		// Send via selected provider
-		if (settings.provider === "resend") {
-			const resend = createResendClient();
-			if (!resend) {
-				await logEmail(settings.provider, to, subject, "custom", "failed", {
-					errorMessage: "Resend API key not configured",
-				});
-				return { success: false, message: "Resend API key not configured in environment" };
-			}
-
-			const result = await resend.emails.send({
-				from: `${settings.fromName} <${settings.fromAddress}>`,
-				to,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text: body,
-				html: htmlBody,
+		const resend = createResendClient();
+		if (!resend) {
+			await logEmail("resend", to, subject, "custom", "failed", {
+				errorMessage: "Resend API key not configured",
 			});
-
-			if (result.error) {
-				await logEmail(settings.provider, to, subject, "custom", "failed", {
-					errorMessage: result.error.message,
-				});
-				return { success: false, message: result.error.message };
-			}
-
-			providerId = result.data?.id;
-		} else {
-			const transporter = createTransporter();
-			if (!transporter) {
-				await logEmail(settings.provider, to, subject, "custom", "failed", {
-					errorMessage: "SMTP credentials not configured",
-				});
-				return { success: false, message: "SMTP credentials not configured in environment" };
-			}
-
-			const info = await transporter.sendMail({
-				from: `"${settings.fromName}" <${settings.fromAddress}>`,
-				to,
-				replyTo: settings.replyTo || settings.fromAddress,
-				subject,
-				text: body,
-				html: htmlBody,
-			});
-
-			providerId = info.messageId;
+			return { success: false, message: "Resend API key not configured in environment" };
 		}
 
-		// Log successful send
-		await logEmail(settings.provider, to, subject, "custom", "sent", {
-			providerId,
+		const result = await resend.emails.send({
+			from: `${settings.fromName} <${settings.fromAddress}>`,
+			to,
+			replyTo: settings.replyTo || settings.fromAddress,
+			subject,
+			text: body,
+			html: htmlBody,
 		});
 
+		if (result.error) {
+			await logEmail("resend", to, subject, "custom", "failed", {
+				errorMessage: result.error.message,
+			});
+			return { success: false, message: result.error.message };
+		}
+
+		await logEmail("resend", to, subject, "custom", "sent", { providerId: result.data?.id });
 		return { success: true, message: "Email sent successfully" };
 	} catch (error) {
 		console.error("Failed to send custom email:", error);
 		const errorMessage = error instanceof Error ? error.message : "Failed to send email";
-
-		// Log failed attempt
-		const settings = await getEmailSettings();
-		if (settings) {
-			await logEmail(settings.provider, to, subject, "custom", "failed", {
-				errorMessage,
-			});
-		}
-
+		await logEmail("resend", to, subject, "custom", "failed", { errorMessage });
 		return { success: false, message: errorMessage };
 	}
 }

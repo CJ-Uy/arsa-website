@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { user as userTable, eventAdmin } from "@/db/schema";
 import { Unauthorized } from "./unauthorized";
 import { Suspense } from "react";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
@@ -19,9 +21,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	}
 
 	// Check user permissions - shop admin OR events admin (global or event-specific)
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: {
+	const user = await db.query.user.findFirst({
+		where: eq(userTable.id, session.user.id),
+		columns: {
 			isShopAdmin: true,
 			isEventsAdmin: true,
 			isTicketsAdmin: true,
@@ -29,10 +31,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 			isSSO26Admin: true,
 			isBackupAdmin: true,
 			isSuperAdmin: true,
-			eventAdmins: {
-				select: { eventId: true },
-			},
 		},
+	});
+	const eventAdmins = await db.query.eventAdmin.findMany({
+		where: eq(eventAdmin.userId, session.user.id),
+		columns: { eventId: true },
 	});
 
 	const isShopAdmin = user?.isShopAdmin ?? false;
@@ -42,7 +45,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 	const isSSO26Admin = user?.isSSO26Admin ?? false;
 	const isBackupAdmin = user?.isBackupAdmin ?? false;
 	const isSuperAdmin = user?.isSuperAdmin ?? false;
-	const hasEventAssignments = (user?.eventAdmins?.length ?? 0) > 0;
+	const hasEventAssignments = eventAdmins.length > 0;
 	const canAccessEvents = isShopAdmin || isEventsAdmin || hasEventAssignments;
 	const canAccessBackup = isBackupAdmin || isSuperAdmin;
 
@@ -176,16 +179,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 						label: "SSO 2026",
 						iconKey: "sso26" as const,
 						group: "SSO 2026",
-					},
-				]
-			: []),
-		...(canAccessBackup
-			? [
-					{
-						href: "/admin/backup",
-						label: "Backup",
-						iconKey: "backup" as const,
-						group: "System",
 					},
 				]
 			: []),

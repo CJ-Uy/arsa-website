@@ -1,8 +1,20 @@
-import { PdfReader } from "pdfreader";
-
 /**
- * Represents a single parsed transaction from the GCash statement.
+ * GCash PDF invoice parser.
+ *
+ * Migrated from `pdfreader` (Node-only, blocked on Cloudflare Workers) to a
+ * Workers-compatible flow: PDF text extraction now happens on the *client*
+ * via `pdfjs-dist`, and the server only receives the pre-extracted positioned
+ * text items for transaction matching.
+ *
+ * If you want to parse a PDF on the server, use the legacy Node-only path via
+ * a separate background job (e.g. wrangler with `nodejs_compat` does not yet
+ * support `pdfreader`'s synchronous Buffer parsing).
+ *
+ * The pure data-processing function `processExtractedData` is kept exported so
+ * the same column-detection logic can be reused once the client passes its
+ * extracted items array.
  */
+
 export interface GcashTransaction {
 	date: string | null;
 	description: string;
@@ -12,95 +24,42 @@ export interface GcashTransaction {
 	balance: number | null;
 }
 
-/**
- * Represents the entire set of data extracted from the GCash PDF.
- */
 export interface GcashInvoiceExtractedData {
 	dateRange: string | null;
 	transactions: GcashTransaction[];
 }
 
-/**
- * Low-level PDF parsing engine. It wraps the event-based `pdfreader` library
- * in a modern Promise-based interface.
- */
-async function extractDataWithCoordinates(
-	pdfBuffer: Buffer,
-	password: string,
-): Promise<{ pages: { content: any[] }[] }> {
-	return new Promise((resolve, reject) => {
-		const pages: { [key: number]: any[] } = {};
-
-		// The reader instance is created inside the promise
-		const reader = new PdfReader({ password });
-
-		reader.parseBuffer(pdfBuffer, (err, item) => {
-			if (err) {
-				return reject(err);
-			}
-			if (!item) {
-				// End of document
-				const rawData = {
-					pages: Object.keys(pages)
-						.sort((a, b) => parseInt(a) - parseInt(b))
-						.map((pageNum) => ({ content: pages[parseInt(pageNum)] })),
-				};
-				return resolve(rawData);
-			}
-			if (item.page) {
-				// When a new page starts, we create an entry for it.
-				if (!pages[item.page]) {
-					pages[item.page] = [];
-				}
-			} else if (item.text) {
-				// The library doesn't consistently provide the page number with each text item.
-				// We assume the text belongs to the most recently seen page.
-				const currentPageNumber = Object.keys(pages).length;
-				if (currentPageNumber > 0 && pages[currentPageNumber]) {
-					pages[currentPageNumber].push({
-						x: item.x,
-						y: item.y,
-						text: item.text,
-					});
-				}
-			}
-		});
-	});
+export interface PositionedTextItem {
+	x: number;
+	y: number;
+	text: string;
 }
 
-/**
- * Transforms raw, coordinate-based character data into structured transaction objects.
- * This function contains all the business logic specific to the GCash PDF layout.
- * It uses a multi-pass approach to correctly handle multi-line descriptions.
- *
- * @param data An object containing the pages and their content, as extracted by `extractDataWithCoordinates`.
- * @returns An object containing the transaction date range and a list of structured transactions.
- */
-function processExtractedData(data: { pages: { content: any[] }[] }) {
-	// The final list of transactions is now at the top level,
-	// so it persists across page loops.
-	const finalTransactions: any[] = [];
+export interface ExtractedPages {
+	pages: { content: PositionedTextItem[] }[];
+}
+
+const columnBoundaries = {
+	date: { start: 2, end: 7 },
+	description: { start: 7, end: 20 },
+	reference: { start: 20, end: 25 },
+	debit: { start: 26, end: 28 },
+	credit: { start: 29, end: 31 },
+	balance: { start: 32, end: 35 },
+};
+
+export function processExtractedData(data: ExtractedPages): GcashInvoiceExtractedData {
+	const finalTransactions: (GcashTransaction & { startX?: number })[] = [];
 	let dateRange: string | null = null;
 
-	const columnBoundaries = {
-		date: { start: 2, end: 7 },
-		description: { start: 7, end: 20 },
-		reference: { start: 20, end: 25 },
-		debit: { start: 26, end: 28 },
-		credit: { start: 29, end: 31 },
-		balance: { start: 32, end: 35 },
-	};
-
-	// Process each page sequentially
 	for (const page of data.pages) {
-		const preliminaryTransactions: any[] = [];
+		const preliminaryTransactions: (GcashTransaction & { startX: number })[] = [];
 
-		// --- Pass 1: "Anchored-Y" Row Detection (runs for each page) ---
-		const rows: { y: number; items: any[] }[] = [];
-		const content = page.content.sort((a, b) => a.y - b.y || a.x - b.x);
+		const rows: { y: number; items: PositionedTextItem[] }[] = [];
+		const content = [...page.content].sort((a, b) => a.y - b.y || a.x - b.x);
 
 		if (content.length > 0) {
-			let currentRow: any[] = [];
+			let currentRow: PositionedTextItem[] = [];
 			let currentRowY = -1;
 			const ROW_TOLERANCE = 0.25;
 
@@ -120,7 +79,6 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 			}
 		}
 
-		// --- Pass 2: Create preliminary transaction objects (runs for each page) ---
 		for (const row of rows) {
 			if (row.items.length === 0) continue;
 			const startX = row.items[0].x;
@@ -141,7 +99,6 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 			];
 			if (ignoreKeywords.some((keyword) => fullLineText.includes(keyword))) continue;
 
-			// Capture date range only if it hasn't been found yet
 			if (!dateRange && fullLineText.match(/\d{4}-\d{2}-\d{2}TO\d{4}-\d{2}-\d{2}/)) {
 				dateRange = row.items
 					.map((i) => i.text)
@@ -156,6 +113,7 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 				debitStr = "",
 				creditStr = "",
 				balanceStr = "";
+
 			for (const charItem of row.items) {
 				if (charItem.x >= columnBoundaries.date.start && charItem.x < columnBoundaries.date.end)
 					dateStr += charItem.text;
@@ -187,7 +145,7 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 			}
 
 			const transaction = {
-				startX: startX,
+				startX,
 				date: dateStr.trim() || null,
 				description: descriptionStr.trim(),
 				reference: referenceStr.trim() || null,
@@ -196,21 +154,18 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 				balance: parseFloat(balanceStr.trim().replace(/,/g, "")) || null,
 			};
 
-			if (
-				Object.values(transaction).some(
-					(v) =>
-						(v !== null && v !== "" && v !== undefined && typeof v !== "number") ||
-						(typeof v === "number" && !isNaN(v)),
-				)
-			) {
-				preliminaryTransactions.push(transaction);
-			}
+			const hasRealValue =
+				transaction.date !== null ||
+				transaction.description !== "" ||
+				transaction.reference !== null ||
+				transaction.debit !== null ||
+				transaction.credit !== null ||
+				transaction.balance !== null;
+			if (hasRealValue) preliminaryTransactions.push(transaction);
 		}
 
-		// --- Pass 3: The Final Merge (crucially, this appends to the GLOBAL finalTransactions) ---
 		for (const currentTx of preliminaryTransactions) {
 			const isFragment = currentTx.startX >= columnBoundaries.description.start;
-
 			if (isFragment && finalTransactions.length > 0) {
 				const mainTx = finalTransactions[finalTransactions.length - 1];
 				mainTx.description = `${mainTx.description} ${currentTx.description}`.trim();
@@ -222,36 +177,23 @@ function processExtractedData(data: { pages: { content: any[] }[] }) {
 				finalTransactions.push(currentTx);
 			}
 		}
-	} // End of page loop
+	}
 
-	// Clean up the temporary 'startX' property before returning.
-	finalTransactions.forEach((tx) => delete tx.startX);
-
+	finalTransactions.forEach((tx) => delete (tx as Partial<typeof tx>).startX);
 	return { dateRange, transactions: finalTransactions };
 }
 
 /**
- * The main exported function that orchestrates the entire PDF parsing pipeline.
- * @param pdfBuffer The PDF file as a Buffer
- * @param password The PDF password (typically last 4 digits of mobile number for GCash PDFs)
- * @returns Extracted transaction data with date range
+ * @deprecated Server-side PDF parsing relies on `pdfreader`, which depends on
+ * Node APIs unavailable in the Cloudflare Workers runtime. Use the client-side
+ * helper at `src/lib/gcashReaders/readInvoice.client.ts` to extract positioned
+ * text via `pdfjs-dist`, then POST the result to the invoice action.
  */
-export async function parseGcashPdf(pdfBuffer: Buffer, password: string = "") {
-	try {
-		// Step 1: Call the engine to get raw character data with coordinates.
-		const rawData = await extractDataWithCoordinates(pdfBuffer, password);
-
-		// Step 2: Pass the raw data to the high-level processor to get final results.
-		return processExtractedData(rawData);
-	} catch (error: any) {
-		console.error("Failed to parse PDF with pdfreader:", error);
-		// Translate low-level errors into user-friendly messages.
-		if (error?.message?.includes("PasswordException")) {
-			throw new Error("Invalid password provided for the PDF.");
-		}
-		throw new Error(
-			error?.message ||
-				"Could not process the PDF file. It might be corrupted or in an unsupported format.",
-		);
-	}
+export async function parseGcashPdf(
+	_pdfBuffer: ArrayBuffer | Uint8Array,
+	_password: string = "",
+): Promise<GcashInvoiceExtractedData> {
+	throw new Error(
+		"Server-side PDF parsing is disabled in the Cloudflare Workers runtime. Use the client-side pdfjs-dist extractor and pass the positioned-text payload to the invoice action.",
+	);
 }

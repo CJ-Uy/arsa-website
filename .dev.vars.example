@@ -1,0 +1,26 @@
+# Cloudflare D1 HTTP API (for next dev — production uses native binding)
+CLOUDFLARE_ACCOUNT_ID=c0316c17e2973be4ae27ddc85b94edab
+CLOUDFLARE_D1_DATABASE_ID=
+CLOUDFLARE_D1_TOKEN=
+
+# Better Auth
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# R2 public domain (where uploads are served from)
+R2_PUBLIC_DOMAIN=https://r2.ateneoarsa.org
+
+# Email (Resend only)
+RESEND_API_KEY=
+
+# Tickets HMAC
+TICKET_HMAC_SECRET=
+
+# Google Sheets (optional)
+GOOGLE_SHEETS_CREDENTIALS=
+CRON_SECRET=

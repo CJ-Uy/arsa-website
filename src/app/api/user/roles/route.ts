@@ -1,53 +1,50 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, eventAdmin } from "@/db/schema";
 
 export async function GET() {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
-
+		const session = await auth.api.getSession({ headers: await headers() });
 		if (!session?.user) {
 			return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
 		}
 
-		const user = await prisma.user.findUnique({
-			where: { id: session.user.id },
-			select: {
+		const u = await db.query.user.findFirst({
+			where: eq(user.id, session.user.id),
+			columns: {
 				isShopAdmin: true,
 				isEventsAdmin: true,
 				isRedirectsAdmin: true,
 				isTicketsAdmin: true,
 				isSSO26Admin: true,
 				isSuperAdmin: true,
-				eventAdmins: {
-					select: {
-						eventId: true,
-					},
-				},
 			},
 		});
 
-		if (!user) {
+		if (!u) {
 			return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
 		}
 
-		// User is an events admin if they have the global flag OR are assigned to specific events
-		const hasEventAdminAccess = user.isEventsAdmin || user.eventAdmins.length > 0;
+		const eventAdmins = await db.query.eventAdmin.findMany({
+			where: eq(eventAdmin.userId, session.user.id),
+			columns: { eventId: true },
+		});
+
+		const hasEventAdminAccess = u.isEventsAdmin || eventAdmins.length > 0;
 
 		return NextResponse.json({
 			success: true,
 			roles: {
-				isShopAdmin: user.isShopAdmin,
+				isShopAdmin: u.isShopAdmin,
 				isEventsAdmin: hasEventAdminAccess,
-				isRedirectsAdmin: user.isRedirectsAdmin,
-				isTicketsAdmin: user.isTicketsAdmin,
-				isSSO26Admin: user.isSSO26Admin,
-				isSuperAdmin: user.isSuperAdmin,
-				// Include specific event IDs for fine-grained access control
-				eventAdminIds: user.eventAdmins.map((ea) => ea.eventId),
+				isRedirectsAdmin: u.isRedirectsAdmin,
+				isTicketsAdmin: u.isTicketsAdmin,
+				isSSO26Admin: u.isSSO26Admin,
+				isSuperAdmin: u.isSuperAdmin,
+				eventAdminIds: eventAdmins.map((ea) => ea.eventId),
 			},
 		});
 	} catch (error) {

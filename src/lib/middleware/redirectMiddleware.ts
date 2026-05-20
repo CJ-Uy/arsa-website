@@ -1,40 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { redirects, redirectClick } from "@/db/schema";
 
 export async function redirectMiddleware(req: NextRequest): Promise<NextResponse | undefined> {
 	const path = req.nextUrl.pathname;
 	const code = path.substring(1);
 
-	// Skip this middleware for known paths and API routes to avoid unnecessary DB queries
 	if (path === "/" || path.startsWith("/api") || path.startsWith("/_next")) {
-		return undefined; // Let the request continue
+		return undefined;
 	}
 
 	try {
-		const redirect = await prisma.redirects.findFirst({
-			where: {
-				redirectCode: code,
-			},
+		const redirect = await db.query.redirects.findFirst({
+			where: eq(redirects.redirectCode, code),
 		});
 
-		// If a link is found, return a redirect response immediately
 		if (redirect) {
-			// Update click count and log the individual click
-			await prisma.$transaction([
-				prisma.redirects.update({
-					where: { id: redirect.id },
-					data: {
-						clicks: {
-							increment: 1,
-						},
-					},
-				}),
-				prisma.redirectClick.create({
-					data: {
-						redirectId: redirect.id,
-						userAgent: req.headers.get("user-agent") || null,
-						referer: req.headers.get("referer") || null,
-					},
+			await db.batch([
+				db
+					.update(redirects)
+					.set({ clicks: sql`${redirects.clicks} + 1` })
+					.where(eq(redirects.id, redirect.id)),
+				db.insert(redirectClick).values({
+					redirectId: redirect.id,
+					userAgent: req.headers.get("user-agent") || null,
+					referer: req.headers.get("referer") || null,
 				}),
 			]);
 
@@ -42,10 +33,7 @@ export async function redirectMiddleware(req: NextRequest): Promise<NextResponse
 		}
 	} catch (error) {
 		console.error("Redirect middleware database error:", error);
-		// Let the request continue to the Next.js router to handle the error
 	}
 
-	// If no link is found, return undefined to signal that we are done
-	// and the next middleware (or Next.js itself) should take over.
 	return undefined;
 }

@@ -1,9 +1,11 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { and, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { sso26Nomination, sso26DdayVote } from "@/db/schema";
 
 const ALLOWED_DOMAINS = ["@student.ateneo.edu", "@ateneo.edu"];
 
@@ -18,8 +20,6 @@ async function verifyAteneoUser() {
 	return { authorized: true as const, userId: session.user.id };
 }
 
-// ── Superlatives ──────────────────────────────────────────────────────────────
-
 export type NominationInput = {
 	question: string;
 	nominee: string;
@@ -31,20 +31,30 @@ export async function submitNominations(nominations: NominationInput) {
 		const authResult = await verifyAteneoUser();
 		if (!authResult.authorized) return { success: false, message: authResult.message };
 
-		await prisma.$transaction(
-			nominations.map(({ question, nominee, otherText }) =>
-				prisma.sSO26Nomination.upsert({
-					where: { userId_question: { userId: authResult.userId, question } },
-					update: { nominee, otherText: nominee === "OTHER" ? (otherText ?? null) : null },
-					create: {
+		await db.transaction(async (tx) => {
+			for (const { question, nominee, otherText } of nominations) {
+				const otherTextValue = nominee === "OTHER" ? (otherText ?? null) : null;
+				const existing = await tx.query.sso26Nomination.findFirst({
+					where: and(
+						eq(sso26Nomination.userId, authResult.userId),
+						eq(sso26Nomination.question, question),
+					),
+				});
+				if (existing) {
+					await tx
+						.update(sso26Nomination)
+						.set({ nominee, otherText: otherTextValue })
+						.where(eq(sso26Nomination.id, existing.id));
+				} else {
+					await tx.insert(sso26Nomination).values({
 						userId: authResult.userId,
 						question,
 						nominee,
-						otherText: nominee === "OTHER" ? (otherText ?? null) : null,
-					},
-				}),
-			),
-		);
+						otherText: otherTextValue,
+					});
+				}
+			}
+		});
 
 		revalidatePath("/sso26/superlatives");
 		return { success: true, message: "Nominations saved!" };
@@ -53,19 +63,21 @@ export async function submitNominations(nominations: NominationInput) {
 	}
 }
 
-export async function getUserNominations(): Promise<Record<string, { nominee: string; otherText: string | null }>> {
+export async function getUserNominations(): Promise<
+	Record<string, { nominee: string; otherText: string | null }>
+> {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) return {};
 
-	const nominations = await prisma.sSO26Nomination.findMany({
-		where: { userId: session.user.id },
-		select: { question: true, nominee: true, otherText: true },
+	const nominations = await db.query.sso26Nomination.findMany({
+		where: eq(sso26Nomination.userId, session.user.id),
+		columns: { question: true, nominee: true, otherText: true },
 	});
 
-	return Object.fromEntries(nominations.map((n) => [n.question, { nominee: n.nominee, otherText: n.otherText }]));
+	return Object.fromEntries(
+		nominations.map((n) => [n.question, { nominee: n.nominee, otherText: n.otherText }]),
+	);
 }
-
-// ── DDay ──────────────────────────────────────────────────────────────────────
 
 export type DdayVoteInput = {
 	question: string;
@@ -74,13 +86,12 @@ export type DdayVoteInput = {
 
 export async function submitDdayVotes(votes: DdayVoteInput) {
 	try {
-		await prisma.sSO26DdayVote.createMany({
-			data: votes.map(({ question, nominee }) => ({
+		await db.insert(sso26DdayVote).values(
+			votes.map(({ question, nominee }) => ({
 				question,
 				nominee,
 			})),
-		});
-
+		);
 		return { success: true, message: "Votes submitted!" };
 	} catch {
 		return { success: false, message: "Failed to submit votes" };

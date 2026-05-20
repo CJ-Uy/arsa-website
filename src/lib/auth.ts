@@ -1,14 +1,22 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import * as schema from "@/db/schema";
 
 const isProduction = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
 	trustedOrigins: [process.env.BETTER_AUTH_URL!, process.env.NEXT_PUBLIC_APP_URL!].filter(Boolean),
-	database: prismaAdapter(prisma, {
-		provider: "postgresql",
+	database: drizzleAdapter(db, {
+		provider: "sqlite",
+		schema: {
+			user: schema.user,
+			session: schema.session,
+			account: schema.account,
+			verification: schema.verification,
+		},
 	}),
 	socialProviders: {
 		google: {
@@ -17,55 +25,38 @@ export const auth = betterAuth({
 		},
 	},
 	emailAndPassword: {
-		enabled: false, // Only allow OAuth login
+		enabled: false,
 	},
 	session: {
 		cookieCache: {
 			enabled: true,
-			maxAge: 5 * 60, // 5 minutes - reduces DB lookups
+			maxAge: 5 * 60,
 		},
 	},
 	advanced: {
-		// Use secure cookies in production (requires HTTPS)
 		useSecureCookies: isProduction,
-		// Cookie prefix for namespacing
 		cookiePrefix: "arsa",
-		// Cross-subdomain cookies (set to your domain if using subdomains)
-		// crossSubDomainCookies: { enabled: true, domain: ".yourdomain.com" },
 	},
 	user: {
 		additionalFields: {
-			isShopAdmin: {
-				type: "boolean",
-				defaultValue: false,
-			},
-			isRedirectsAdmin: {
-				type: "boolean",
-				defaultValue: false,
-			},
-			isTicketsAdmin: {
-				type: "boolean",
-				defaultValue: false,
-			},
-			isSSO26Admin: {
-				type: "boolean",
-				defaultValue: false,
-			},
+			isShopAdmin: { type: "boolean", defaultValue: false },
+			isEventsAdmin: { type: "boolean", defaultValue: false },
+			isRedirectsAdmin: { type: "boolean", defaultValue: false },
+			isTicketsAdmin: { type: "boolean", defaultValue: false },
+			isSSO26Admin: { type: "boolean", defaultValue: false },
+			isBackupAdmin: { type: "boolean", defaultValue: false },
+			isSuperAdmin: { type: "boolean", defaultValue: false },
 		},
-		async onCreate(user: { name?: string; email: string }) {
-			// Auto-populate firstName and lastName from Google name
-			if (user.name) {
-				const nameParts = user.name.trim().split(" ");
+		async onCreate(u: { name?: string; email: string }) {
+			if (u.name) {
+				const nameParts = u.name.trim().split(" ");
 				const firstName = nameParts[0] || "";
 				const lastName = nameParts.slice(1).join(" ") || "";
 
-				await prisma.user.update({
-					where: { email: user.email },
-					data: {
-						firstName,
-						lastName,
-					},
-				});
+				await db
+					.update(schema.user)
+					.set({ firstName, lastName })
+					.where(eq(schema.user.email, u.email));
 			}
 		},
 	},
