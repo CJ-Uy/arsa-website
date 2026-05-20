@@ -1,8 +1,17 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { eq, sql } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	cartItem,
+	order,
+	orderItem,
+	product as productTable,
+	shopEvent,
+	shopPurchase,
+} from "@/db/schema";
 import { isValidDeliveryDate } from "@/lib/deliveryScheduling";
 import type { DeliveryOption, FulfillmentType } from "./types";
 import {
@@ -13,76 +22,44 @@ import {
 	MESSAGE_MAX_LENGTH,
 } from "./types";
 
-// Order data structure matching the checkout form
 type FlowerFestOrderInput = {
 	eventId: string;
-
-	// Sender (buyer) info
-	sender: {
-		name: string;
-		contactNumber: string;
-	};
-
-	// Recipient info
-	recipient: {
-		name: string;
-		contactNumber?: string;
-	};
-
-	// Fulfillment
+	sender: { name: string; contactNumber: string };
+	recipient: { name: string; contactNumber?: string };
 	fulfillment: {
 		type: FulfillmentType;
 		deliveryOptions?: DeliveryOption[];
 		preferredOption?: 1 | 2 | 3;
 	};
-
-	// Message card
 	messageCard: {
 		message: string;
 		isAnonymous: boolean;
 		includeSenderName: boolean;
 	};
-
-	// Payment
 	payment: {
 		receiptUrl: string;
 		gcashReferenceNumber: string;
 		amount: number;
 	};
-
-	// Optional
 	specialInstructions?: string;
-
-	// Delivery scheduling (for delivery orders)
 	deliveryDate?: Date;
 };
 
 export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 	try {
-		// Auth check
-		const session = await auth.api.getSession({
-			headers: await headers(),
+		const session = await auth.api.getSession({ headers: await headers() });
+		if (!session?.user) return { success: false, message: "Not authenticated" };
+
+		const event = await db.query.shopEvent.findFirst({
+			where: eq(shopEvent.id, data.eventId),
 		});
-		if (!session?.user) {
-			return { success: false, message: "Not authenticated" };
-		}
+		if (!event) return { success: false, message: "Event not found" };
 
-		// Get event for validation
-		const event = await prisma.shopEvent.findUnique({
-			where: { id: data.eventId },
-		});
-
-		if (!event) {
-			return { success: false, message: "Event not found" };
-		}
-
-		// Check if event is active
 		const now = new Date();
 		if (now < event.startDate || now > event.endDate || !event.isActive) {
 			return { success: false, message: "Event is not currently active" };
 		}
 
-		// Check if shop is closed
 		if (event.isShopClosed) {
 			return {
 				success: false,
@@ -90,7 +67,6 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			};
 		}
 
-		// Validate sender info
 		if (!data.sender.name?.trim()) {
 			return { success: false, message: "Please enter your name" };
 		}
@@ -101,12 +77,10 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			};
 		}
 
-		// Validate recipient info
 		if (!data.recipient.name?.trim()) {
 			return { success: false, message: "Please enter recipient name" };
 		}
 
-		// Validate fulfillment
 		if (data.fulfillment.type === "delivery") {
 			if (!data.fulfillment.deliveryOptions) {
 				return { success: false, message: "Please provide delivery options" };
@@ -116,7 +90,6 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 				return { success: false, message: deliveryValidation.error };
 			}
 
-			// Validate delivery date for delivery orders
 			if (data.deliveryDate) {
 				const dateValidation = isValidDeliveryDate(data.deliveryDate, event);
 				if (!dateValidation.valid) {
@@ -125,7 +98,6 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			}
 		}
 
-		// Validate message card
 		if (data.messageCard.message && !validateMessage(data.messageCard.message)) {
 			return {
 				success: false,
@@ -133,7 +105,6 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			};
 		}
 
-		// Validate payment
 		if (!data.payment.receiptUrl) {
 			return { success: false, message: "Please upload your GCash receipt" };
 		}
@@ -146,13 +117,9 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			};
 		}
 
-		// Check for duplicate reference number
-		const existingOrder = await prisma.order.findFirst({
-			where: {
-				gcashReferenceNumber: refNumberClean,
-			},
+		const existingOrder = await db.query.order.findFirst({
+			where: eq(order.gcashReferenceNumber, refNumberClean),
 		});
-
 		if (existingOrder) {
 			return {
 				success: false,
@@ -160,25 +127,21 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			};
 		}
 
-		// Get user's cart items
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId: session.user.id },
-			include: {
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, session.user.id),
+			with: {
 				product: true,
 				package: {
-					include: {
-						items: { include: { product: true } },
-						pools: { include: { options: { include: { product: true } } } },
+					with: {
+						items: { with: { product: true } },
+						pools: { with: { options: { with: { product: true } } } },
 					},
 				},
 			},
 		});
 
-		if (cartItems.length === 0) {
-			return { success: false, message: "Cart is empty" };
-		}
+		if (cartItems.length === 0) return { success: false, message: "Cart is empty" };
 
-		// Check stock availability for all items
 		for (const item of cartItems) {
 			if (item.product) {
 				if (item.product.stock !== null && item.product.stock < item.quantity) {
@@ -190,144 +153,112 @@ export async function createFlowerFestOrder(data: FlowerFestOrderInput) {
 			}
 		}
 
-		// Calculate total
 		const totalAmount = cartItems.reduce((sum, item) => {
 			const price = item.product?.price || item.package?.price || 0;
 			return sum + price * item.quantity;
 		}, 0);
 
-		// Use transaction to ensure stock decrement and order creation are atomic
-		const order = await prisma.$transaction(async (tx) => {
-			// Decrement stock for all products
+		// Build delivery time slot
+		let deliveryTimeSlot: string | null = null;
+		if (
+			data.fulfillment.type === "delivery" &&
+			data.fulfillment.deliveryOptions &&
+			data.fulfillment.preferredOption
+		) {
+			const preferredIdx = data.fulfillment.preferredOption - 1;
+			const preferred = data.fulfillment.deliveryOptions[preferredIdx];
+			if (preferred) deliveryTimeSlot = preferred.timeSlot;
+		}
+
+		// Atomic-ish: SQLite via D1 doesn't support nested updates inside a single statement.
+		// Decrement stocks first, then create order; D1's local transaction model serializes these.
+		const createdOrder = await db.transaction(async (tx) => {
 			for (const item of cartItems) {
 				if (item.product && item.product.stock !== null) {
-					await tx.product.update({
-						where: { id: item.product.id },
-						data: {
-							stock: {
-								decrement: item.quantity,
-							},
-						},
-					});
+					await tx
+						.update(productTable)
+						.set({ stock: sql`${productTable.stock} - ${item.quantity}` })
+						.where(eq(productTable.id, item.product.id));
 				}
 			}
 
-			// Build delivery time slot string from preferred option
-			let deliveryTimeSlot: string | null = null;
-			if (
-				data.fulfillment.type === "delivery" &&
-				data.fulfillment.deliveryOptions &&
-				data.fulfillment.preferredOption
-			) {
-				const preferredIdx = data.fulfillment.preferredOption - 1;
-				const preferred = data.fulfillment.deliveryOptions[preferredIdx];
-				if (preferred) {
-					deliveryTimeSlot = preferred.timeSlot;
-				}
-			}
-
-			// Create order
-			const newOrder = await tx.order.create({
-				data: {
+			const orderRows = await tx
+				.insert(order)
+				.values({
 					userId: session.user.id,
 					eventId: data.eventId,
 					totalAmount,
 					status: "pending",
 					receiptImageUrl: data.payment.receiptUrl,
 					gcashReferenceNumber: refNumberClean,
-
-					// Delivery scheduling
 					deliveryDate: data.deliveryDate || null,
 					deliveryTimeSlot,
 					deliveryNotes: data.specialInstructions || null,
-
-					// Custom event data (stored as JSON for Google Sheets sync)
 					eventData: {
-						// Sender info
 						senderName: data.sender.name,
 						senderPhone: data.sender.contactNumber,
-
-						// Recipient info
 						recipientName: data.recipient.name,
 						recipientPhone: data.recipient.contactNumber || null,
-
-						// Fulfillment details
 						fulfillmentType: data.fulfillment.type,
 						deliveryOptions:
 							data.fulfillment.type === "delivery" ? data.fulfillment.deliveryOptions : null,
 						preferredOption:
 							data.fulfillment.type === "delivery" ? data.fulfillment.preferredOption : null,
-
-						// Card message
 						cardMessage: data.messageCard.message,
 						isAnonymous: data.messageCard.isAnonymous,
 						includeSenderName: data.messageCard.includeSenderName,
-
-						// Additional notes
 						specialInstructions: data.specialInstructions || null,
-
-						// Payment amount for reference
 						paymentAmount: data.payment.amount,
 					},
+				})
+				.returning();
 
-					// Order items
-					orderItems: {
-						create: cartItems.map((item) => ({
-							productId: item.productId,
-							packageId: item.packageId,
-							quantity: item.quantity,
-							price: item.product?.price || item.package?.price || 0,
-							size: item.size,
-							packageSelections: item.packageSelections ?? undefined,
-						})),
-					},
-				},
-			});
+			const newOrder = orderRows[0];
+
+			if (cartItems.length > 0) {
+				await tx.insert(orderItem).values(
+					cartItems.map((item) => ({
+						orderId: newOrder.id,
+						productId: item.productId,
+						packageId: item.packageId,
+						quantity: item.quantity,
+						price: item.product?.price || item.package?.price || 0,
+						size: item.size,
+						packageSelections: item.packageSelections ?? null,
+					})),
+				);
+			}
 
 			return newOrder;
 		});
 
-		// Create analytics record (outside transaction is fine)
-		await prisma.shopPurchase.create({
-			data: {
-				orderId: order.id,
-				eventId: data.eventId,
-				totalAmount,
-				itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-			},
+		await db.insert(shopPurchase).values({
+			orderId: createdOrder.id,
+			eventId: data.eventId,
+			totalAmount,
+			itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
 		});
 
-		// Clear cart
-		await prisma.cartItem.deleteMany({
-			where: { userId: session.user.id },
-		});
+		await db.delete(cartItem).where(eq(cartItem.userId, session.user.id));
 
-		return { success: true, orderId: order.id };
+		return { success: true, orderId: createdOrder.id };
 	} catch (error) {
 		console.error("Flower Fest order creation error:", error);
-		return {
-			success: false,
-			message: "Failed to create order. Please try again.",
-		};
+		return { success: false, message: "Failed to create order. Please try again." };
 	}
 }
 
-/**
- * Get stock status for a product
- */
 export async function getProductStock(productId: string) {
-	const product = await prisma.product.findUnique({
-		where: { id: productId },
-		select: { stock: true, name: true },
+	const p = await db.query.product.findFirst({
+		where: eq(productTable.id, productId),
+		columns: { stock: true, name: true },
 	});
 
-	if (!product) {
-		return { success: false, message: "Product not found" };
-	}
+	if (!p) return { success: false, message: "Product not found" };
 
 	return {
 		success: true,
-		stock: product.stock,
-		available: product.stock === null || product.stock > 0,
+		stock: p.stock,
+		available: p.stock === null || p.stock > 0,
 	};
 }
