@@ -13,8 +13,9 @@
  */
 
 import { google } from "googleapis";
-import { prisma } from "@/lib/prisma";
-import { Readable } from "stream";
+import { and, count, desc, eq, gt } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { order, shopSettings } from "@/db/schema";
 
 // Types imported from src/app/admin/events/actions.ts for checkout config structure
 type CheckoutFieldType =
@@ -123,8 +124,8 @@ async function getGoogleSheetsClient() {
 async function getGoogleSheetsSettings(): Promise<{ spreadsheetId: string; sheetName: string }> {
 	// First, try to get settings from database
 	try {
-		const settings = await prisma.shopSettings.findUnique({
-			where: { key: "googleSheets" },
+		const settings = await db.query.shopSettings.findFirst({
+			where: eq(shopSettings.key, "googleSheets"),
 		});
 
 		if (settings && settings.value) {
@@ -249,14 +250,12 @@ async function hasNewOrdersSinceLastSync(
 		return true;
 	}
 
-	const whereClause = {
-		...(eventId ? { eventId } : {}),
-		createdAt: { gt: lastSyncTimestamp },
-	};
+	const whereExpr = eventId
+		? and(eq(order.eventId, eventId), gt(order.createdAt, lastSyncTimestamp))!
+		: gt(order.createdAt, lastSyncTimestamp);
 
-	const newOrderCount = await prisma.order.count({
-		where: whereClause,
-	});
+	const [countRow] = await db.select({ c: count() }).from(order).where(whereExpr);
+	const newOrderCount = countRow.c;
 
 	console.log(
 		`[Smart Sync] Found ${newOrderCount} orders created after ${lastSyncTimestamp.toISOString()}`,
@@ -268,11 +267,11 @@ async function hasNewOrdersSinceLastSync(
  * Fetch orders from database with optional event filter
  */
 async function getOrdersForSync(eventId?: string) {
-	const orders = await prisma.order.findMany({
-		where: eventId ? { eventId } : undefined,
-		include: {
+	const orders = await db.query.order.findMany({
+		where: eventId ? eq(order.eventId, eventId) : undefined,
+		with: {
 			user: {
-				select: {
+				columns: {
 					id: true,
 					name: true,
 					email: true,
@@ -282,34 +281,34 @@ async function getOrdersForSync(eventId?: string) {
 				},
 			},
 			event: {
-				select: {
+				columns: {
 					id: true,
 					name: true,
 					checkoutConfig: true,
+				},
+				with: {
 					products: {
-						select: {
+						columns: {
 							productId: true,
 							packageId: true,
 							categoryId: true,
-							category: {
-								select: {
-									name: true,
-								},
-							},
+						},
+						with: {
+							category: { columns: { name: true } },
 						},
 					},
 				},
 			},
 			orderItems: {
-				include: {
+				with: {
 					product: {
-						select: {
+						columns: {
 							name: true,
 							description: true,
 						},
 					},
 					package: {
-						select: {
+						columns: {
 							name: true,
 							description: true,
 						},
@@ -317,7 +316,7 @@ async function getOrdersForSync(eventId?: string) {
 				},
 			},
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [desc(order.createdAt)],
 	});
 
 	return orders;
@@ -603,8 +602,6 @@ async function uploadImageToDrive(imageUrl: string, auth: any): Promise<string |
 		if (!response.ok) return null;
 
 		const arrayBuffer = await response.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
-
 		// Determine mime type
 		const contentType = response.headers.get("content-type") || "image/jpeg";
 
@@ -614,10 +611,14 @@ async function uploadImageToDrive(imageUrl: string, auth: any): Promise<string |
 			parents: [], // Optional: specify a folder ID if needed
 		};
 
+		// On Cloudflare Workers, Node.js streams are unavailable. We pass the file as a
+		// Web ReadableStream — `googleapis` accepts this when the body has a length-known
+		// Blob/ArrayBuffer via the underlying fetch transport.
+		const blob = new Blob([arrayBuffer], { type: contentType });
 		const media = {
 			mimeType: contentType,
-			body: Readable.from(buffer),
-		};
+			body: blob.stream(),
+		} as unknown as { mimeType: string; body: NodeJS.ReadableStream };
 
 		const file = await drive.files.create({
 			requestBody: fileMetadata,
@@ -834,8 +835,8 @@ export async function isGoogleSheetsConfigured(): Promise<boolean> {
 
 	// Check database settings
 	try {
-		const settings = await prisma.shopSettings.findUnique({
-			where: { key: "googleSheets" },
+		const settings = await db.query.shopSettings.findFirst({
+			where: eq(shopSettings.key, "googleSheets"),
 		});
 
 		if (settings && settings.value) {
