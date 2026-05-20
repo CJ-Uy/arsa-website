@@ -21,56 +21,64 @@ This is the ARSA (Ateneo Resident Students Association) website - a Next.js 15 a
 - **Ticket System**: Ticket generation and QR code verification for events, with Mail Merge integration and camera scanning
 - **URL Shortener**: Custom short URL system with click tracking and analytics
 - **Authentication**: Better Auth with Google OAuth integration
-- **Storage**: MinIO (S3-compatible) for product images and receipt storage
+- **Storage**: Cloudflare R2 (S3-compatible) for product images and receipt storage
 - **Analytics**: Shop click tracking and purchase analytics per event
 
 ## Development Commands
 
 ```bash
-# Development server (with Turbopack)
-npm run dev
+# Development server (Turbopack)
+pnpm dev
 
-# Production build (with Turbopack)
-npm run build
+# Production build
+pnpm build
 
-# Start production server
-npm start
+# Workers preview (local) and deploy
+pnpm preview
+pnpm deploy
 
 # Linting
-npm run lint
+pnpm lint
 
-# Database management
-npx prisma generate      # Generate Prisma client after schema changes
-npx prisma db push       # Apply schema changes (safer than migrate for existing data)
-npx prisma migrate dev   # Create and apply migrations (development)
-npx prisma studio        # Open Prisma Studio for database management
+# Database (Drizzle + D1)
+pnpm db:generate            # Generate SQL migration from schema changes
+pnpm db:migrate             # Apply migrations to remote D1
+pnpm db:migrate:local       # Apply to local D1 (wrangler dev)
+pnpm db:studio              # Open Drizzle Studio
+
+# Cloudflare Worker types
+pnpm cf-typegen
 ```
 
 ## Tech Stack
 
+- **Runtime**: Cloudflare Workers via `@opennextjs/cloudflare`
 - **Framework**: Next.js 15 (App Router) with React 19
 - **Styling**: Tailwind CSS v4 with PostCSS
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Better Auth with Google OAuth
-- **Storage**: MinIO (S3-compatible object storage)
-- **OCR**: Tesseract.js (client-side browser OCR)
+- **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
+- **Authentication**: Better Auth + drizzleAdapter (sqlite provider), Google OAuth
+- **Storage**: Cloudflare R2 (S3-compatible)
+- **Cache**: Cloudflare KV
+- **OCR**: Tesseract.js (client-side only)
+- **PDF parsing**: pdfjs-dist (client-side)
+- **Image optim**: browser-image-compression (client; Sharp removed)
 - **UI Components**: 57 shadcn/ui components (Radix UI primitives + Tailwind)
 - **Forms**: react-hook-form with Zod validation
 - **Notifications**: Sonner for toast notifications
 - **Charts**: Recharts for analytics dashboards
-- **Email**: Nodemailer (SMTP) or Resend
-- **Google APIs**: googleapis for Sheets sync
+- **Email**: Resend (Nodemailer dropped — TCP-incompatible with Workers)
+- **Google APIs**: googleapis (HTTPS-only paths; Drive upload uses Web ReadableStream)
 - **Excel Export**: XLSX / ExcelJS for order exports
 - **Package Manager**: pnpm
-- **Deployment**: Docker + Docker Compose (standalone output mode)
+- **Deployment**: Cloudflare Workers (build cmd `npx opennextjs-cloudflare build`)
 
 ## Architecture
 
 ### Database and ORM
 
-- **Prisma Schema**: [prisma/schema.prisma](prisma/schema.prisma)
-- **Generated Client Output**: `src/generated/prisma/` (custom location)
-- **Singleton Prisma Client**: [src/lib/prisma.ts](src/lib/prisma.ts) (prevents multiple instances in development)
+- **Drizzle Schema**: [src/db/schema.ts](src/db/schema.ts) — 23 tables, JSON columns via `mode: "json"`, application-level `crypto.randomUUID()` IDs, integer-timestamp datetimes.
+- **DB Client**: [src/lib/db.ts](src/lib/db.ts) — lazy `Proxy` that returns the native D1 binding inside a Worker request, and falls back to the D1 HTTP REST API in `next dev`.
+- **Migrations**: `pnpm db:generate` writes SQL into `drizzle/`; `pnpm db:migrate` applies them to remote D1.
 
 #### Database Models
 
@@ -142,33 +150,27 @@ The application uses a chainable middleware pattern in [src/middleware.ts](src/m
 
 ### Caching System
 
-**In-Memory Cache** ([src/lib/cache.ts](src/lib/cache.ts)):
+**Cloudflare KV** ([src/lib/cache.ts](src/lib/cache.ts)):
 
-- Reduces database queries for remote databases
-- Request deduplication (prevents cache stampede)
-- Automatic cleanup of expired entries
-- Cache key generators for products, cart, orders, redirects
-- Cache statistics API endpoint at `/api/cache-stats`
+- Distributed across the Worker edge.
+- TTL via `expirationTtl` (minimum 60s in KV).
+- `withCache()` does per-isolate in-flight dedup to prevent stampede.
+- Cache key generators for products, cart, orders, redirects.
 
 ### Storage System
 
-**MinIO Integration** ([src/lib/minio.ts](src/lib/minio.ts)):
+**Cloudflare R2** ([src/lib/r2.ts](src/lib/r2.ts)):
 
-- S3-compatible object storage for product images and receipts
-- Automatic bucket creation and management
-- Presigned URL generation for secure access
-- SSL/TLS support with self-signed certificates
-- Public bucket policies for OCR processing
-- Upload endpoint at `/api/upload`
-- Receipt serving at `/api/receipts/[filename]`
+- Four buckets bound by name in `wrangler.jsonc`: PRODUCTS, RECEIPTS, EVENTS, CONTENT.
+- Public reads via a custom R2 domain (`R2_PUBLIC_DOMAIN` env, e.g. `https://r2.ateneoarsa.org`).
+- `uploadFile/deleteFile/getFileStream` preserve the original MinIO API surface so call sites stayed unchanged.
+- Upload endpoint at `/api/upload`; receipt serving at `/api/receipts/[filename]` streams via `R2Bucket.get()`.
 
-**Image Optimization**:
+**Image Optimization** (client-side):
 
-- Sharp library processes images once at upload time
-- Conversion to WebP format
-- Resizing to max 1200x1200px
-- Quality set to 85%
-- No runtime processing (server resource efficient)
+- [src/lib/imageCompress.ts](src/lib/imageCompress.ts) wraps `browser-image-compression` to resize → WebP at quality 0.85 in the browser before upload.
+- Sharp removed (native bindings don't run on Workers).
+- Receipts stay raw (no compression) to preserve OCR fidelity.
 
 ### URL Redirect System
 
@@ -287,7 +289,6 @@ Located in [src/app/api/](src/app/api/):
 - `/api/receipts/[filename]` - Receipt file serving
 - `/api/user/roles` - Fetch current user's admin roles
 - `/api/health` - Health check endpoint
-- `/api/cache-stats` - Cache statistics endpoint
 - `/api/shop/track` - Shop click tracking (event tab analytics)
 - `/api/shop/sync-orders` - Trigger Google Sheets order sync (cron-compatible, requires `CRON_SECRET`)
 - `/api/tickets/qr` - QR code PNG generation (HMAC-signed, no auth — for email `<img>` embeds)
@@ -531,7 +532,7 @@ Order confirmation emails are sent automatically when an order is created.
 
 **Implementation** ([src/lib/email.ts](src/lib/email.ts)):
 
-- Supports two providers: SMTP (via Nodemailer) and Resend
+- Resend-only (Nodemailer/SMTP removed for Workers compatibility)
 - Provider selection and sender email configured in Admin → Settings → Email Configuration
 - Settings stored in database and loaded at send time (not env-only)
 - All sent emails logged to `EmailLog` model for auditing
@@ -657,42 +658,28 @@ Events can optionally load custom React components for unique shop experiences (
 
 **Development Guide**: See [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)
 
-## Docker Deployment
+## Cloudflare Deployment
 
-The application is containerized for production:
+The application runs on Cloudflare Workers via `@opennextjs/cloudflare`:
 
-**Multi-stage Dockerfile** ([dockerfile](dockerfile)):
+- **Worker name**: `arsa-website` (already configured in the Cloudflare dashboard).
+- **Build command**: `npx opennextjs-cloudflare build` (set in the dashboard for non-prod branches).
+- **Config**: [wrangler.jsonc](wrangler.jsonc) declares bindings for `DB` (D1), `PRODUCTS_BUCKET/RECEIPTS_BUCKET/EVENTS_BUCKET/CONTENT_BUCKET` (R2), `CACHE` (KV), `ASSETS` (static assets).
+- **Compatibility flags**: `nodejs_compat`, `global_fetch_strictly_public`.
+- **Account ID**: `c0316c17e2973be4ae27ddc85b94edab` (ARSA org).
 
-1. `deps` - Install dependencies
-2. `builder` - Generate Prisma client and build Next.js
-3. `runner` - Minimal production image with standalone output (~150MB vs ~500MB)
+**Local development**:
 
-**Features**:
-
-- Standalone output mode enabled in [next.config.ts](next.config.ts)
-- Alpine Linux base for minimal image size
-- CA certificates for SSL/TLS support
-- Binary targets for Alpine in Prisma schema
-- Environment variables from `.env` file
-- Security: Runs as non-root user (nextjs:nodejs)
-- Resource limits in docker-compose.yaml
-
-**Docker Compose** ([docker-compose.yaml](docker-compose.yaml)):
-
-- Service definition with health checks
-- Resource limits (memory, CPU)
-- Logging configuration
-- Environment variable management
+- `pnpm dev` runs Next.js with the D1 HTTP REST proxy fallback (set `CLOUDFLARE_D1_TOKEN` in `.dev.vars`).
+- `pnpm preview` builds the Worker bundle and runs `wrangler dev` for a real Workers preview.
 
 ## Important Notes
 
 ### Database Workflow
 
-**Always run** `npx prisma generate` after modifying [prisma/schema.prisma](prisma/schema.prisma) to regenerate the client in `src/generated/prisma/`.
+**Always run** `pnpm db:generate` after modifying [src/db/schema.ts](src/db/schema.ts) to emit a new SQL migration into `drizzle/`.
 
-**Use** `npx prisma db push` to apply schema changes to the database (safer than migrate for existing data).
-
-**Generated client location**: The Prisma client is generated in a custom location (`src/generated/prisma/`) instead of the default `node_modules/.prisma/client`. This is configured in the Prisma schema with `output = "../src/generated/prisma"`.
+**Use** `pnpm db:migrate` (remote) or `pnpm db:migrate:local` (local Wrangler D1) to apply migrations.
 
 ### Authentication
 
@@ -701,7 +688,7 @@ The system uses **Better Auth** for user authentication:
 - Google OAuth only (no email/password login)
 - Auto-populates `firstName` and `lastName` from Google OAuth
 - Session-based authentication with IP and user agent tracking
-- Admin access controlled via `isShopAdmin`, `isEventsAdmin`, and `isRedirectsAdmin` flags on User model
+- Admin access controlled via `isShopAdmin`, `isEventsAdmin`, `isRedirectsAdmin`, `isTicketsAdmin`, `isSSO26Admin`, `isBackupAdmin`, `isSuperAdmin` flags on User model
 - Event-specific admin access via `EventAdmin` model (many-to-many User ↔ ShopEvent)
 - Role-based access control for admin dashboards
 - User roles fetched from `/api/user/roles` endpoint
@@ -745,8 +732,8 @@ The system uses **Better Auth** for user authentication:
 
 - **ESLint**: Errors are ignored during builds (`ignoreDuringBuilds: true`)
 - **Turbopack**: Used for faster builds and development
-- **Standalone Output**: Creates minimal production bundle for Docker
-- **Image Optimization**: Disabled (images pre-optimized with Sharp at upload)
+- **opennextjs-cloudflare**: Wraps the Next.js build for the Workers runtime; `initOpenNextCloudflareForDev()` in [next.config.ts](next.config.ts) exposes the Cloudflare context during `next dev`.
+- **Image Optimization**: Disabled (images pre-optimized client-side via `browser-image-compression` at upload)
 - **Console Removal**: Production builds remove `console.log` statements
 - **Memory Optimizations**: Configured in next.config.ts for large builds
 
@@ -870,10 +857,10 @@ The shop system is designed with an **event-first workflow** to streamline produ
 
 ### Performance Optimizations
 
-- In-memory caching system with request deduplication
-- Upload-time image optimization
-- Standalone Docker output mode
-- Efficient database queries with Prisma
+- Cloudflare KV cache with per-isolate request dedup
+- Client-side image compression before upload
+- Global edge runtime via Cloudflare Workers
+- Efficient queries with Drizzle's relational API
 
 ### Ticket Generation & Verification System
 
@@ -890,27 +877,28 @@ The shop system is designed with an **event-first workflow** to streamline produ
 ## Configuration Files
 
 - **package.json** - Dependencies and scripts
-- **next.config.ts** - Next.js configuration (standalone output, image optimization, compiler options)
+- **next.config.ts** - Next.js + `initOpenNextCloudflareForDev()`
+- **wrangler.jsonc** - Cloudflare Worker config (D1/R2/KV bindings, compat flags)
+- **drizzle.config.ts** - Drizzle Kit config (D1 HTTP driver for dev migrations)
+- **open-next.config.ts** - opennextjs-cloudflare adapter (KV incremental cache)
+- **src/db/schema.ts** - Drizzle schema (single source of truth for D1)
 - **tsconfig.json** - TypeScript configuration with path aliases
-- **prisma/schema.prisma** - Database schema with custom Prisma client output
-- **dockerfile** - Multi-stage Docker build
-- **docker-compose.yaml** - Service definition with resource limits
 - **postcss.config.mjs** - PostCSS with Tailwind CSS v4
 - **.env.example** - Example environment variables
-- **.env.docker.example** - Docker-specific environment template
+- **.dev.vars.example** - Cloudflare local dev env vars
 - **.prettierrc.json** - Prettier code formatting
 - **eslint.config.mjs** - ESLint configuration
 - **components.json** - shadcn/ui component configuration
 
 ## Development Tips
 
-1. **Database changes**: Always run `npx prisma generate` after schema changes, then restart dev server
-2. **Cache management**: Use `/api/cache-stats` to monitor cache performance
-3. **OCR testing**: Test with real GCash receipts, processing time is ~8-12 seconds
-4. **Image uploads**: Images are automatically optimized to WebP at 1200x1200px max
-5. **Admin access**: Set `isShopAdmin`, `isEventsAdmin`, or `isRedirectsAdmin` flags directly in database via Prisma Studio
+1. **Database changes**: Edit [src/db/schema.ts](src/db/schema.ts), then `pnpm db:generate` → `pnpm db:migrate` (remote) or `pnpm db:migrate:local`.
+2. **Cache management**: KV TTL handles eviction; for forced invalidation call `cache.delete(key)` from a server action.
+3. **OCR testing**: Test with real GCash receipts, processing time is ~8-12 seconds (client-side only).
+4. **Image uploads**: Use `compressForUpload(file)` from `@/lib/imageCompress` before POSTing to `/api/upload`.
+5. **Admin access**: Set `isShopAdmin`, `isEventsAdmin`, etc. directly in D1 via `wrangler d1 execute arsa-db --command="UPDATE user SET isShopAdmin = 1 WHERE email = '...'"` or via Drizzle Studio.
 6. **Event admin assignment**: Use the admin management interface in the events dashboard (UI-based)
-7. **Docker deployment**: Use standalone output mode for minimal image size
+7. **Cloudflare deploy**: Worker `arsa-website` builds with `npx opennextjs-cloudflare build`; secrets via `wrangler secret put <NAME>`.
 8. **Mobile testing**: Test on actual mobile devices for touch gestures and responsiveness
 9. **Event timing**: Events only appear as tabs when current date is between `startDate` and `endDate`
 10. **Package testing**: Test packages with both fixed items and selection pools for complete coverage

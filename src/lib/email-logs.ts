@@ -1,9 +1,10 @@
 "use server";
 
-import { prisma } from "./prisma";
+import { and, count, desc, eq, gte, like, lte, SQL } from "drizzle-orm";
+import { db } from "./db";
+import { emailLog } from "@/db/schema";
 import type { EmailProvider } from "./email";
 
-// Manually log an email (for historical records or manual tracking)
 export async function manuallyLogEmail(
 	provider: EmailProvider,
 	recipient: string,
@@ -13,16 +14,14 @@ export async function manuallyLogEmail(
 	userId?: string,
 ): Promise<{ success: boolean; message?: string }> {
 	try {
-		await prisma.emailLog.create({
-			data: {
-				provider,
-				recipient,
-				subject,
-				emailType,
-				status: "sent",
-				orderId,
-				userId,
-			},
+		await db.insert(emailLog).values({
+			provider,
+			recipient,
+			subject,
+			emailType,
+			status: "sent",
+			orderId,
+			userId,
 		});
 
 		return { success: true };
@@ -35,7 +34,6 @@ export async function manuallyLogEmail(
 	}
 }
 
-// Get email logs with filtering
 export async function getEmailLogs(options?: {
 	limit?: number;
 	offset?: number;
@@ -47,57 +45,44 @@ export async function getEmailLogs(options?: {
 	endDate?: Date;
 }) {
 	try {
-		const where: any = {};
-
+		const filters: SQL[] = [];
 		if (options?.recipient) {
-			where.recipient = { contains: options.recipient, mode: "insensitive" };
+			filters.push(like(emailLog.recipient, `%${options.recipient.toLowerCase()}%`));
 		}
-		if (options?.orderId) {
-			where.orderId = options.orderId;
-		}
-		if (options?.status) {
-			where.status = options.status;
-		}
-		if (options?.emailType) {
-			where.emailType = options.emailType;
-		}
-		if (options?.startDate || options?.endDate) {
-			where.sentAt = {};
-			if (options.startDate) {
-				where.sentAt.gte = options.startDate;
-			}
-			if (options.endDate) {
-				where.sentAt.lte = options.endDate;
-			}
-		}
+		if (options?.orderId) filters.push(eq(emailLog.orderId, options.orderId));
+		if (options?.status) filters.push(eq(emailLog.status, options.status));
+		if (options?.emailType) filters.push(eq(emailLog.emailType, options.emailType));
+		if (options?.startDate) filters.push(gte(emailLog.sentAt, options.startDate));
+		if (options?.endDate) filters.push(lte(emailLog.sentAt, options.endDate));
 
-		const [logs, total] = await Promise.all([
-			prisma.emailLog.findMany({
-				where,
-				orderBy: { sentAt: "desc" },
-				take: options?.limit || 50,
-				skip: options?.offset || 0,
+		const whereExpr = filters.length > 0 ? and(...filters) : undefined;
+
+		const [logs, totalRows] = await Promise.all([
+			db.query.emailLog.findMany({
+				where: whereExpr,
+				orderBy: [desc(emailLog.sentAt)],
+				limit: options?.limit || 50,
+				offset: options?.offset || 0,
 			}),
-			prisma.emailLog.count({ where }),
+			db.select({ c: count() }).from(emailLog).where(whereExpr),
 		]);
 
-		return { logs, total };
+		return { logs, total: totalRows[0]?.c ?? 0 };
 	} catch (error) {
 		console.error("Failed to get email logs:", error);
 		throw error;
 	}
 }
 
-// Get email log statistics
 export async function getEmailLogStats() {
 	try {
-		const [totalSent, totalFailed, recentLogs] = await Promise.all([
-			prisma.emailLog.count({ where: { status: "sent" } }),
-			prisma.emailLog.count({ where: { status: "failed" } }),
-			prisma.emailLog.findMany({
-				orderBy: { sentAt: "desc" },
-				take: 5,
-				select: {
+		const [sentRows, failedRows, recentLogs] = await Promise.all([
+			db.select({ c: count() }).from(emailLog).where(eq(emailLog.status, "sent")),
+			db.select({ c: count() }).from(emailLog).where(eq(emailLog.status, "failed")),
+			db.query.emailLog.findMany({
+				orderBy: [desc(emailLog.sentAt)],
+				limit: 5,
+				columns: {
 					recipient: true,
 					subject: true,
 					status: true,
@@ -106,6 +91,9 @@ export async function getEmailLogStats() {
 				},
 			}),
 		]);
+
+		const totalSent = sentRows[0]?.c ?? 0;
+		const totalFailed = failedRows[0]?.c ?? 0;
 
 		return {
 			totalSent,
@@ -119,13 +107,9 @@ export async function getEmailLogStats() {
 	}
 }
 
-// Delete an email log
 export async function deleteEmailLog(id: string): Promise<{ success: boolean; message?: string }> {
 	try {
-		await prisma.emailLog.delete({
-			where: { id },
-		});
-
+		await db.delete(emailLog).where(eq(emailLog.id, id));
 		return { success: true };
 	} catch (error) {
 		console.error("Failed to delete email log:", error);
