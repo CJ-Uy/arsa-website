@@ -1,63 +1,43 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, order } from "@/db/schema";
 
 async function checkShopAdmin() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) throw new Error("Unauthorized");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true },
 	});
-
-	if (!session?.user) {
-		throw new Error("Unauthorized");
-	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true },
-	});
-
-	if (!user?.isShopAdmin) {
-		throw new Error("Forbidden: Shop admin access required");
-	}
-
+	if (!u?.isShopAdmin) throw new Error("Forbidden: Shop admin access required");
 	return session;
 }
 
-/**
- * Get orders that need OCR processing with their receipt URLs
- * Client will download and process these
- */
 export async function getOrdersForClientOcr() {
 	try {
 		await checkShopAdmin();
 
-		const orders = await prisma.order.findMany({
-			where: {
-				receiptImageUrl: { not: null },
-				gcashReferenceNumber: null,
-			},
-			select: {
+		const orders = await db.query.order.findMany({
+			where: and(isNotNull(order.receiptImageUrl), isNull(order.gcashReferenceNumber)),
+			columns: {
 				id: true,
 				receiptImageUrl: true,
 				totalAmount: true,
 				status: true,
 				createdAt: true,
-				user: {
-					select: {
-						name: true,
-						email: true,
-					},
-				},
 			},
-			orderBy: { createdAt: "desc" },
+			with: { user: { columns: { name: true, email: true } } },
+			orderBy: [desc(order.createdAt)],
 		});
 
-		// Filter to only image receipts (not PDFs) since client-side OCR works on images
 		const imageOrders = orders.filter(
-			(order) => order.receiptImageUrl && !order.receiptImageUrl.toLowerCase().endsWith(".pdf"),
+			(o) => o.receiptImageUrl && !o.receiptImageUrl.toLowerCase().endsWith(".pdf"),
 		);
 
 		return { success: true, orders: imageOrders, count: imageOrders.length };
@@ -72,38 +52,26 @@ export async function getOrdersForClientOcr() {
 	}
 }
 
-/**
- * Get ALL orders with receipt images (including ones already processed)
- * Used for reprocessing to fix false positives
- */
 export async function getAllOrdersWithReceipts() {
 	try {
 		await checkShopAdmin();
 
-		const orders = await prisma.order.findMany({
-			where: {
-				receiptImageUrl: { not: null },
-			},
-			select: {
+		const orders = await db.query.order.findMany({
+			where: isNotNull(order.receiptImageUrl),
+			columns: {
 				id: true,
 				receiptImageUrl: true,
 				totalAmount: true,
 				status: true,
 				createdAt: true,
 				gcashReferenceNumber: true,
-				user: {
-					select: {
-						name: true,
-						email: true,
-					},
-				},
 			},
-			orderBy: { createdAt: "desc" },
+			with: { user: { columns: { name: true, email: true } } },
+			orderBy: [desc(order.createdAt)],
 		});
 
-		// Filter to only image receipts (not PDFs) since client-side OCR works on images
 		const imageOrders = orders.filter(
-			(order) => order.receiptImageUrl && !order.receiptImageUrl.toLowerCase().endsWith(".pdf"),
+			(o) => o.receiptImageUrl && !o.receiptImageUrl.toLowerCase().endsWith(".pdf"),
 		);
 
 		return { success: true, orders: imageOrders, count: imageOrders.length };
@@ -118,10 +86,6 @@ export async function getAllOrdersWithReceipts() {
 	}
 }
 
-/**
- * Save extracted reference number for an order
- * Called by client after it processes the image with OCR
- */
 export async function saveExtractedReferenceNumber(
 	orderId: string,
 	referenceNumber: string,
@@ -131,27 +95,17 @@ export async function saveExtractedReferenceNumber(
 		await checkShopAdmin();
 
 		if (!referenceNumber || referenceNumber.trim() === "") {
-			return {
-				success: false,
-				message: "Reference number is required",
-			};
+			return { success: false, message: "Reference number is required" };
 		}
 
-		// Check if order exists
-		const order = await prisma.order.findUnique({
-			where: { id: orderId },
-			select: {
-				id: true,
-				gcashReferenceNumber: true,
-			},
+		const found = await db.query.order.findFirst({
+			where: eq(order.id, orderId),
+			columns: { id: true, gcashReferenceNumber: true },
 		});
 
-		if (!order) {
-			return { success: false, message: "Order not found" };
-		}
+		if (!found) return { success: false, message: "Order not found" };
 
-		// If order already has a reference number and we're not allowing overwrite, skip
-		if (order.gcashReferenceNumber && !allowOverwrite) {
+		if (found.gcashReferenceNumber && !allowOverwrite) {
 			return {
 				success: false,
 				message: "Order already has a reference number (use reprocess to overwrite)",
@@ -159,50 +113,31 @@ export async function saveExtractedReferenceNumber(
 			};
 		}
 
-		// Save the reference number (will overwrite if allowOverwrite is true)
-		await prisma.order.update({
-			where: { id: orderId },
-			data: { gcashReferenceNumber: referenceNumber.trim() },
-		});
+		await db
+			.update(order)
+			.set({ gcashReferenceNumber: referenceNumber.trim() })
+			.where(eq(order.id, orderId));
 
-		const action = order.gcashReferenceNumber ? "Updated" : "Saved";
+		const action = found.gcashReferenceNumber ? "Updated" : "Saved";
 		return {
 			success: true,
 			message: `${action} reference number: ${referenceNumber}`,
-			wasOverwritten: !!order.gcashReferenceNumber,
+			wasOverwritten: !!found.gcashReferenceNumber,
 		};
 	} catch (error: any) {
 		console.error(`Error saving reference number for order ${orderId}:`, error);
-		return {
-			success: false,
-			message: error.message || "Failed to save reference number",
-		};
+		return { success: false, message: error.message || "Failed to save reference number" };
 	}
 }
 
-/**
- * Mark an order as failed OCR processing
- * Used when client-side OCR can't extract the reference number
- */
 export async function markOrderOcrFailed(orderId: string, errorMessage: string) {
 	try {
 		await checkShopAdmin();
-
 		console.log(`Order ${orderId} OCR failed: ${errorMessage}`);
-
-		// You could optionally store failed OCR attempts in the database
-		// For now, just log it
-
-		return {
-			success: true,
-			message: "Marked as failed",
-		};
+		return { success: true, message: "Marked as failed" };
 	} catch (error: any) {
 		console.error(`Error marking order ${orderId} as failed:`, error);
-		return {
-			success: false,
-			message: error.message || "Failed to mark as failed",
-		};
+		return { success: false, message: error.message || "Failed to mark as failed" };
 	} finally {
 		revalidatePath("/admin/orders");
 	}
