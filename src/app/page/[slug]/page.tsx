@@ -1,6 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { contentPage } from "@/db/schema";
 import { ContentRenderer } from "./content-renderer";
 
 type Props = {
@@ -9,9 +11,9 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params;
-	const page = await prisma.contentPage.findUnique({
-		where: { slug, isPublished: true },
-		select: { title: true, description: true },
+	const page = await db.query.contentPage.findFirst({
+		where: and(eq(contentPage.slug, slug), eq(contentPage.isPublished, true)),
+		columns: { title: true, description: true },
 	});
 
 	if (!page) return { title: "Page Not Found" };
@@ -24,8 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ContentPageRoute({ params }: Props) {
 	const { slug } = await params;
-	const page = await prisma.contentPage.findUnique({
-		where: { slug, isPublished: true },
+	const page = await db.query.contentPage.findFirst({
+		where: and(eq(contentPage.slug, slug), eq(contentPage.isPublished, true)),
 	});
 
 	if (!page) notFound();

@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { user } from "@/db/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmailLogsClient } from "./email-logs-client";
 import { BulkSendClient } from "./bulk-send-client";
@@ -17,15 +19,12 @@ export default async function EmailLogsPage() {
 		redirect("/shop");
 	}
 
-	// Only shop admins can access email logs
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true },
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true },
 	});
 
-	if (!user?.isShopAdmin) {
-		redirect("/admin");
-	}
+	if (!u?.isShopAdmin) redirect("/admin");
 
 	// Get initial stats
 	const stats = await getEmailLogStats();

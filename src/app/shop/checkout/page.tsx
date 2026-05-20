@@ -1,36 +1,26 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { and, eq, gte, lte } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user as userTable, shopEvent } from "@/db/schema";
 import { getCart, validateAndCleanCart } from "../actions";
 import { CheckoutClient } from "./checkout-client";
 import { getCartDailyStockInfo, getAvailableDatesForCart } from "./daily-stock-actions";
 
-// Import types from the shared types file
 import type { CheckoutConfig } from "../events/types";
 
 export default async function CheckoutPage() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
-	});
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) redirect("/shop");
 
-	if (!session?.user) {
-		redirect("/shop");
-	}
-
-	// Clean up unavailable/sold-out items before fetching cart
 	const { removedItems } = await validateAndCleanCart();
-
 	const { cart } = await getCart();
+	if (!cart || cart.length === 0) redirect("/shop/cart");
 
-	if (!cart || cart.length === 0) {
-		redirect("/shop/cart");
-	}
-
-	// Fetch full user data including firstName, lastName, studentId
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: {
+	const user = await db.query.user.findFirst({
+		where: eq(userTable.id, session.user.id),
+		columns: {
 			id: true,
 			email: true,
 			name: true,
@@ -39,31 +29,20 @@ export default async function CheckoutPage() {
 			studentId: true,
 		},
 	});
+	if (!user) redirect("/shop");
 
-	if (!user) {
-		redirect("/shop");
-	}
-
-	// Check if any cart items are associated with an event
-	// Get event IDs from cart items (products or packages could be in events)
 	const now = new Date();
-	const activeEvents = await prisma.shopEvent.findMany({
-		where: {
-			isActive: true,
-			startDate: { lte: now },
-			endDate: { gte: now },
-		},
-		include: {
-			products: {
-				select: {
-					productId: true,
-					packageId: true,
-				},
-			},
+	const activeEvents = await db.query.shopEvent.findMany({
+		where: and(
+			eq(shopEvent.isActive, true),
+			lte(shopEvent.startDate, now),
+			gte(shopEvent.endDate, now),
+		),
+		with: {
+			products: { columns: { productId: true, packageId: true } },
 		},
 	});
 
-	// Find if any cart items belong to an event
 	let eventForCheckout: {
 		id: string;
 		name: string;
@@ -90,7 +69,6 @@ export default async function CheckoutPage() {
 		}
 	}
 
-	// Fetch daily stock data server-side
 	let dailyStockInfo = { hasLimitedItems: false, items: [] };
 	let availableDates: Array<{
 		date: string;
@@ -100,8 +78,6 @@ export default async function CheckoutPage() {
 
 	if (eventForCheckout) {
 		dailyStockInfo = await getCartDailyStockInfo(session.user.id, eventForCheckout.id);
-
-		// Get available dates for the next 90 days
 		if (dailyStockInfo.hasLimitedItems) {
 			const startDate = new Date();
 			const endDate = new Date();

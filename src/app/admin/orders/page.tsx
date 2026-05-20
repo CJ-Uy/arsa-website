@@ -1,30 +1,22 @@
-import { prisma } from "@/lib/prisma";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { order } from "@/db/schema";
 import { OrdersManagement } from "./orders-management";
 
 export default async function AdminOrdersPage({
 	searchParams,
 }: {
-	searchParams: { status?: string };
+	searchParams: Promise<{ status?: string }>;
 }) {
-	const statusFilter = searchParams.status;
+	const { status: statusFilter } = await searchParams;
 
-	const orders = await prisma.order.findMany({
-		where: statusFilter ? { status: statusFilter } : undefined,
-		include: {
-			user: {
-				select: {
-					id: true,
-					name: true,
-					email: true,
-				},
-			},
-			orderItems: {
-				include: {
-					product: true,
-				},
-			},
+	const orders = await db.query.order.findMany({
+		where: statusFilter ? eq(order.status, statusFilter) : undefined,
+		with: {
+			user: { columns: { id: true, name: true, email: true } },
+			orderItems: { with: { product: true } },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [desc(order.createdAt)],
 	});
 
 	return <OrdersManagement initialOrders={orders} />;

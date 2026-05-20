@@ -1,34 +1,25 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { shopEvent, cartItem } from "@/db/schema";
 import { FlowerFestCheckout } from "./checkout-client";
 
 export default async function FlowerFestCheckoutPage() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
-	});
-
+	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) {
 		redirect("/api/auth/signin?callbackUrl=/shop/events/2026/flower-fest-2026/checkout");
 	}
 
-	// Fetch event data
-	const event = await prisma.shopEvent.findUnique({
-		where: { slug: "flower-fest-2026" },
+	const event = await db.query.shopEvent.findFirst({
+		where: eq(shopEvent.slug, "flower-fest-2026"),
 	});
+	if (!event) redirect("/shop");
 
-	if (!event) {
-		redirect("/shop");
-	}
-
-	// Check if event is active
 	const now = new Date();
-	if (now < event.startDate || now > event.endDate || !event.isActive) {
-		redirect("/shop");
-	}
+	if (now < event.startDate || now > event.endDate || !event.isActive) redirect("/shop");
 
-	// Check if shop is closed
 	if (event.isShopClosed) {
 		return (
 			<div className="container mx-auto py-12">
@@ -42,23 +33,20 @@ export default async function FlowerFestCheckoutPage() {
 		);
 	}
 
-	// Fetch cart items
-	const cartItems = await prisma.cartItem.findMany({
-		where: { userId: session.user.id },
-		include: {
+	const cartItems = await db.query.cartItem.findMany({
+		where: eq(cartItem.userId, session.user.id),
+		with: {
 			product: true,
 			package: {
-				include: {
-					items: { include: { product: true } },
-					pools: { include: { options: { include: { product: true } } } },
+				with: {
+					items: { with: { product: true } },
+					pools: { with: { options: { with: { product: true } } } },
 				},
 			},
 		},
 	});
 
-	if (cartItems.length === 0) {
-		redirect("/shop/events/2026/flower-fest-2026");
-	}
+	if (cartItems.length === 0) redirect("/shop/events/2026/flower-fest-2026");
 
 	return (
 		<div className="container mx-auto py-8">

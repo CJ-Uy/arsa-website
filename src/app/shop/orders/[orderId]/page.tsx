@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { order as orderTable } from "@/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, Package, Copy } from "lucide-react";
@@ -20,17 +22,11 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
 
 	const { orderId } = await params;
 
-	const order = await prisma.order.findUnique({
-		where: {
-			id: orderId,
-			userId: session.user.id,
-		},
-		include: {
+	const order = await db.query.order.findFirst({
+		where: and(eq(orderTable.id, orderId), eq(orderTable.userId, session.user.id)),
+		with: {
 			orderItems: {
-				include: {
-					product: true,
-					package: true,
-				},
+				with: { product: true, package: true },
 			},
 		},
 	});

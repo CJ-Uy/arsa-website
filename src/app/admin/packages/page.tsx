@@ -1,54 +1,34 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { asc, desc, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, packageTable, product } from "@/db/schema";
 import { PackagesManagement } from "./packages-management";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPackagesPage() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) redirect("/shop");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true },
 	});
+	if (!u?.isShopAdmin) redirect("/shop");
 
-	if (!session?.user) {
-		redirect("/shop");
-	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true },
-	});
-
-	if (!user?.isShopAdmin) {
-		redirect("/shop");
-	}
-
-	// Fetch packages with their items and pools
-	const packages = await prisma.package.findMany({
-		include: {
-			items: {
-				include: {
-					product: true,
-				},
-			},
-			pools: {
-				include: {
-					options: {
-						include: {
-							product: true,
-						},
-					},
-				},
-			},
+	const packages = await db.query.packageTable.findMany({
+		with: {
+			items: { with: { product: true } },
+			pools: { with: { options: { with: { product: true } } } },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [desc(packageTable.createdAt)],
 	});
 
-	// Fetch all available products for the form
-	const products = await prisma.product.findMany({
-		where: { isAvailable: true },
-		orderBy: { name: "asc" },
+	const products = await db.query.product.findMany({
+		where: eq(product.isAvailable, true),
+		orderBy: [asc(product.name)],
 	});
 
 	return (
