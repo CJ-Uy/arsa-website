@@ -1,12 +1,14 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { and, desc, eq, ne } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { contentPage } from "@/db/schema";
 
 export async function getAllContentPages() {
 	try {
-		const pages = await prisma.contentPage.findMany({
-			orderBy: { updatedAt: "desc" },
+		const pages = await db.query.contentPage.findMany({
+			orderBy: [desc(contentPage.updatedAt)],
 		});
 		return { success: true, pages };
 	} catch (error) {
@@ -17,7 +19,7 @@ export async function getAllContentPages() {
 
 export async function getContentPage(id: string) {
 	try {
-		const page = await prisma.contentPage.findUnique({ where: { id } });
+		const page = await db.query.contentPage.findFirst({ where: eq(contentPage.id, id) });
 		if (!page) return { success: false, message: "Page not found" };
 		return { success: true, page };
 	} catch (error) {
@@ -28,8 +30,8 @@ export async function getContentPage(id: string) {
 
 export async function getContentPageBySlug(slug: string) {
 	try {
-		const page = await prisma.contentPage.findUnique({
-			where: { slug, isPublished: true },
+		const page = await db.query.contentPage.findFirst({
+			where: and(eq(contentPage.slug, slug), eq(contentPage.isPublished, true)),
 		});
 		if (!page) return { success: false, message: "Page not found" };
 		return { success: true, page };
@@ -54,31 +56,31 @@ export async function createContentPage(data: {
 			.replace(/-+/g, "-")
 			.replace(/^-|-$/g, "");
 
-		if (!slug || !data.title) {
-			return { success: false, message: "Slug and title are required" };
-		}
+		if (!slug || !data.title) return { success: false, message: "Slug and title are required" };
 
-		const existing = await prisma.contentPage.findUnique({ where: { slug } });
+		const existing = await db.query.contentPage.findFirst({
+			where: eq(contentPage.slug, slug),
+		});
 		if (existing) {
 			return { success: false, message: `A page with slug "${slug}" already exists` };
 		}
 
-		const page = await prisma.contentPage.create({
-			data: {
+		const inserted = await db
+			.insert(contentPage)
+			.values({
 				slug,
 				title: data.title,
 				description: data.description || null,
-				content: data.content as object,
+				content: data.content,
 				isPublished: data.isPublished,
 				publishedAt: data.isPublished ? new Date() : null,
 				updatedBy: data.updatedBy || null,
-			},
-		});
+			})
+			.returning();
 
 		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${slug}`);
-
-		return { success: true, message: "Page created successfully", page };
+		return { success: true, message: "Page created successfully", page: inserted[0] };
 	} catch (error) {
 		console.error("Error creating content page:", error);
 		return { success: false, message: "Failed to create content page" };
@@ -97,7 +99,7 @@ export async function updateContentPage(
 	},
 ) {
 	try {
-		const existing = await prisma.contentPage.findUnique({ where: { id } });
+		const existing = await db.query.contentPage.findFirst({ where: eq(contentPage.id, id) });
 		if (!existing) return { success: false, message: "Page not found" };
 
 		let slug = data.slug;
@@ -108,8 +110,8 @@ export async function updateContentPage(
 				.replace(/-+/g, "-")
 				.replace(/^-|-$/g, "");
 
-			const conflict = await prisma.contentPage.findFirst({
-				where: { slug, NOT: { id } },
+			const conflict = await db.query.contentPage.findFirst({
+				where: and(eq(contentPage.slug, slug), ne(contentPage.id, id)),
 			});
 			if (conflict) {
 				return { success: false, message: `A page with slug "${slug}" already exists` };
@@ -119,26 +121,27 @@ export async function updateContentPage(
 		const wasPublished = existing.isPublished;
 		const willPublish = data.isPublished ?? existing.isPublished;
 
-		const page = await prisma.contentPage.update({
-			where: { id },
-			data: {
-				...(slug && { slug }),
-				...(data.title && { title: data.title }),
-				...(data.description !== undefined && { description: data.description || null }),
-				...(data.content !== undefined && { content: data.content as object }),
-				...(data.isPublished !== undefined && { isPublished: data.isPublished }),
-				...(!wasPublished && willPublish && { publishedAt: new Date() }),
-				updatedBy: data.updatedBy || existing.updatedBy,
-			},
-		});
+		const updates: Partial<typeof contentPage.$inferInsert> = {
+			...(slug && { slug }),
+			...(data.title && { title: data.title }),
+			...(data.description !== undefined && { description: data.description || null }),
+			...(data.content !== undefined && { content: data.content }),
+			...(data.isPublished !== undefined && { isPublished: data.isPublished }),
+			...(!wasPublished && willPublish && { publishedAt: new Date() }),
+			updatedBy: data.updatedBy || existing.updatedBy,
+		};
+
+		const updated = await db
+			.update(contentPage)
+			.set(updates)
+			.where(eq(contentPage.id, id))
+			.returning();
 
 		revalidatePath("/admin/pages");
 		revalidatePath(`/page/${existing.slug}`);
-		if (slug && slug !== existing.slug) {
-			revalidatePath(`/page/${slug}`);
-		}
+		if (slug && slug !== existing.slug) revalidatePath(`/page/${slug}`);
 
-		return { success: true, message: "Page updated successfully", page };
+		return { success: true, message: "Page updated successfully", page: updated[0] };
 	} catch (error) {
 		console.error("Error updating content page:", error);
 		return { success: false, message: "Failed to update content page" };
@@ -147,11 +150,11 @@ export async function updateContentPage(
 
 export async function deleteContentPage(id: string) {
 	try {
-		const page = await prisma.contentPage.delete({ where: { id } });
-
+		const existing = await db.query.contentPage.findFirst({ where: eq(contentPage.id, id) });
+		if (!existing) return { success: false, message: "Page not found" };
+		await db.delete(contentPage).where(eq(contentPage.id, id));
 		revalidatePath("/admin/pages");
-		revalidatePath(`/page/${page.slug}`);
-
+		revalidatePath(`/page/${existing.slug}`);
 		return { success: true, message: "Page deleted successfully" };
 	} catch (error) {
 		console.error("Error deleting content page:", error);
@@ -161,18 +164,22 @@ export async function deleteContentPage(id: string) {
 
 export async function toggleContentPagePublished(id: string, isPublished: boolean) {
 	try {
-		const page = await prisma.contentPage.update({
-			where: { id },
-			data: {
-				isPublished,
-				...(isPublished && { publishedAt: new Date() }),
-			},
-		});
-
+		const updates: Partial<typeof contentPage.$inferInsert> = {
+			isPublished,
+			...(isPublished && { publishedAt: new Date() }),
+		};
+		const updated = await db
+			.update(contentPage)
+			.set(updates)
+			.where(eq(contentPage.id, id))
+			.returning();
 		revalidatePath("/admin/pages");
-		revalidatePath(`/page/${page.slug}`);
-
-		return { success: true, message: `Page ${isPublished ? "published" : "unpublished"}`, page };
+		revalidatePath(`/page/${updated[0].slug}`);
+		return {
+			success: true,
+			message: `Page ${isPublished ? "published" : "unpublished"}`,
+			page: updated[0],
+		};
 	} catch (error) {
 		console.error("Error toggling content page:", error);
 		return { success: false, message: "Failed to update page status" };

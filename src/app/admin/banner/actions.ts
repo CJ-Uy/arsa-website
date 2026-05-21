@@ -1,25 +1,23 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { and, desc, eq, ne } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { banner } from "@/db/schema";
 
-// Helper to convert datetime-local input (assumed PHT) to UTC Date
 function parseManilaDatetime(datetimeStr: string): Date | null {
 	if (!datetimeStr) return null;
-	// datetime-local gives us format: "2024-01-15T14:30"
-	// We need to interpret this as Manila time (UTC+8)
-	// Append +08:00 timezone offset to parse as Manila time
 	const manilaDateStr = `${datetimeStr}:00+08:00`;
 	return new Date(manilaDateStr);
 }
 
 export async function getActiveBanner() {
 	try {
-		const banner = await prisma.banner.findFirst({
-			where: { isActive: true },
-			orderBy: { updatedAt: "desc" },
+		const row = await db.query.banner.findFirst({
+			where: eq(banner.isActive, true),
+			orderBy: [desc(banner.updatedAt)],
 		});
-		return { success: true, banner };
+		return { success: true, banner: row };
 	} catch (error) {
 		console.error("Error fetching active banner:", error);
 		return { success: false, message: "Failed to fetch banner" };
@@ -28,8 +26,8 @@ export async function getActiveBanner() {
 
 export async function getAllBanners() {
 	try {
-		const banners = await prisma.banner.findMany({
-			orderBy: { updatedAt: "desc" },
+		const banners = await db.query.banner.findMany({
+			orderBy: [desc(banner.updatedAt)],
 		});
 		return { success: true, banners };
 	} catch (error) {
@@ -44,33 +42,21 @@ export async function createBanner(formData: FormData) {
 		const deadlineStr = formData.get("deadline") as string;
 		const isActive = formData.get("isActive") === "true";
 
-		if (!message) {
-			return { success: false, message: "Message is required" };
-		}
+		if (!message) return { success: false, message: "Message is required" };
 
-		// If creating an active banner, deactivate all others
 		if (isActive) {
-			await prisma.banner.updateMany({
-				where: { isActive: true },
-				data: { isActive: false },
-			});
+			await db.update(banner).set({ isActive: false }).where(eq(banner.isActive, true));
 		}
 
-		// Parse deadline as Manila time (UTC+8)
 		const deadline = parseManilaDatetime(deadlineStr);
-
-		const banner = await prisma.banner.create({
-			data: {
-				message,
-				deadline,
-				isActive,
-			},
-		});
+		const inserted = await db
+			.insert(banner)
+			.values({ message, deadline, isActive })
+			.returning();
 
 		revalidatePath("/");
 		revalidatePath("/admin/banner");
-
-		return { success: true, message: "Banner created successfully", banner };
+		return { success: true, message: "Banner created successfully", banner: inserted[0] };
 	} catch (error) {
 		console.error("Error creating banner:", error);
 		return { success: false, message: "Failed to create banner" };
@@ -84,34 +70,25 @@ export async function updateBanner(formData: FormData) {
 		const deadlineStr = formData.get("deadline") as string;
 		const isActive = formData.get("isActive") === "true";
 
-		if (!id || !message) {
-			return { success: false, message: "ID and message are required" };
-		}
+		if (!id || !message) return { success: false, message: "ID and message are required" };
 
-		// If activating this banner, deactivate all others
 		if (isActive) {
-			await prisma.banner.updateMany({
-				where: { isActive: true, NOT: { id } },
-				data: { isActive: false },
-			});
+			await db
+				.update(banner)
+				.set({ isActive: false })
+				.where(and(eq(banner.isActive, true), ne(banner.id, id)));
 		}
 
-		// Parse deadline as Manila time (UTC+8)
 		const deadline = parseManilaDatetime(deadlineStr);
-
-		const banner = await prisma.banner.update({
-			where: { id },
-			data: {
-				message,
-				deadline,
-				isActive,
-			},
-		});
+		const updated = await db
+			.update(banner)
+			.set({ message, deadline, isActive })
+			.where(eq(banner.id, id))
+			.returning();
 
 		revalidatePath("/");
 		revalidatePath("/admin/banner");
-
-		return { success: true, message: "Banner updated successfully", banner };
+		return { success: true, message: "Banner updated successfully", banner: updated[0] };
 	} catch (error) {
 		console.error("Error updating banner:", error);
 		return { success: false, message: "Failed to update banner" };
@@ -120,13 +97,9 @@ export async function updateBanner(formData: FormData) {
 
 export async function deleteBanner(id: string) {
 	try {
-		await prisma.banner.delete({
-			where: { id },
-		});
-
+		await db.delete(banner).where(eq(banner.id, id));
 		revalidatePath("/");
 		revalidatePath("/admin/banner");
-
 		return { success: true, message: "Banner deleted successfully" };
 	} catch (error) {
 		console.error("Error deleting banner:", error);
@@ -136,23 +109,20 @@ export async function deleteBanner(id: string) {
 
 export async function toggleBannerStatus(id: string, isActive: boolean) {
 	try {
-		// If activating this banner, deactivate all others
 		if (isActive) {
-			await prisma.banner.updateMany({
-				where: { isActive: true, NOT: { id } },
-				data: { isActive: false },
-			});
+			await db
+				.update(banner)
+				.set({ isActive: false })
+				.where(and(eq(banner.isActive, true), ne(banner.id, id)));
 		}
-
-		const banner = await prisma.banner.update({
-			where: { id },
-			data: { isActive },
-		});
-
+		const updated = await db
+			.update(banner)
+			.set({ isActive })
+			.where(eq(banner.id, id))
+			.returning();
 		revalidatePath("/");
 		revalidatePath("/admin/banner");
-
-		return { success: true, message: "Banner status updated", banner };
+		return { success: true, message: "Banner status updated", banner: updated[0] };
 	} catch (error) {
 		console.error("Error toggling banner status:", error);
 		return { success: false, message: "Failed to update banner status" };

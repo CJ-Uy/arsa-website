@@ -1,39 +1,30 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { DashboardClient } from "./dashboardClient";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { asc, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, redirects, redirectTag } from "@/db/schema";
+import { DashboardClient } from "./dashboardClient";
 
 export default async function RedirectsPage() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) redirect("/");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isRedirectsAdmin: true },
 	});
+	if (!u?.isRedirectsAdmin) redirect("/admin");
 
-	if (!session?.user) {
-		redirect("/");
-	}
-
-	// Check if user is redirects admin
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isRedirectsAdmin: true },
-	});
-
-	if (!user?.isRedirectsAdmin) {
-		redirect("/admin");
-	}
-
-	// Fetch initial data on the server for the first page load
-	const [redirects, tags] = await Promise.all([
-		prisma.redirects.findMany({
-			orderBy: { redirectCode: "asc" },
-			include: { redirectTags: { include: { tag: true } } },
+	const [allRedirects, tags] = await Promise.all([
+		db.query.redirects.findMany({
+			orderBy: [asc(redirects.redirectCode)],
+			with: { redirectTags: { with: { tag: true } } },
 		}),
-		prisma.redirectTag.findMany({ orderBy: { name: "asc" } }),
+		db.query.redirectTag.findMany({ orderBy: [asc(redirectTag.name)] }),
 	]);
 
-	// Flatten for the client
-	const redirectsWithTags = redirects.map((r) => ({
+	const redirectsWithTags = allRedirects.map((r) => ({
 		id: r.id,
 		newURL: r.newURL,
 		redirectCode: r.redirectCode,

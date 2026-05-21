@@ -1,22 +1,29 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	cartItem,
+	eventProduct,
+	order,
+	orderItem,
+	packageTable,
+	product,
+	shopEvent,
+	shopPurchase,
+	user,
+} from "@/db/schema";
 import { cache, cacheKeys, withCache } from "@/lib/cache";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { validateDailyStockForCart } from "@/lib/daily-stock";
 
-// Get current session
 async function getSession() {
-	return await auth.api.getSession({
-		headers: await headers(),
-	});
+	return await auth.api.getSession({ headers: await headers() });
 }
 
-// Cart Actions
 export async function addToCart(productId: string, quantity: number = 1, size?: string) {
 	try {
 		const session = await getSession();
@@ -24,56 +31,46 @@ export async function addToCart(productId: string, quantity: number = 1, size?: 
 			return { success: false, message: "You must be logged in to add items to cart" };
 		}
 
-		const product = await prisma.product.findUnique({
-			where: { id: productId },
-		});
-
-		if (!product || !product.isAvailable) {
+		const p = await db.query.product.findFirst({ where: eq(product.id, productId) });
+		if (!p || !p.isAvailable) {
 			return { success: false, message: "Product not available" };
 		}
 
-		// Check if size is required but not provided
-		if (product.availableSizes.length > 0 && !size) {
+		if (p.availableSizes.length > 0 && !size) {
 			return { success: false, message: "Please select a size" };
 		}
 
-		if (!product.isPreOrder && product.stock !== null && product.stock < quantity) {
+		if (!p.isPreOrder && p.stock !== null && p.stock < quantity) {
 			return { success: false, message: "Insufficient stock" };
 		}
 
-		// Normalize size to null if undefined or empty
 		const normalizedSize = size ? size : null;
 
-		// Check if item already in cart (including size)
-		const existingCartItem = await prisma.cartItem.findFirst({
-			where: {
-				userId: session.user.id,
-				productId,
-				size: normalizedSize,
-			},
+		const existing = await db.query.cartItem.findFirst({
+			where: and(
+				eq(cartItem.userId, session.user.id),
+				eq(cartItem.productId, productId),
+				normalizedSize === null
+					? eq(cartItem.size, null as unknown as string)
+					: eq(cartItem.size, normalizedSize),
+			),
 		});
 
-		if (existingCartItem) {
-			// Update quantity
-			await prisma.cartItem.update({
-				where: { id: existingCartItem.id },
-				data: { quantity: existingCartItem.quantity + quantity },
-			});
+		if (existing) {
+			await db
+				.update(cartItem)
+				.set({ quantity: existing.quantity + quantity })
+				.where(eq(cartItem.id, existing.id));
 		} else {
-			// Create new cart item
-			await prisma.cartItem.create({
-				data: {
-					userId: session.user.id,
-					productId,
-					quantity,
-					size: normalizedSize,
-				},
+			await db.insert(cartItem).values({
+				userId: session.user.id,
+				productId,
+				quantity,
+				size: normalizedSize,
 			});
 		}
 
-		// Invalidate cart cache
-		cache.delete(cacheKeys.cart(session.user.id));
-
+		await cache.delete(cacheKeys.cart(session.user.id));
 		revalidatePath("/shop");
 		return { success: true, message: "Added to cart" };
 	} catch (error) {
@@ -85,25 +82,16 @@ export async function addToCart(productId: string, quantity: number = 1, size?: 
 export async function updateCartItemQuantity(cartItemId: string, quantity: number) {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: false, message: "Unauthorized" };
-		}
+		if (!session?.user) return { success: false, message: "Unauthorized" };
 
-		if (quantity <= 0) {
-			return await removeFromCart(cartItemId);
-		}
+		if (quantity <= 0) return await removeFromCart(cartItemId);
 
-		await prisma.cartItem.update({
-			where: {
-				id: cartItemId,
-				userId: session.user.id,
-			},
-			data: { quantity },
-		});
+		await db
+			.update(cartItem)
+			.set({ quantity })
+			.where(and(eq(cartItem.id, cartItemId), eq(cartItem.userId, session.user.id)));
 
-		// Invalidate cart cache
-		cache.delete(cacheKeys.cart(session.user.id));
-
+		await cache.delete(cacheKeys.cart(session.user.id));
 		revalidatePath("/shop");
 		revalidatePath("/shop/cart");
 		return { success: true };
@@ -116,20 +104,13 @@ export async function updateCartItemQuantity(cartItemId: string, quantity: numbe
 export async function removeFromCart(cartItemId: string) {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: false, message: "Unauthorized" };
-		}
+		if (!session?.user) return { success: false, message: "Unauthorized" };
 
-		await prisma.cartItem.delete({
-			where: {
-				id: cartItemId,
-				userId: session.user.id,
-			},
-		});
+		await db
+			.delete(cartItem)
+			.where(and(eq(cartItem.id, cartItemId), eq(cartItem.userId, session.user.id)));
 
-		// Invalidate cart cache
-		cache.delete(cacheKeys.cart(session.user.id));
-
+		await cache.delete(cacheKeys.cart(session.user.id));
 		revalidatePath("/shop");
 		return { success: true };
 	} catch (error) {
@@ -141,41 +122,25 @@ export async function removeFromCart(cartItemId: string) {
 export async function getCart() {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: false, cart: [] };
-		}
+		if (!session?.user) return { success: false, cart: [] };
 
-		// Cache cart for 10 seconds - it updates frequently but this still helps
 		const cartItems = await withCache(
 			cacheKeys.cart(session.user.id),
-			10000, // 10 seconds cache
-			async () => {
-				return await prisma.cartItem.findMany({
-					where: { userId: session.user.id },
-					include: {
+			10000,
+			async () =>
+				db.query.cartItem.findMany({
+					where: eq(cartItem.userId, session.user.id),
+					with: {
 						product: true,
 						package: {
-							include: {
-								items: {
-									include: {
-										product: true,
-									},
-								},
-								pools: {
-									include: {
-										options: {
-											include: {
-												product: true,
-											},
-										},
-									},
-								},
+							with: {
+								items: { with: { product: true } },
+								pools: { with: { options: { with: { product: true } } } },
 							},
 						},
 					},
-					orderBy: { createdAt: "desc" },
-				});
-			},
+					orderBy: [desc(cartItem.createdAt)],
+				}),
 		);
 
 		return { success: true, cart: cartItems };
@@ -185,24 +150,17 @@ export async function getCart() {
 	}
 }
 
-// Validate cart and remove unavailable/sold-out items
 export async function validateAndCleanCart(): Promise<{
 	success: boolean;
 	removedItems: string[];
 }> {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: true, removedItems: [] };
-		}
+		if (!session?.user) return { success: true, removedItems: [] };
 
-		// Fetch cart items directly from DB (bypass cache for fresh availability data)
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId: session.user.id },
-			include: {
-				product: true,
-				package: true,
-			},
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, session.user.id),
+			with: { product: true, package: true },
 		});
 
 		const idsToRemove: string[] = [];
@@ -214,9 +172,8 @@ export async function validateAndCleanCart(): Promise<{
 
 			if (item.productId && item.product) {
 				itemName = item.product.name;
-				if (!item.product.isAvailable) {
-					shouldRemove = true;
-				} else if (
+				if (!item.product.isAvailable) shouldRemove = true;
+				else if (
 					!item.product.isPreOrder &&
 					item.product.stock !== null &&
 					item.product.stock <= 0
@@ -225,11 +182,8 @@ export async function validateAndCleanCart(): Promise<{
 				}
 			} else if (item.packageId && item.package) {
 				itemName = item.package.name;
-				if (!item.package.isAvailable) {
-					shouldRemove = true;
-				}
+				if (!item.package.isAvailable) shouldRemove = true;
 			} else if (!item.product && !item.package) {
-				// Orphan cart item - referenced product/package was deleted
 				shouldRemove = true;
 				itemName = "a deleted item";
 			}
@@ -241,15 +195,12 @@ export async function validateAndCleanCart(): Promise<{
 		}
 
 		if (idsToRemove.length > 0) {
-			await prisma.cartItem.deleteMany({
-				where: {
-					id: { in: idsToRemove },
-					userId: session.user.id,
-				},
-			});
-
-			// Invalidate cart cache (revalidatePath removed - can't be called during render)
-			cache.delete(cacheKeys.cart(session.user.id));
+			await db
+				.delete(cartItem)
+				.where(
+					and(inArray(cartItem.id, idsToRemove), eq(cartItem.userId, session.user.id)),
+				);
+			await cache.delete(cacheKeys.cart(session.user.id));
 		}
 
 		return { success: true, removedItems: removedNames };
@@ -259,7 +210,6 @@ export async function validateAndCleanCart(): Promise<{
 	}
 }
 
-// Package Selections type for cart items
 export type PackageSelections = {
 	fixedItems: Array<{
 		productId: string;
@@ -275,7 +225,6 @@ export type PackageSelections = {
 	}>;
 };
 
-// Add package to cart with selections
 export async function addPackageToCart(
 	packageId: string,
 	quantity: number = 1,
@@ -287,11 +236,11 @@ export async function addPackageToCart(
 			return { success: false, message: "You must be logged in to add items to cart" };
 		}
 
-		const pkg = await prisma.package.findUnique({
-			where: { id: packageId },
-			include: {
-				items: { include: { product: true } },
-				pools: { include: { options: { include: { product: true } } } },
+		const pkg = await db.query.packageTable.findFirst({
+			where: eq(packageTable.id, packageId),
+			with: {
+				items: { with: { product: true } },
+				pools: { with: { options: { with: { product: true } } } },
 			},
 		});
 
@@ -299,14 +248,9 @@ export async function addPackageToCart(
 			return { success: false, message: "Package not available" };
 		}
 
-		// Validate selections
-		// Check that all fixed items have sizes if required
 		for (const item of pkg.items) {
 			const itemSelections = selections.fixedItems.filter((s) => s.productId === item.productId);
-
-			// Check we have the right number of selections for quantity
 			if (itemSelections.length !== item.quantity) {
-				// Allow if product doesn't require size
 				if (item.product.availableSizes.length > 0 && itemSelections.length < item.quantity) {
 					return {
 						success: false,
@@ -316,7 +260,6 @@ export async function addPackageToCart(
 			}
 		}
 
-		// Validate pool selections
 		for (const pool of pkg.pools) {
 			const poolSelection = selections.poolSelections.find((s) => s.poolId === pool.id);
 			if (!poolSelection || poolSelection.selections.length !== pool.selectCount) {
@@ -325,29 +268,22 @@ export async function addPackageToCart(
 					message: `Please select ${pool.selectCount} items from "${pool.name}"`,
 				};
 			}
-
-			// Validate selected products are in the pool
 			const validProductIds = pool.options.map((o) => o.productId);
-			for (const selection of poolSelection.selections) {
-				if (!validProductIds.includes(selection.productId)) {
+			for (const sel of poolSelection.selections) {
+				if (!validProductIds.includes(sel.productId)) {
 					return { success: false, message: "Invalid product selection" };
 				}
 			}
 		}
 
-		// Create cart item with selections
-		await prisma.cartItem.create({
-			data: {
-				userId: session.user.id,
-				packageId,
-				quantity,
-				packageSelections: selections,
-			},
+		await db.insert(cartItem).values({
+			userId: session.user.id,
+			packageId,
+			quantity,
+			packageSelections: selections,
 		});
 
-		// Invalidate cart cache
-		cache.delete(cacheKeys.cart(session.user.id));
-
+		await cache.delete(cacheKeys.cart(session.user.id));
 		revalidatePath("/shop");
 		return { success: true, message: "Package added to cart" };
 	} catch (error) {
@@ -356,13 +292,9 @@ export async function addPackageToCart(
 	}
 }
 
-// Purchase Code Generation Helpers
-
-// Format timestamp as MM-DD-YY-HH:mm for purchase codes (UTC+8 / Asia/Manila)
 function formatPurchaseTimestamp(): string {
-	// Convert to UTC+8 by adding 8 hours to UTC time
 	const now = new Date();
-	const utcPlus8Offset = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+	const utcPlus8Offset = 8 * 60 * 60 * 1000;
 	const manilaTime = new Date(now.getTime() + utcPlus8Offset);
 
 	const month = String(manilaTime.getUTCMonth() + 1).padStart(2, "0");
@@ -373,7 +305,6 @@ function formatPurchaseTimestamp(): string {
 	return `${month}-${day}-${year}-${hours}:${minutes}`;
 }
 
-// Generate purchase codes for an order item
 async function generatePurchaseCodes(
 	eventId: string,
 	productId: string | null,
@@ -381,27 +312,26 @@ async function generatePurchaseCodes(
 	quantity: number,
 	productCode: string,
 ): Promise<string> {
-	// Count existing items with purchase codes for this product/package in this event
-	const existingCount = await prisma.orderItem.count({
-		where: {
-			order: { eventId },
-			...(productId ? { productId } : { packageId }),
-			purchaseCode: { not: null },
-		},
-	});
+	const itemFilter = productId
+		? eq(orderItem.productId, productId)
+		: eq(orderItem.packageId, packageId!);
 
+	const [r] = await db
+		.select({ c: count() })
+		.from(orderItem)
+		.innerJoin(order, eq(orderItem.orderId, order.id))
+		.where(and(eq(order.eventId, eventId), itemFilter, isNotNull(orderItem.purchaseCode)));
+
+	const existingCount = r.c;
 	const timestamp = formatPurchaseTimestamp();
 	const codes: string[] = [];
-
 	for (let i = 0; i < quantity; i++) {
 		const sequenceNum = existingCount + i + 1;
 		codes.push(`${productCode}_${timestamp}_${sequenceNum}`);
 	}
-
 	return codes.join(",");
 }
 
-// Order Actions
 export async function createOrder(
 	receiptImageUrl: string,
 	notes?: string,
@@ -414,84 +344,48 @@ export async function createOrder(
 ) {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: false, message: "Unauthorized" };
-		}
+		if (!session?.user) return { success: false, message: "Unauthorized" };
 
-		// Check for duplicate orders using the same GCash reference number
 		if (gcashReferenceNumber) {
-			const existingOrder = await prisma.order.findFirst({
-				where: {
-					gcashReferenceNumber,
-				},
-				include: {
-					user: {
-						select: {
-							name: true,
-							email: true,
-						},
-					},
-				},
+			const existing = await db.query.order.findFirst({
+				where: eq(order.gcashReferenceNumber, gcashReferenceNumber),
+				with: { user: { columns: { name: true, email: true } } },
 			});
-
-			if (existingOrder) {
+			if (existing) {
 				return {
 					success: false,
-					message: `This GCash reference number has already been used for another order (Order ID: ${existingOrder.id.slice(0, 8)}). Each payment can only be used for one order. Please contact support if you believe this is an error.`,
+					message: `This GCash reference number has already been used for another order (Order ID: ${existing.id.slice(0, 8)}). Each payment can only be used for one order. Please contact support if you believe this is an error.`,
 					isDuplicate: true,
 				};
 			}
 		}
 
-		// Update user's information if provided
 		const updateData: {
 			firstName?: string;
 			lastName?: string;
 			name?: string;
 			studentId?: string;
 		} = {};
-
-		if (firstName && firstName.trim()) {
-			updateData.firstName = firstName.trim();
-		}
-		if (lastName && lastName.trim()) {
-			updateData.lastName = lastName.trim();
-		}
-		if (firstName && lastName) {
-			updateData.name = `${firstName.trim()} ${lastName.trim()}`;
-		}
-		if (studentId && studentId.trim()) {
-			updateData.studentId = studentId.trim();
-		}
-
+		if (firstName && firstName.trim()) updateData.firstName = firstName.trim();
+		if (lastName && lastName.trim()) updateData.lastName = lastName.trim();
+		if (firstName && lastName) updateData.name = `${firstName.trim()} ${lastName.trim()}`;
+		if (studentId && studentId.trim()) updateData.studentId = studentId.trim();
 		if (Object.keys(updateData).length > 0) {
-			await prisma.user.update({
-				where: { id: session.user.id },
-				data: updateData,
-			});
+			await db.update(user).set(updateData).where(eq(user.id, session.user.id));
 		}
 
-		// Get cart items with products and packages
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId: session.user.id },
-			include: {
-				product: {
-					include: {
-						eventProducts: true,
-					},
-				},
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, session.user.id),
+			with: {
+				product: { with: { eventProducts: true } },
 				package: true,
 			},
 		});
 
-		if (cartItems.length === 0) {
-			return { success: false, message: "Cart is empty" };
-		}
+		if (cartItems.length === 0) return { success: false, message: "Cart is empty" };
 
-		// Safety net: check availability of all cart items before creating order
 		const unavailableIds: string[] = [];
 		const unavailableNames: string[] = [];
-
 		for (const item of cartItems) {
 			if (item.productId && item.product) {
 				if (
@@ -508,16 +402,13 @@ export async function createOrder(
 				}
 			}
 		}
-
 		if (unavailableIds.length > 0) {
-			// Remove unavailable items from cart
-			await prisma.cartItem.deleteMany({
-				where: {
-					id: { in: unavailableIds },
-					userId: session.user.id,
-				},
-			});
-			cache.delete(cacheKeys.cart(session.user.id));
+			await db
+				.delete(cartItem)
+				.where(
+					and(inArray(cartItem.id, unavailableIds), eq(cartItem.userId, session.user.id)),
+				);
+			await cache.delete(cacheKeys.cart(session.user.id));
 
 			return {
 				success: false,
@@ -525,14 +416,13 @@ export async function createOrder(
 			};
 		}
 
-		// Validate cutoff time and date restrictions for delivery/pickup dates
+		// Cutoff time / disabled-date validation
 		if (eventId && eventData) {
 			const fields = eventData.fields as Record<string, any> | undefined;
 			if (fields) {
-				// Fetch the event's checkout config for cutoff validation
-				const eventForCutoff = await prisma.shopEvent.findUnique({
-					where: { id: eventId },
-					select: { checkoutConfig: true },
+				const eventForCutoff = await db.query.shopEvent.findFirst({
+					where: eq(shopEvent.id, eventId),
+					columns: { checkoutConfig: true },
 				});
 
 				const checkoutConfig = eventForCutoff?.checkoutConfig as {
@@ -559,7 +449,6 @@ export async function createOrder(
 					const todayStart = new Date(now);
 					todayStart.setHours(0, 0, 0, 0);
 
-					// Collect all date values to validate: { dateString, fieldConfig }
 					const datesToValidate: Array<{
 						dateString: string;
 						fieldLabel: string;
@@ -567,7 +456,6 @@ export async function createOrder(
 						disabledDates?: string[];
 					}> = [];
 
-					// Helper to check if a field name is a delivery/pickup date
 					const isDateRelatedField = (text: string) => {
 						const lower = text.toLowerCase();
 						return (
@@ -578,17 +466,13 @@ export async function createOrder(
 						);
 					};
 
-					// Go through all submitted fields and match them to their config
 					for (const [fieldLabel, fieldValue] of Object.entries(fields)) {
-						// Find matching field config by label
 						const fieldConfig = checkoutConfig.additionalFields?.find(
 							(f) => f.label === fieldLabel,
 						);
-
 						if (!fieldConfig) continue;
 
 						if (fieldConfig.type === "date" && typeof fieldValue === "string" && fieldValue) {
-							// Simple date field
 							if (isDateRelatedField(`${fieldConfig.id} ${fieldConfig.label}`)) {
 								datesToValidate.push({
 									dateString: fieldValue,
@@ -598,11 +482,9 @@ export async function createOrder(
 								});
 							}
 						} else if (fieldConfig.type === "repeater" && Array.isArray(fieldValue)) {
-							// Repeater field - check each row for date columns
 							const dateColumns = fieldConfig.columns?.filter(
 								(col) => col.type === "date" && isDateRelatedField(`${col.id} ${col.label}`),
 							);
-
 							if (dateColumns?.length) {
 								for (const row of fieldValue) {
 									if (!row || typeof row !== "object") continue;
@@ -622,12 +504,10 @@ export async function createOrder(
 						}
 					}
 
-					// Validate each collected date
 					for (const dateInfo of datesToValidate) {
 						const selectedDate = new Date(dateInfo.dateString);
 						selectedDate.setHours(0, 0, 0, 0);
 
-						// Check minDateOffset
 						if (dateInfo.minDateOffset !== undefined) {
 							const minAllowed = new Date(todayStart);
 							minAllowed.setDate(minAllowed.getDate() + dateInfo.minDateOffset);
@@ -639,7 +519,6 @@ export async function createOrder(
 							}
 						}
 
-						// Check disabledDates
 						if (dateInfo.disabledDates?.length) {
 							const selectedDateStr = selectedDate.toISOString().split("T")[0];
 							if (dateInfo.disabledDates.includes(selectedDateStr)) {
@@ -650,14 +529,14 @@ export async function createOrder(
 							}
 						}
 
-						// Check cutoff time
 						if (checkoutConfig.cutoffTime) {
-							const [cutoffHours, cutoffMinutes] = checkoutConfig.cutoffTime.split(":").map(Number);
+							const [cutoffHours, cutoffMinutes] = checkoutConfig.cutoffTime
+								.split(":")
+								.map(Number);
 							const cutoffToday = new Date(now);
 							cutoffToday.setHours(cutoffHours, cutoffMinutes, 0, 0);
 
 							if (now > cutoffToday) {
-								// Past cutoff - calculate earliest allowed delivery date
 								const daysOffset = checkoutConfig.cutoffDaysOffset || 2;
 								const earliestDelivery = new Date(todayStart);
 								earliestDelivery.setDate(earliestDelivery.getDate() + daysOffset);
@@ -680,12 +559,10 @@ export async function createOrder(
 			}
 		}
 
-		// Validate daily stock for delivery date if applicable
+		// Daily stock validation
 		if (eventId && eventData) {
-			// Find delivery date in event data fields
 			const fields = eventData.fields as Record<string, any> | undefined;
 			if (fields) {
-				// Look for delivery date field
 				const deliveryDateEntry = Object.entries(fields).find(([key]) =>
 					key.toLowerCase().includes("delivery date"),
 				);
@@ -694,20 +571,16 @@ export async function createOrder(
 					const deliveryDateString = deliveryDateEntry[1] as string;
 					if (deliveryDateString) {
 						const deliveryDate = new Date(deliveryDateString);
-
-						// Build cart items for validation
 						const cartItemsForValidation = cartItems.map((item) => ({
 							productId: item.productId || undefined,
 							packageId: item.packageId || undefined,
 							quantity: item.quantity,
 						}));
-
 						const validation = await validateDailyStockForCart(
 							cartItemsForValidation,
 							deliveryDate,
 							eventId,
 						);
-
 						if (!validation.valid) {
 							return {
 								success: false,
@@ -721,33 +594,21 @@ export async function createOrder(
 			}
 		}
 
-		// Helper to get correct product price
 		const getProductPrice = (item: (typeof cartItems)[0]) => {
 			if (!item.product) return 0;
-
-			// 1. Check for size-specific pricing
 			if (item.size && item.product.sizePricing) {
 				const sizePricing = item.product.sizePricing as Record<string, number>;
-				if (sizePricing[item.size]) {
-					return sizePricing[item.size];
-				}
+				if (sizePricing[item.size]) return sizePricing[item.size];
 			}
-
-			// 2. Check for event-specific pricing
 			if (eventId && item.product.eventProducts) {
-				const eventProduct = (item.product.eventProducts as any[]).find(
-					(ep: any) => ep.eventId === eventId,
+				const ep = (item.product.eventProducts as any[]).find(
+					(e: any) => e.eventId === eventId,
 				);
-				if (eventProduct?.eventPrice) {
-					return eventProduct.eventPrice;
-				}
+				if (ep?.eventPrice) return ep.eventPrice;
 			}
-
-			// 3. Fall back to base price
 			return item.product.price;
 		};
 
-		// Calculate total (products and packages)
 		let totalAmount = 0;
 		let itemCount = 0;
 		for (const item of cartItems) {
@@ -761,73 +622,66 @@ export async function createOrder(
 			}
 		}
 
-		// Get EventProduct records to check for productCodes (for purchase code generation)
-		const eventProductMap = new Map<string, string>(); // productId/packageId -> productCode
-
+		const eventProductMap = new Map<string, string>();
 		if (eventId) {
-			const eventProducts = await prisma.eventProduct.findMany({
-				where: {
-					eventId,
-					productCode: { not: null },
-				},
-				select: {
-					productId: true,
-					packageId: true,
-					productCode: true,
-				},
+			const eventProducts = await db.query.eventProduct.findMany({
+				where: and(eq(eventProduct.eventId, eventId), isNotNull(eventProduct.productCode)),
+				columns: { productId: true, packageId: true, productCode: true },
 			});
-
 			eventProducts.forEach((ep) => {
 				const key = ep.productId || ep.packageId;
-				if (key && ep.productCode) {
-					eventProductMap.set(key, ep.productCode);
-				}
+				if (key && ep.productCode) eventProductMap.set(key, ep.productCode);
 			});
 		}
 
-		// Build order items data with purchase codes
-		const orderItemsData = await Promise.all(
-			cartItems.map(async (item) => {
-				const itemId = item.productId || item.packageId;
-				const productCode = itemId ? eventProductMap.get(itemId) : null;
+		// Pre-compute purchase codes sequentially so the existingCount increments correctly
+		const orderItemsData: Array<{
+			productId?: string | null;
+			packageId?: string | null;
+			quantity: number;
+			price: number;
+			size?: string | null;
+			packageSelections?: unknown;
+			purchaseCode: string | null;
+		}> = [];
 
-				let purchaseCode: string | null = null;
-				if (productCode && eventId) {
-					purchaseCode = await generatePurchaseCodes(
-						eventId,
-						item.productId,
-						item.packageId,
-						item.quantity,
-						productCode,
-					);
-				}
+		for (const item of cartItems) {
+			const itemId = item.productId || item.packageId;
+			const productCode = itemId ? eventProductMap.get(itemId) : null;
 
-				if (item.product) {
-					return {
-						productId: item.productId,
-						quantity: item.quantity,
-						price: getProductPrice(item),
-						size: item.size,
-						purchaseCode,
-					};
-				} else {
-					// Package item
-					return {
-						packageId: item.packageId,
-						quantity: item.quantity,
-						price: item.package!.price,
-						packageSelections: item.packageSelections
-							? (item.packageSelections as Prisma.InputJsonValue)
-							: Prisma.JsonNull,
-						purchaseCode,
-					};
-				}
-			}),
-		);
+			let purchaseCode: string | null = null;
+			if (productCode && eventId) {
+				purchaseCode = await generatePurchaseCodes(
+					eventId,
+					item.productId,
+					item.packageId,
+					item.quantity,
+					productCode,
+				);
+			}
 
-		// Create order with order items
-		const order = await prisma.order.create({
-			data: {
+			if (item.product) {
+				orderItemsData.push({
+					productId: item.productId,
+					quantity: item.quantity,
+					price: getProductPrice(item),
+					size: item.size,
+					purchaseCode,
+				});
+			} else {
+				orderItemsData.push({
+					packageId: item.packageId,
+					quantity: item.quantity,
+					price: item.package!.price,
+					packageSelections: item.packageSelections ?? null,
+					purchaseCode,
+				});
+			}
+		}
+
+		const orderRows = await db
+			.insert(order)
+			.values({
 				userId: session.user.id,
 				totalAmount,
 				receiptImageUrl,
@@ -835,46 +689,39 @@ export async function createOrder(
 				notes,
 				status: "pending",
 				eventId: eventId || null,
-				eventData: eventData ? (eventData as Prisma.InputJsonValue) : Prisma.JsonNull,
-				orderItems: {
-					create: orderItemsData,
-				},
-			},
+				eventData: eventData ?? null,
+			})
+			.returning();
+		const createdOrder = orderRows[0];
+
+		if (orderItemsData.length > 0) {
+			await db
+				.insert(orderItem)
+				.values(orderItemsData.map((oi) => ({ ...oi, orderId: createdOrder.id })));
+		}
+
+		await db.insert(shopPurchase).values({
+			orderId: createdOrder.id,
+			eventId: eventId || null,
+			totalAmount,
+			itemCount,
 		});
 
-		// Create purchase analytics record
-		await prisma.shopPurchase.create({
-			data: {
-				orderId: order.id,
-				eventId: eventId || null,
-				totalAmount,
-				itemCount,
-			},
-		});
+		await db.delete(cartItem).where(eq(cartItem.userId, session.user.id));
+		await cache.delete(cacheKeys.cart(session.user.id));
 
-		// Clear cart
-		await prisma.cartItem.deleteMany({
-			where: { userId: session.user.id },
-		});
-
-		// Invalidate cart cache
-		cache.delete(cacheKeys.cart(session.user.id));
-
-		// Send order confirmation email (non-blocking)
 		try {
-			// Get event name and slug if applicable
 			let eventName: string | undefined;
 			let eventSlug: string | undefined;
 			if (eventId) {
-				const event = await prisma.shopEvent.findUnique({
-					where: { id: eventId },
-					select: { name: true, slug: true },
+				const event = await db.query.shopEvent.findFirst({
+					where: eq(shopEvent.id, eventId),
+					columns: { name: true, slug: true },
 				});
 				eventName = event?.name;
 				eventSlug = event?.slug;
 			}
 
-			// Build email data from cart items
 			const emailItems = cartItems.map((item) => ({
 				name: item.product?.name || item.package?.name || "Item",
 				size: item.size,
@@ -892,7 +739,7 @@ export async function createOrder(
 				firstName && lastName ? `${firstName} ${lastName}` : session.user.name || "Customer";
 
 			const emailResult = await sendOrderConfirmationEmail({
-				orderId: order.id,
+				orderId: createdOrder.id,
 				customerName,
 				customerEmail: session.user.email,
 				items: emailItems,
@@ -907,20 +754,18 @@ export async function createOrder(
 				},
 			});
 
-			// If email was sent successfully, mark confirmationEmailSent as true
 			if (emailResult.success) {
-				await prisma.order.update({
-					where: { id: order.id },
-					data: { confirmationEmailSent: true },
-				});
+				await db
+					.update(order)
+					.set({ confirmationEmailSent: true })
+					.where(eq(order.id, createdOrder.id));
 			}
 		} catch (emailError) {
-			// Log error but don't fail the order
 			console.error("Failed to send order confirmation email:", emailError);
 		}
 
 		revalidatePath("/shop");
-		return { success: true, orderId: order.id, message: "Order created successfully" };
+		return { success: true, orderId: createdOrder.id, message: "Order created successfully" };
 	} catch (error) {
 		console.error("Create order error:", error);
 		return { success: false, message: "Failed to create order" };
@@ -930,20 +775,14 @@ export async function createOrder(
 export async function getOrders() {
 	try {
 		const session = await getSession();
-		if (!session?.user) {
-			return { success: false, orders: [] };
-		}
+		if (!session?.user) return { success: false, orders: [] };
 
-		const orders = await prisma.order.findMany({
-			where: { userId: session.user.id },
-			include: {
-				orderItems: {
-					include: {
-						product: true,
-					},
-				},
+		const orders = await db.query.order.findMany({
+			where: eq(order.userId, session.user.id),
+			with: {
+				orderItems: { with: { product: true } },
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [desc(order.createdAt)],
 		});
 
 		return { success: true, orders };
@@ -953,36 +792,25 @@ export async function getOrders() {
 	}
 }
 
-// Product Actions
 export async function getProducts(category?: string) {
 	try {
-		// Cache products for 10 minutes to handle high load (increased due to VPS latency)
-		// Products rarely change, so longer cache is safe
 		const products = await withCache(
 			cacheKeys.products(category),
-			600000, // 10 minutes cache (was 2 minutes)
-			async () => {
-				return await prisma.product.findMany({
-					where: {
-						isAvailable: true,
-						...(category && { category }),
-					},
-					include: {
+			600000,
+			async () =>
+				db.query.product.findMany({
+					where: category
+						? and(eq(product.isAvailable, true), eq(product.category, category))
+						: eq(product.isAvailable, true),
+					with: {
 						eventProducts: {
-							include: {
-								event: {
-									select: {
-										id: true,
-										name: true,
-										slug: true,
-									},
-								},
+							with: {
+								event: { columns: { id: true, name: true, slug: true } },
 							},
 						},
 					},
-					orderBy: { createdAt: "desc" },
-				});
-			},
+					orderBy: [desc(product.createdAt)],
+				}),
 		);
 
 		return { success: true, products };
@@ -992,34 +820,20 @@ export async function getProducts(category?: string) {
 	}
 }
 
-// Package Actions
 export async function getPackages() {
 	try {
 		const packages = await withCache(
 			"packages:all",
-			600000, // 10 minutes cache
-			async () => {
-				return await prisma.package.findMany({
-					where: { isAvailable: true },
-					include: {
-						items: {
-							include: {
-								product: true,
-							},
-						},
-						pools: {
-							include: {
-								options: {
-									include: {
-										product: true,
-									},
-								},
-							},
-						},
+			600000,
+			async () =>
+				db.query.packageTable.findMany({
+					where: eq(packageTable.isAvailable, true),
+					with: {
+						items: { with: { product: true } },
+						pools: { with: { options: { with: { product: true } } } },
 					},
-					orderBy: { createdAt: "desc" },
-				});
-			},
+					orderBy: [desc(packageTable.createdAt)],
+				}),
 		);
 
 		return { success: true, packages };
@@ -1029,40 +843,38 @@ export async function getPackages() {
 	}
 }
 
-// Event Actions
 export async function getActiveEvents() {
 	try {
 		const now = new Date();
 		const events = await withCache(
 			"events:active",
-			60000, // 1 minute cache (events can change status)
-			async () => {
-				return await prisma.shopEvent.findMany({
-					where: {
-						isActive: true,
-						startDate: { lte: now },
-						endDate: { gte: now },
-					},
-					include: {
+			60000,
+			async () =>
+				db.query.shopEvent.findMany({
+					where: and(
+						eq(shopEvent.isActive, true),
+						lte(shopEvent.startDate, now),
+						gte(shopEvent.endDate, now),
+					),
+					with: {
 						products: {
-							include: {
+							with: {
 								product: true,
 								package: {
-									include: {
-										items: { include: { product: true } },
-										pools: { include: { options: { include: { product: true } } } },
+									with: {
+										items: { with: { product: true } },
+										pools: { with: { options: { with: { product: true } } } },
 									},
 								},
 							},
-							orderBy: { sortOrder: "asc" },
+							orderBy: [asc(eventProduct.sortOrder)],
 						},
 						categories: {
-							orderBy: { displayOrder: "asc" },
+							orderBy: (cat, { asc }) => [asc(cat.displayOrder)],
 						},
 					},
-					orderBy: [{ isPriority: "desc" }, { tabOrder: "asc" }],
-				});
-			},
+					orderBy: [desc(shopEvent.isPriority), asc(shopEvent.tabOrder)],
+				}),
 		);
 
 		return { success: true, events };
@@ -1074,28 +886,25 @@ export async function getActiveEvents() {
 
 export async function getEventBySlug(slug: string) {
 	try {
-		const event = await prisma.shopEvent.findUnique({
-			where: { slug },
-			include: {
+		const event = await db.query.shopEvent.findFirst({
+			where: eq(shopEvent.slug, slug),
+			with: {
 				products: {
-					include: {
+					with: {
 						product: true,
 						package: {
-							include: {
-								items: { include: { product: true } },
-								pools: { include: { options: { include: { product: true } } } },
+							with: {
+								items: { with: { product: true } },
+								pools: { with: { options: { with: { product: true } } } },
 							},
 						},
 					},
-					orderBy: { sortOrder: "asc" },
+					orderBy: [asc(eventProduct.sortOrder)],
 				},
 			},
 		});
 
-		if (!event) {
-			return { success: false, event: null, message: "Event not found" };
-		}
-
+		if (!event) return { success: false, event: null, message: "Event not found" };
 		return { success: true, event };
 	} catch (error) {
 		console.error("Get event error:", error);

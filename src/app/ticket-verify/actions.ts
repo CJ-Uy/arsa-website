@@ -1,26 +1,15 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user, ticket, ticketVerifier } from "@/db/schema";
 
 async function getVerifierSession() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
-	});
+	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) return null;
 	return session;
-}
-
-async function getVerifierAccess(userId: string) {
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: {
-			isTicketsAdmin: true,
-			ticketVerifiers: { select: { ticketEventId: true } },
-		},
-	});
-	return user;
 }
 
 export async function scanTicket(shortCode: string) {
@@ -28,10 +17,18 @@ export async function scanTicket(shortCode: string) {
 	if (!session)
 		return { success: false, message: "Please log in to verify tickets", code: "UNAUTHORIZED" };
 
-	const user = await getVerifierAccess(session.user.id);
-	if (!user) return { success: false, message: "User not found", code: "UNAUTHORIZED" };
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isTicketsAdmin: true },
+	});
+	if (!u) return { success: false, message: "User not found", code: "UNAUTHORIZED" };
 
-	const hasAnyAccess = user.isTicketsAdmin || user.ticketVerifiers.length > 0;
+	const verifiers = await db.query.ticketVerifier.findMany({
+		where: eq(ticketVerifier.userId, session.user.id),
+		columns: { ticketEventId: true },
+	});
+
+	const hasAnyAccess = u.isTicketsAdmin || verifiers.length > 0;
 	if (!hasAnyAccess) {
 		return {
 			success: false,
@@ -40,24 +37,21 @@ export async function scanTicket(shortCode: string) {
 		};
 	}
 
-	// Find the ticket
-	const ticket = await prisma.ticket.findUnique({
-		where: { shortCode: shortCode.toUpperCase().trim() },
-		include: {
-			ticketEvent: { select: { id: true, name: true } },
-			scannedBy: { select: { name: true, email: true } },
+	const code = shortCode.toUpperCase().trim();
+	const found = await db.query.ticket.findFirst({
+		where: eq(ticket.shortCode, code),
+		with: {
+			ticketEvent: { columns: { id: true, name: true } },
+			scannedBy: { columns: { name: true, email: true } },
 		},
 	});
 
-	if (!ticket) {
+	if (!found) {
 		return { success: false, message: "Ticket not found", code: "NOT_FOUND" };
 	}
 
-	// Check the verifier has access to this event
 	const hasEventAccess =
-		user.isTicketsAdmin ||
-		user.ticketVerifiers.some((v) => v.ticketEventId === ticket.ticketEventId);
-
+		u.isTicketsAdmin || verifiers.some((v) => v.ticketEventId === found.ticketEventId);
 	if (!hasEventAccess) {
 		return {
 			success: false,
@@ -66,35 +60,33 @@ export async function scanTicket(shortCode: string) {
 		};
 	}
 
-	// Already scanned?
-	if (ticket.scanned) {
+	if (found.scanned) {
 		return {
 			success: false,
 			message: "Ticket already scanned",
 			code: "ALREADY_SCANNED",
 			ticket: {
-				shortCode: ticket.shortCode,
-				email: ticket.email,
-				eventName: ticket.ticketEvent.name,
-				scannedAt: ticket.scannedAt?.toISOString() || null,
-				scannedBy: ticket.scannedBy
-					? { name: ticket.scannedBy.name, email: ticket.scannedBy.email }
+				shortCode: found.shortCode,
+				email: found.email,
+				eventName: found.ticketEvent.name,
+				scannedAt: found.scannedAt?.toISOString() || null,
+				scannedBy: found.scannedBy
+					? { name: found.scannedBy.name, email: found.scannedBy.email }
 					: null,
 			},
 		};
 	}
 
-	// Mark as scanned
-	const updated = await prisma.ticket.update({
-		where: { shortCode: shortCode.toUpperCase().trim() },
-		data: {
-			scanned: true,
-			scannedAt: new Date(),
-			scannedById: session.user.id,
-		},
-		include: {
-			ticketEvent: { select: { name: true } },
-			scannedBy: { select: { name: true, email: true } },
+	await db
+		.update(ticket)
+		.set({ scanned: true, scannedAt: new Date(), scannedById: session.user.id })
+		.where(eq(ticket.shortCode, code));
+
+	const updated = await db.query.ticket.findFirst({
+		where: eq(ticket.shortCode, code),
+		with: {
+			ticketEvent: { columns: { name: true } },
+			scannedBy: { columns: { name: true, email: true } },
 		},
 	});
 
@@ -103,12 +95,12 @@ export async function scanTicket(shortCode: string) {
 		message: "Ticket verified successfully",
 		code: "VALID",
 		ticket: {
-			shortCode: updated.shortCode,
-			email: updated.email,
-			eventName: updated.ticketEvent.name,
-			scannedAt: updated.scannedAt?.toISOString() || null,
-			scannedBy: updated.scannedBy
-				? { name: updated.scannedBy.name, email: updated.scannedBy.email }
+			shortCode: updated!.shortCode,
+			email: updated!.email,
+			eventName: updated!.ticketEvent.name,
+			scannedAt: updated!.scannedAt?.toISOString() || null,
+			scannedBy: updated!.scannedBy
+				? { name: updated!.scannedBy.name, email: updated!.scannedBy.email }
 				: null,
 		},
 	};

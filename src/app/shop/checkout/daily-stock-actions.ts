@@ -1,55 +1,38 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { cartItem, eventProduct } from "@/db/schema";
 import {
 	getCartItemsWithDailyLimits,
-	getRemainingStock,
 	validateDailyStockForCart,
 } from "@/lib/daily-stock";
 
-/**
- * Get daily stock information for items in the user's cart
- * Returns items that have daily limits and their notes
- */
 export async function getCartDailyStockInfo(userId: string, eventId?: string) {
 	try {
-		// Get cart items
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId },
-			select: {
-				productId: true,
-				packageId: true,
-				quantity: true,
-			},
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, userId),
+			columns: { productId: true, packageId: true, quantity: true },
 		});
 
 		if (cartItems.length === 0 || !eventId) {
-			return {
-				hasLimitedItems: false,
-				items: [],
-			};
+			return { hasLimitedItems: false, items: [] };
 		}
 
-		// Get items with daily limits
-		const limitedItems = await getCartItemsWithDailyLimits(cartItems, eventId);
-
-		return {
-			hasLimitedItems: limitedItems.length > 0,
-			items: limitedItems,
-		};
+		const limitedItems = await getCartItemsWithDailyLimits(
+			cartItems.map((i) => ({
+				productId: i.productId ?? undefined,
+				packageId: i.packageId ?? undefined,
+			})),
+			eventId,
+		);
+		return { hasLimitedItems: limitedItems.length > 0, items: limitedItems };
 	} catch (error) {
 		console.error("Failed to get cart daily stock info:", error);
-		return {
-			hasLimitedItems: false,
-			items: [],
-		};
+		return { hasLimitedItems: false, items: [] };
 	}
 }
 
-/**
- * Get available dates with remaining stock for a date range
- * Returns dates that are not blocked and their remaining slots per product
- */
 export async function getAvailableDatesForCart(
 	userId: string,
 	eventId: string,
@@ -63,117 +46,111 @@ export async function getAvailableDatesForCart(
 	}>
 > {
 	try {
-		// Get cart items
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId },
-			select: {
-				productId: true,
-				packageId: true,
-			},
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, userId),
+			columns: { productId: true, packageId: true },
 		});
 
-		if (cartItems.length === 0) {
-			return [];
-		}
+		if (cartItems.length === 0) return [];
 
-		// Find event products with daily limits for cart items
-		const eventProducts = await prisma.eventProduct.findMany({
-			where: {
-				eventId,
-				hasDailyStockLimit: true,
-				OR: [
-					{ productId: { in: cartItems.filter((i) => i.productId).map((i) => i.productId!) } },
-					{ packageId: { in: cartItems.filter((i) => i.packageId).map((i) => i.packageId!) } },
-				],
-			},
-			select: {
+		const productIds = cartItems.filter((i) => i.productId).map((i) => i.productId!);
+		const packageIds = cartItems.filter((i) => i.packageId).map((i) => i.packageId!);
+
+		const filters = [eq(eventProduct.eventId, eventId), eq(eventProduct.hasDailyStockLimit, true)];
+		const orParts = [];
+		if (productIds.length > 0) orParts.push(inArray(eventProduct.productId, productIds));
+		if (packageIds.length > 0) orParts.push(inArray(eventProduct.packageId, packageIds));
+		if (orParts.length === 0) return [];
+		filters.push(or(...orParts)!);
+
+		const eventProducts = await db.query.eventProduct.findMany({
+			where: and(...filters),
+			columns: {
 				id: true,
 				productId: true,
 				packageId: true,
 				defaultMaxOrdersPerDay: true,
 				dailyStockOverrides: true,
 			},
+			with: {
+				product: { columns: { name: true } },
+				package: { columns: { name: true } },
+			},
 		});
 
-		if (eventProducts.length === 0) {
-			// No limited items, all dates available
-			return [];
-		}
+		if (eventProducts.length === 0) return [];
 
-		// OPTIMIZED: Batch query all order counts at once
-		// Get order counts grouped by date for all event products
 		const orderCountsByDateAndProduct = new Map<string, Map<string, number>>();
+		const productNames = new Map<string, string>();
 
-		for (const eventProduct of eventProducts) {
-			// Get all orders for this product in this event (extract dates from eventData)
-			const ordersForProduct = await prisma.order.findMany({
-				where: {
-					eventId,
-					status: {
-						notIn: ["cancelled"],
-					},
+		for (const ep of eventProducts) {
+			productNames.set(ep.id, ep.product?.name || ep.package?.name || "Unknown Product");
+
+			const itemFilter = ep.productId
+				? { productId: ep.productId }
+				: { packageId: ep.packageId };
+
+			// Find orders in this event with this product/package via Drizzle: pull the matching
+			// orderItems then dedupe by orderId.
+			const matchOrders = await db.query.order.findMany({
+				where: (o, { eq }) => eq(o.eventId, eventId),
+				columns: { id: true, eventData: true, status: true },
+				with: {
 					orderItems: {
-						some: eventProduct.productId
-							? { productId: eventProduct.productId }
-							: { packageId: eventProduct.packageId },
+						columns: { productId: true, packageId: true },
 					},
-				},
-				select: {
-					id: true,
-					eventData: true,
 				},
 			});
 
-			// Extract dates from eventData and count per date
+			const matched = matchOrders.filter(
+				(o) =>
+					o.status !== "cancelled" &&
+					o.orderItems.some((oi) =>
+						itemFilter.productId
+							? oi.productId === itemFilter.productId
+							: oi.packageId === itemFilter.packageId,
+					),
+			);
+
 			const countsByDate = new Map<string, number>();
 
-			for (const order of ordersForProduct) {
+			for (const o of matched) {
 				try {
-					const eventData = order.eventData as any;
+					const eventData = o.eventData as any;
 					if (!eventData?.fields) continue;
 
 					const fields = eventData.fields;
 					let deliveryDate: string | null = null;
 
-					// Look for delivery/pickup fields
 					for (const [fieldName, fieldValue] of Object.entries(fields)) {
 						const lowerFieldName = fieldName.toLowerCase();
 						const isDeliveryField =
 							lowerFieldName.includes("delivery") || lowerFieldName.includes("pickup");
-
 						if (!isDeliveryField) continue;
 
-						// Check if it's a repeater field (array)
 						if (Array.isArray(fieldValue) && fieldValue.length > 0) {
-							// IMPORTANT: Use first row only for stock counting
-							// Multiple rows = multiple delivery times, but stock is taken on the FIRST delivery date
 							const firstRow = fieldValue[0];
 							if (typeof firstRow === "object" && firstRow !== null) {
-								// Find the date column
 								for (const colValue of Object.values(firstRow)) {
 									if (typeof colValue === "string" && colValue.includes("-")) {
 										const parsedDate = new Date(colValue);
 										if (!isNaN(parsedDate.getTime())) {
-											deliveryDate = colValue.split("T")[0]; // YYYY-MM-DD
+											deliveryDate = colValue.split("T")[0];
 											break;
 										}
 									}
 								}
 							}
 						} else if (typeof fieldValue === "string" && lowerFieldName.includes("date")) {
-							// Simple field
 							const parsedDate = new Date(fieldValue);
 							if (!isNaN(parsedDate.getTime())) {
 								deliveryDate = fieldValue.split("T")[0];
 							}
 						}
-
 						if (deliveryDate) break;
 					}
 
-					// Count this order for the date
 					if (deliveryDate) {
-						// Check if date is in range
 						const orderDate = new Date(deliveryDate);
 						if (orderDate >= startDate && orderDate <= endDate) {
 							const currentCount = countsByDate.get(deliveryDate) || 0;
@@ -181,14 +158,13 @@ export async function getAvailableDatesForCart(
 						}
 					}
 				} catch (error) {
-					console.error(`Error parsing order ${order.id} for daily stock:`, error);
+					console.error(`Error parsing order ${o.id} for daily stock:`, error);
 				}
 			}
 
-			orderCountsByDateAndProduct.set(eventProduct.id, countsByDate);
+			orderCountsByDateAndProduct.set(ep.id, countsByDate);
 		}
 
-		// Build a map of dates with per-product stock information
 		const dateStockMap = new Map<
 			string,
 			{
@@ -198,156 +174,108 @@ export async function getAvailableDatesForCart(
 		>();
 		const currentDate = new Date(startDate);
 
-		// Get product names for display
-		const productNames = new Map<string, string>();
-		for (const eventProduct of eventProducts) {
-			const name = await prisma.eventProduct.findUnique({
-				where: { id: eventProduct.id },
-				select: {
-					product: { select: { name: true } },
-					package: { select: { name: true } },
-				},
-			});
-			productNames.set(
-				eventProduct.id,
-				name?.product?.name || name?.package?.name || "Unknown Product",
-			);
-		}
-
 		while (currentDate <= endDate) {
 			const dateString = currentDate.toISOString().split("T")[0];
 			let minStock: number | null = null;
 			const productStocks: Array<{ productName: string; remaining: number; limit: number }> = [];
 
-			for (const eventProduct of eventProducts) {
-				// Get limit for this date
+			for (const ep of eventProducts) {
 				const overrides =
-					(eventProduct.dailyStockOverrides as Record<string, number | null> | null) || {};
+					(ep.dailyStockOverrides as Record<string, number | null> | null) || {};
 				let limit: number | null = null;
+				if (dateString in overrides) limit = overrides[dateString];
+				else limit = ep.defaultMaxOrdersPerDay ?? null;
 
-				if (dateString in overrides) {
-					limit = overrides[dateString];
-				} else {
-					limit = eventProduct.defaultMaxOrdersPerDay ?? null;
-				}
-
-				// If limit is null (no limit), continue
-				if (limit === null) {
-					continue;
-				}
-
-				// If limit is 0, date is blocked
+				if (limit === null) continue;
 				if (limit === 0) {
 					minStock = -1;
 					break;
 				}
 
-				// Get order count for this date and product
-				const orderCount = orderCountsByDateAndProduct.get(eventProduct.id)?.get(dateString) || 0;
+				const orderCount = orderCountsByDateAndProduct.get(ep.id)?.get(dateString) || 0;
 				const remaining = Math.max(0, limit - orderCount);
 
-				// Add to product stocks array
 				productStocks.push({
-					productName: productNames.get(eventProduct.id) || "Unknown",
+					productName: productNames.get(ep.id) || "Unknown",
 					remaining,
 					limit,
 				});
 
-				// If no stock remaining, mark as sold out
-				if (remaining === 0) {
-					minStock = 0;
-					// Don't break - continue to collect all product stocks
-				} else {
-					// Track minimum stock across all products
-					minStock = minStock === null ? remaining : Math.min(minStock, remaining);
-				}
+				if (remaining === 0) minStock = 0;
+				else minStock = minStock === null ? remaining : Math.min(minStock, remaining);
 			}
 
 			dateStockMap.set(dateString, { minStock, productStocks });
 			currentDate.setDate(currentDate.getDate() + 1);
 		}
 
-		// Convert to array of available dates
-		const availableDates = Array.from(dateStockMap.entries())
-			.filter(([_, data]) => data.minStock !== -1 && data.minStock !== 0 && data.minStock !== null) // Filter out blocked and sold out
+		return Array.from(dateStockMap.entries())
+			.filter(
+				([_, data]) => data.minStock !== -1 && data.minStock !== 0 && data.minStock !== null,
+			)
 			.map(([dateString, data]) => ({
 				date: dateString,
 				remaining: data.minStock!,
 				productStocks: data.productStocks,
 			}));
-
-		return availableDates;
 	} catch (error) {
 		console.error("Failed to get available dates:", error);
 		return [];
 	}
 }
 
-/**
- * Validate that the cart can be ordered for a specific delivery date
- * Returns validation result with errors if any
- */
 export async function validateCartForDeliveryDate(
 	userId: string,
 	eventId: string,
 	deliveryDate: Date,
 ) {
 	try {
-		// Get cart items
-		const cartItems = await prisma.cartItem.findMany({
-			where: { userId },
-			select: {
-				productId: true,
-				packageId: true,
-				quantity: true,
-			},
+		const cartItems = await db.query.cartItem.findMany({
+			where: eq(cartItem.userId, userId),
+			columns: { productId: true, packageId: true, quantity: true },
 		});
 
 		if (cartItems.length === 0) {
-			return {
-				valid: false,
-				errors: ["Your cart is empty"],
-			};
+			return { valid: false, errors: ["Your cart is empty"] };
 		}
 
-		// Find event products for cart items
-		const eventProducts = await prisma.eventProduct.findMany({
-			where: {
-				eventId,
-				OR: [
-					{ productId: { in: cartItems.filter((i) => i.productId).map((i) => i.productId!) } },
-					{ packageId: { in: cartItems.filter((i) => i.packageId).map((i) => i.packageId!) } },
-				],
-			},
-			select: {
-				id: true,
-				productId: true,
-				packageId: true,
-				hasDailyStockLimit: true,
-			},
-		});
+		const productIds = cartItems.filter((i) => i.productId).map((i) => i.productId!);
+		const packageIds = cartItems.filter((i) => i.packageId).map((i) => i.packageId!);
 
-		// Build cart items with event product IDs
+		const orParts = [];
+		if (productIds.length > 0) orParts.push(inArray(eventProduct.productId, productIds));
+		if (packageIds.length > 0) orParts.push(inArray(eventProduct.packageId, packageIds));
+
+		const eventProducts =
+			orParts.length === 0
+				? []
+				: await db.query.eventProduct.findMany({
+						where: and(eq(eventProduct.eventId, eventId), or(...orParts)!),
+						columns: {
+							id: true,
+							productId: true,
+							packageId: true,
+							hasDailyStockLimit: true,
+						},
+					});
+
 		const cartWithEventProducts = cartItems.map((item) => {
-			const eventProduct = eventProducts.find(
-				(ep) =>
-					(item.productId && ep.productId === item.productId) ||
-					(item.packageId && ep.packageId === item.packageId),
+			const ep = eventProducts.find(
+				(e) =>
+					(item.productId && e.productId === item.productId) ||
+					(item.packageId && e.packageId === item.packageId),
 			);
-
 			return {
-				...item,
-				eventProductId: eventProduct?.id,
+				productId: item.productId ?? undefined,
+				packageId: item.packageId ?? undefined,
+				quantity: item.quantity,
+				eventProductId: ep?.id,
 			};
 		});
 
-		// Validate daily stock
 		return await validateDailyStockForCart(cartWithEventProducts, deliveryDate, eventId);
 	} catch (error) {
 		console.error("Failed to validate cart for delivery date:", error);
-		return {
-			valid: false,
-			errors: ["Failed to validate order"],
-		};
+		return { valid: false, errors: ["Failed to validate order"] };
 	}
 }

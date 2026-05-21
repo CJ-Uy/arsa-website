@@ -1,0 +1,32 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "arsa-website",
+	"account_id": "c0316c17e2973be4ae27ddc85b94edab",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2025-05-01",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "arsa-db",
+			"database_id": "dfc93af8-5eb5-4ea7-8720-c636382cafa1",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"r2_buckets": [
+		{ "binding": "BUCKET", "bucket_name": "arsa-storage" }
+	],
+	"kv_namespaces": [
+		{ "binding": "CACHE", "id": "2c91299375b844a494e0b29633188811" }
+	],
+	"vars": {
+		"NEXT_PUBLIC_APP_URL": "https://ateneoarsa.org"
+	}
+}

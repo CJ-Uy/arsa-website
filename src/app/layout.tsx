@@ -4,7 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/main/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LayoutWrapper } from "@/components/layout-wrapper";
-import { prisma } from "@/lib/prisma";
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { banner as bannerTable, siteContent } from "@/db/schema";
 
 const geistSans = localFont({
 	src: [
@@ -103,19 +105,18 @@ export default async function RootLayout({
 	let banner = null;
 	let activeMajorEvent: string | null = null;
 	try {
-		banner = await prisma.banner.findFirst({
-			where: { isActive: true },
-			orderBy: { updatedAt: "desc" },
-		});
+		banner = (await db.query.banner.findFirst({
+			where: eq(bannerTable.isActive, true),
+			orderBy: [desc(bannerTable.updatedAt)],
+		})) ?? null;
 	} catch (error) {
-		// Database not available during build or no banner exists
 		console.log("Banner fetch skipped:", error instanceof Error ? error.message : "Unknown error");
 	}
 
 	// Fetch active major event for homepage
 	try {
-		const setting = await prisma.siteContent.findUnique({
-			where: { key: "homepage-active-major-event" },
+		const setting = await db.query.siteContent.findFirst({
+			where: eq(siteContent.key, "homepage-active-major-event"),
 		});
 		if (
 			setting?.data &&

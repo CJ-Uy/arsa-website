@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { getSSO26Config, getSuperlativesResults, getDdayResults, getSSO26Stats, getRawNominations, getRawDdayVotes } from "./actions";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { user } from "@/db/schema";
+import {
+	getSSO26Config,
+	getSuperlativesResults,
+	getDdayResults,
+	getSSO26Stats,
+	getRawNominations,
+	getRawDdayVotes,
+} from "./actions";
 import { SSO26Management } from "./sso26-management";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +20,12 @@ export default async function AdminSSO26Page() {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user) redirect("/");
 
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isSSO26Admin: true, isSuperAdmin: true },
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isSSO26Admin: true, isSuperAdmin: true },
 	});
 
-	if (!user?.isSSO26Admin && !user?.isSuperAdmin) redirect("/");
+	if (!u?.isSSO26Admin && !u?.isSuperAdmin) redirect("/");
 
 	const [config, superlativesResults, ddayResults, stats, nominations, ddayVotes] = await Promise.all([
 		getSSO26Config(),

@@ -1,37 +1,35 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { and, asc, desc, eq, gte, lte, like, not, or } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	user,
+	shopEvent,
+	eventProduct,
+	eventCategory,
+	eventAdmin,
+	order,
+	shopClick,
+	shopPurchase,
+} from "@/db/schema";
 import { cache } from "@/lib/cache";
 
-// Get current session and verify admin access (either shop admin or events admin)
 async function verifyEventsAdminAccess() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) return { authorized: false, message: "Unauthorized" } as const;
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true, isEventsAdmin: true },
 	});
-
-	if (!session?.user) {
-		return { authorized: false, message: "Unauthorized" };
+	if (!u?.isShopAdmin && !u?.isEventsAdmin) {
+		return { authorized: false, message: "Events admin access required" } as const;
 	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true, isEventsAdmin: true },
-	});
-
-	if (!user?.isShopAdmin && !user?.isEventsAdmin) {
-		return { authorized: false, message: "Events admin access required" };
-	}
-
-	return { authorized: true, userId: session.user.id };
+	return { authorized: true as const, userId: session.user.id };
 }
 
-/**
- * Update daily stock settings for a specific EventProduct
- * This allows immediate saving from the daily stock dialog
- */
 export async function updateEventProductDailyStock(
 	eventProductId: string,
 	dailyStockConfig: {
@@ -42,25 +40,20 @@ export async function updateEventProductDailyStock(
 	},
 ) {
 	try {
-		const auth = await verifyEventsAdminAccess();
-		if (!auth.authorized) {
-			return { success: false, message: auth.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Update the EventProduct
-		await prisma.eventProduct.update({
-			where: { id: eventProductId },
-			data: {
+		await db
+			.update(eventProduct)
+			.set({
 				hasDailyStockLimit: dailyStockConfig.hasDailyStockLimit,
 				defaultMaxOrdersPerDay: dailyStockConfig.defaultMaxOrdersPerDay,
-				dailyStockOverrides: dailyStockConfig.dailyStockOverrides as Prisma.JsonValue,
+				dailyStockOverrides: dailyStockConfig.dailyStockOverrides,
 				dailyStockNote: dailyStockConfig.dailyStockNote,
-			},
-		});
+			})
+			.where(eq(eventProduct.id, eventProductId));
 
-		// Clear cache
-		cache.delete("events");
-
+		await cache.delete("events");
 		return { success: true, message: "Daily stock settings updated successfully" };
 	} catch (error) {
 		console.error("Error updating event product daily stock:", error);
@@ -68,21 +61,20 @@ export async function updateEventProductDailyStock(
 	}
 }
 
-// Types for event data
 export type CheckoutFieldType =
-	| "text" // Single line text input
-	| "textarea" // Multi-line text area
-	| "select" // Dropdown selection
-	| "checkbox" // Single checkbox (yes/no)
-	| "date" // Date picker
-	| "time" // Time picker
-	| "number" // Numeric input
-	| "email" // Email with validation
-	| "phone" // Phone number
-	| "radio" // Radio button group
-	| "repeater" // Multiple rows table
-	| "message" // Display-only informational message
-	| "toggle"; // Toggle switch with custom on/off messages
+	| "text"
+	| "textarea"
+	| "select"
+	| "checkbox"
+	| "date"
+	| "time"
+	| "number"
+	| "email"
+	| "phone"
+	| "radio"
+	| "repeater"
+	| "message"
+	| "toggle";
 
 export type RepeaterColumn = {
 	id: string;
@@ -91,24 +83,19 @@ export type RepeaterColumn = {
 	placeholder?: string;
 	options?: string[];
 	width?: "sm" | "md" | "lg";
-	// Number constraints (for type: "number")
 	min?: number;
 	max?: number;
 	step?: number;
-	// Date constraints (for type: "date")
 	minDate?: string;
 	maxDate?: string;
 	disabledDates?: string[];
-	// Date offset constraints (relative to today)
-	minDateOffset?: number; // Days from today (e.g., 1 = tomorrow, -1 = yesterday)
-	maxDateOffset?: number; // Days from today
-	// Time constraints (for type: "time")
+	minDateOffset?: number;
+	maxDateOffset?: number;
 	minTime?: string;
 	maxTime?: string;
 	blockedTimes?: string[];
 };
 
-// Conditional visibility for fields
 export type FieldCondition = {
 	fieldId: string;
 	value: string | string[];
@@ -120,39 +107,30 @@ export type CheckoutField = {
 	type: CheckoutFieldType;
 	required: boolean;
 	placeholder?: string;
-	options?: string[]; // For select, radio types
+	options?: string[];
 	maxLength?: number;
-	// Number field constraints
 	min?: number;
 	max?: number;
 	step?: number;
-	// Date field constraints
-	minDate?: string; // ISO date string for minimum selectable date
-	maxDate?: string; // ISO date string for maximum selectable date
-	disabledDates?: string[]; // Array of ISO date strings to disable
-	// Date offset constraints (relative to today)
-	minDateOffset?: number; // Days from today (e.g., 1 = tomorrow)
-	maxDateOffset?: number; // Days from today
-	// Time field constraints
-	minTime?: string; // Time string for earliest selectable time (HH:MM format)
-	maxTime?: string; // Time string for latest selectable time (HH:MM format)
-	blockedTimes?: string[]; // Array of time strings to disable (HH:MM format)
-	// Conditional display
+	minDate?: string;
+	maxDate?: string;
+	disabledDates?: string[];
+	minDateOffset?: number;
+	maxDateOffset?: number;
+	minTime?: string;
+	maxTime?: string;
+	blockedTimes?: string[];
 	showWhen?: FieldCondition;
-	// Message field content
 	messageContent?: string;
-	// Description for any field type
-	description?: string; // Optional description/help text shown below the field
-	// Repeater-specific fields
+	description?: string;
 	columns?: RepeaterColumn[];
 	minRows?: number;
 	maxRows?: number;
 	defaultRows?: number;
-	rowLabel?: string; // Custom row label prefix (e.g., "Attempt" for "Attempt #1")
-	autoSortByDateTime?: boolean; // Auto-sort rows by date and time columns
-	// Toggle field properties
-	toggleOffMessage?: string; // Message shown when toggle is off
-	toggleOnMessage?: string; // Message shown when toggle is on
+	rowLabel?: string;
+	autoSortByDateTime?: boolean;
+	toggleOffMessage?: string;
+	toggleOnMessage?: string;
 };
 
 export type CheckoutConfig = {
@@ -195,9 +173,9 @@ export type EventCategoryInput = {
 };
 
 export type BlockedDeliverySlot = {
-	date: string; // ISO date string (YYYY-MM-DD)
-	timeSlot?: string; // Optional time slot (e.g., "Morning", "Afternoon", "9:00 AM")
-	reason?: string; // Optional reason (e.g., "Fully booked", "Holiday")
+	date: string;
+	timeSlot?: string;
+	reason?: string;
 };
 
 export type EventFormData = {
@@ -214,64 +192,56 @@ export type EventFormData = {
 	endDate: string;
 	componentPath: string;
 	themeConfig: ThemeConfig | null;
-	checkoutConfig: string | null; // JSON-serialized CheckoutConfig (pre-serialized on client to avoid RSC Flight issues with deeply nested objects)
+	checkoutConfig: string | null;
 	products: EventProductInput[];
 	categories: EventCategoryInput[];
-	// Delivery control
-	minDeliveryDate?: string; // ISO date string
-	maxDeliveryDate?: string; // ISO date string
-	blockedDeliverySlots?: BlockedDeliverySlot[]; // Array of blocked slots
+	minDeliveryDate?: string;
+	maxDeliveryDate?: string;
+	blockedDeliverySlots?: BlockedDeliverySlot[];
 };
 
-// Get all events with their products and categories
 export async function getEvents() {
 	try {
-		const events = await prisma.shopEvent.findMany({
-			include: {
+		const events = await db.query.shopEvent.findMany({
+			with: {
 				products: {
-					include: {
-						product: true,
-						package: true,
-					},
-					orderBy: { sortOrder: "asc" },
+					with: { product: true, package: true },
+					orderBy: [asc(eventProduct.sortOrder)],
 				},
-				categories: {
-					orderBy: { displayOrder: "asc" },
-				},
-				_count: {
-					select: { orders: true },
-				},
+				categories: { orderBy: [asc(eventCategory.displayOrder)] },
+				orders: { columns: { id: true } },
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [desc(shopEvent.createdAt)],
 		});
 
-		return { success: true, events };
+		const decorated = events.map((e) => ({
+			...e,
+			_count: { orders: e.orders.length },
+		}));
+
+		return { success: true, events: decorated };
 	} catch (error) {
 		console.error("Get events error:", error);
 		return { success: false, events: [], message: "Failed to fetch events" };
 	}
 }
 
-// Get active events for shop display
 export async function getActiveEvents() {
 	try {
 		const now = new Date();
-		const events = await prisma.shopEvent.findMany({
-			where: {
-				isActive: true,
-				startDate: { lte: now },
-				endDate: { gte: now },
-			},
-			include: {
+		const events = await db.query.shopEvent.findMany({
+			where: and(
+				eq(shopEvent.isActive, true),
+				lte(shopEvent.startDate, now),
+				gte(shopEvent.endDate, now),
+			),
+			with: {
 				products: {
-					include: {
-						product: true,
-						package: true,
-					},
-					orderBy: { sortOrder: "asc" },
+					with: { product: true, package: true },
+					orderBy: [asc(eventProduct.sortOrder)],
 				},
 			},
-			orderBy: [{ isPriority: "desc" }, { tabOrder: "asc" }],
+			orderBy: [desc(shopEvent.isPriority), asc(shopEvent.tabOrder)],
 		});
 
 		return { success: true, events };
@@ -281,22 +251,17 @@ export async function getActiveEvents() {
 	}
 }
 
-// Get single event by slug
 export async function getEventBySlug(slug: string) {
 	try {
-		const event = await prisma.shopEvent.findUnique({
-			where: { slug },
-			include: {
+		const event = await db.query.shopEvent.findFirst({
+			where: eq(shopEvent.slug, slug),
+			with: {
 				products: {
-					include: {
-						product: true,
-						package: true,
-					},
-					orderBy: { sortOrder: "asc" },
+					with: { product: true, package: true },
+					orderBy: [asc(eventProduct.sortOrder)],
 				},
 			},
 		});
-
 		return { success: true, event };
 	} catch (error) {
 		console.error("Get event error:", error);
@@ -304,31 +269,22 @@ export async function getEventBySlug(slug: string) {
 	}
 }
 
-// Create a new event
 export async function createEvent(data: EventFormData) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Validate slug is unique
-		const existingEvent = await prisma.shopEvent.findUnique({
-			where: { slug: data.slug },
+		const existing = await db.query.shopEvent.findFirst({
+			where: eq(shopEvent.slug, data.slug),
 		});
+		if (existing) return { success: false, message: "An event with this slug already exists" };
 
-		if (existingEvent) {
-			return { success: false, message: "An event with this slug already exists" };
-		}
-
-		// Parse pre-serialized checkoutConfig (serialized on client to avoid RSC Flight issues)
 		const parsedCheckoutConfig = data.checkoutConfig ? JSON.parse(data.checkoutConfig) : null;
 
-		// Use transaction to create event with categories, then products
-		const event = await prisma.$transaction(async (tx) => {
-			// Create event with categories first
-			const newEvent = await tx.shopEvent.create({
-				data: {
+		const createdId = await db.transaction(async (tx) => {
+			const inserted = await tx
+				.insert(shopEvent)
+				.values({
 					name: data.name,
 					slug: data.slug,
 					description: data.description,
@@ -341,105 +297,86 @@ export async function createEvent(data: EventFormData) {
 					startDate: new Date(data.startDate + ":00+08:00"),
 					endDate: new Date(data.endDate + ":00+08:00"),
 					componentPath: data.componentPath || null,
-					themeConfig: data.themeConfig
-						? (data.themeConfig as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
-					checkoutConfig: parsedCheckoutConfig
-						? (parsedCheckoutConfig as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
+					themeConfig: data.themeConfig ?? null,
+					checkoutConfig: parsedCheckoutConfig ?? null,
 					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
 					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,
-					blockedDeliverySlots: data.blockedDeliverySlots
-						? (data.blockedDeliverySlots as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
-					categories: {
-						create: data.categories.map((c) => ({
+					blockedDeliverySlots: data.blockedDeliverySlots ?? null,
+				})
+				.returning();
+			const eventId = inserted[0].id;
+
+			const categoryNameToId = new Map<string, string>();
+			if (data.categories.length > 0) {
+				const catRows = await tx
+					.insert(eventCategory)
+					.values(
+						data.categories.map((c) => ({
+							eventId,
 							name: c.name,
 							displayOrder: c.displayOrder,
 							color: c.color || null,
 						})),
-					},
-				},
-				include: {
-					categories: true,
-				},
-			});
+					)
+					.returning();
+				catRows.forEach((cat) => categoryNameToId.set(cat.name, cat.id));
+			}
 
-			// Build category name to ID mapping for products
-			const categoryNameToId = new Map<string, string>();
-			newEvent.categories.forEach((cat) => {
-				categoryNameToId.set(cat.name, cat.id);
-			});
-
-			// Create products with category references
 			if (data.products.length > 0) {
-				await tx.eventProduct.createMany({
-					data: data.products.map((p) => {
-						// Resolve categoryId - could be a name (for new categories)
+				await tx.insert(eventProduct).values(
+					data.products.map((p) => {
 						let resolvedCategoryId: string | null = null;
 						if (p.categoryId) {
 							resolvedCategoryId = categoryNameToId.get(p.categoryId) || null;
 						}
 						return {
-							eventId: newEvent.id,
+							eventId,
 							productId: p.productId || null,
 							packageId: p.packageId || null,
 							sortOrder: p.sortOrder,
-							eventPrice: p.eventPrice || null,
+							eventPrice: p.eventPrice ?? null,
 							productCode: p.productCode || null,
 							categoryId: resolvedCategoryId,
 							hasDailyStockLimit: p.hasDailyStockLimit || false,
-							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay || null,
+							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay ?? null,
 							dailyStockOverrides: p.dailyStockOverrides || null,
 						};
 					}),
-				});
+				);
 			}
 
-			return newEvent;
+			return eventId;
 		});
 
-		// Invalidate cache
-		cache.deletePattern("events:");
-
-		// Return minimal data to avoid RSC serialization issues with large JSON payloads
-		return { success: true, eventId: event.id };
+		await cache.deletePattern("events:");
+		return { success: true, eventId: createdId };
 	} catch (error) {
 		console.error("Create event error:", error);
 		return { success: false, message: "Failed to create event" };
 	}
 }
 
-// Update an existing event
 export async function updateEvent(id: string, data: EventFormData) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Check if slug is being changed and if new slug is unique
-		const existingEvent = await prisma.shopEvent.findUnique({
-			where: { slug: data.slug },
+		const existing = await db.query.shopEvent.findFirst({
+			where: eq(shopEvent.slug, data.slug),
 		});
-
-		if (existingEvent && existingEvent.id !== id) {
+		if (existing && existing.id !== id) {
 			return { success: false, message: "An event with this slug already exists" };
 		}
 
-		// Parse pre-serialized checkoutConfig (serialized on client to avoid RSC Flight issues)
 		const parsedCheckoutConfig = data.checkoutConfig ? JSON.parse(data.checkoutConfig) : null;
 
-		// Use transaction to update event, categories, and products
-		const event = await prisma.$transaction(async (tx) => {
-			// Delete existing products and categories (will be recreated)
-			await tx.eventProduct.deleteMany({ where: { eventId: id } });
-			await tx.eventCategory.deleteMany({ where: { eventId: id } });
+		await db.transaction(async (tx) => {
+			await tx.delete(eventProduct).where(eq(eventProduct.eventId, id));
+			await tx.delete(eventCategory).where(eq(eventCategory.eventId, id));
 
-			// Update event and create categories
-			const updatedEvent = await tx.shopEvent.update({
-				where: { id },
-				data: {
+			await tx
+				.update(shopEvent)
+				.set({
 					name: data.name,
 					slug: data.slug,
 					description: data.description,
@@ -452,52 +389,41 @@ export async function updateEvent(id: string, data: EventFormData) {
 					startDate: new Date(data.startDate + ":00+08:00"),
 					endDate: new Date(data.endDate + ":00+08:00"),
 					componentPath: data.componentPath || null,
-					themeConfig: data.themeConfig
-						? (data.themeConfig as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
-					checkoutConfig: parsedCheckoutConfig
-						? (parsedCheckoutConfig as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
+					themeConfig: data.themeConfig ?? null,
+					checkoutConfig: parsedCheckoutConfig ?? null,
 					minDeliveryDate: data.minDeliveryDate ? new Date(data.minDeliveryDate) : null,
 					maxDeliveryDate: data.maxDeliveryDate ? new Date(data.maxDeliveryDate) : null,
-					blockedDeliverySlots: data.blockedDeliverySlots
-						? (data.blockedDeliverySlots as Prisma.InputJsonValue)
-						: Prisma.JsonNull,
-					categories: {
-						create: data.categories.map((c) => ({
+					blockedDeliverySlots: data.blockedDeliverySlots ?? null,
+				})
+				.where(eq(shopEvent.id, id));
+
+			const categoryNameToId = new Map<string, string>();
+			if (data.categories.length > 0) {
+				const catRows = await tx
+					.insert(eventCategory)
+					.values(
+						data.categories.map((c) => ({
+							eventId: id,
 							name: c.name,
 							displayOrder: c.displayOrder,
 							color: c.color || null,
 						})),
-					},
-				},
-				include: {
-					categories: true,
-				},
-			});
+					)
+					.returning();
+				catRows.forEach((cat) => categoryNameToId.set(cat.name, cat.id));
 
-			// Build category name to ID mapping for products
-			// Map both by name and by old ID (in case category already existed)
-			const categoryNameToId = new Map<string, string>();
-			updatedEvent.categories.forEach((cat) => {
-				categoryNameToId.set(cat.name, cat.id);
-			});
+				data.categories.forEach((inputCat, index) => {
+					if (inputCat.id && catRows[index]) {
+						categoryNameToId.set(inputCat.id, catRows[index].id);
+					}
+				});
+			}
 
-			// Also map old category IDs if they were provided in the input
-			data.categories.forEach((inputCat, index) => {
-				if (inputCat.id && updatedEvent.categories[index]) {
-					categoryNameToId.set(inputCat.id, updatedEvent.categories[index].id);
-				}
-			});
-
-			// Create products with category references
 			if (data.products.length > 0) {
-				await tx.eventProduct.createMany({
-					data: data.products.map((p) => {
-						// Resolve categoryId - could be a name, an old ID, or a new ID
+				await tx.insert(eventProduct).values(
+					data.products.map((p) => {
 						let resolvedCategoryId: string | null = null;
 						if (p.categoryId) {
-							// Try to find in our mapping (handles both name and old ID)
 							resolvedCategoryId = categoryNameToId.get(p.categoryId) || null;
 						}
 						return {
@@ -505,44 +431,33 @@ export async function updateEvent(id: string, data: EventFormData) {
 							productId: p.productId || null,
 							packageId: p.packageId || null,
 							sortOrder: p.sortOrder,
-							eventPrice: p.eventPrice || null,
+							eventPrice: p.eventPrice ?? null,
 							productCode: p.productCode || null,
 							categoryId: resolvedCategoryId,
 							hasDailyStockLimit: p.hasDailyStockLimit || false,
-							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay || null,
+							defaultMaxOrdersPerDay: p.defaultMaxOrdersPerDay ?? null,
 							dailyStockOverrides: p.dailyStockOverrides || null,
 						};
 					}),
-				});
+				);
 			}
-
-			return updatedEvent;
 		});
 
-		// Invalidate cache
-		cache.deletePattern("events:");
-
-		// Return minimal data to avoid RSC serialization issues with large JSON payloads
-		return { success: true, eventId: event.id };
+		await cache.deletePattern("events:");
+		return { success: true, eventId: id };
 	} catch (error) {
 		console.error("Update event error:", error);
 		return { success: false, message: "Failed to update event" };
 	}
 }
 
-// Delete an event
 export async function deleteEvent(id: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		await prisma.shopEvent.delete({ where: { id } });
-
-		// Invalidate cache
-		cache.deletePattern("events:");
-
+		await db.delete(shopEvent).where(eq(shopEvent.id, id));
+		await cache.deletePattern("events:");
 		return { success: true };
 	} catch (error) {
 		console.error("Delete event error:", error);
@@ -550,7 +465,6 @@ export async function deleteEvent(id: string) {
 	}
 }
 
-// Get analytics data for events with different time ranges
 export type AnalyticsTimeRange = "24h" | "7d" | "30d" | "all";
 
 export async function getEventAnalytics(
@@ -560,12 +474,9 @@ export async function getEventAnalytics(
 	eventEndDate?: Date,
 ) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Calculate date range
 		let startDate: Date;
 		const endDate = new Date();
 
@@ -583,74 +494,57 @@ export async function getEventAnalytics(
 				startDate.setDate(startDate.getDate() - 30);
 				break;
 			case "all":
-				// Use event start date if provided, otherwise 1 year ago
 				startDate = eventStartDate || new Date();
-				if (!eventStartDate) {
-					startDate.setFullYear(startDate.getFullYear() - 1);
-				}
+				if (!eventStartDate) startDate.setFullYear(startDate.getFullYear() - 1);
 				break;
 		}
 
-		// Get raw click data within the range
-		const rawClicks = await prisma.shopClick.findMany({
-			where: {
-				clickedAt: { gte: startDate, lte: endDate },
-				eventId,
-			},
-			select: {
-				clickedAt: true,
-			},
-			orderBy: { clickedAt: "asc" },
+		const rawClicks = await db.query.shopClick.findMany({
+			where: and(
+				eq(shopClick.eventId, eventId),
+				gte(shopClick.clickedAt, startDate),
+				lte(shopClick.clickedAt, endDate),
+			),
+			columns: { clickedAt: true },
+			orderBy: [asc(shopClick.clickedAt)],
 		});
 
-		// Get raw purchase data within the range
-		const rawPurchases = await prisma.shopPurchase.findMany({
-			where: {
-				purchasedAt: { gte: startDate, lte: endDate },
-				eventId,
-			},
-			select: {
-				purchasedAt: true,
-				totalAmount: true,
-				itemCount: true,
-			},
-			orderBy: { purchasedAt: "asc" },
+		const rawPurchases = await db.query.shopPurchase.findMany({
+			where: and(
+				eq(shopPurchase.eventId, eventId),
+				gte(shopPurchase.purchasedAt, startDate),
+				lte(shopPurchase.purchasedAt, endDate),
+			),
+			columns: { purchasedAt: true, totalAmount: true, itemCount: true },
+			orderBy: [asc(shopPurchase.purchasedAt)],
 		});
 
-		// Group data by appropriate interval (hourly for 24h, daily for others)
 		const isHourly = timeRange === "24h";
 		const clicksByPeriod: Record<string, number> = {};
-		const purchasesByPeriod: Record<string, { count: number; revenue: number; items: number }> = {};
+		const purchasesByPeriod: Record<
+			string,
+			{ count: number; revenue: number; items: number }
+		> = {};
 
-		// Initialize periods
 		const periods: string[] = [];
 		const current = new Date(startDate);
 		while (current <= endDate) {
-			const key = isHourly
-				? current.toISOString().slice(0, 13) // YYYY-MM-DDTHH
-				: current.toISOString().slice(0, 10); // YYYY-MM-DD
+			const key = isHourly ? current.toISOString().slice(0, 13) : current.toISOString().slice(0, 10);
 			periods.push(key);
 			clicksByPeriod[key] = 0;
 			purchasesByPeriod[key] = { count: 0, revenue: 0, items: 0 };
 
-			if (isHourly) {
-				current.setHours(current.getHours() + 1);
-			} else {
-				current.setDate(current.getDate() + 1);
-			}
+			if (isHourly) current.setHours(current.getHours() + 1);
+			else current.setDate(current.getDate() + 1);
 		}
 
-		// Aggregate click data
 		for (const click of rawClicks) {
 			const key = isHourly
 				? click.clickedAt.toISOString().slice(0, 13)
 				: click.clickedAt.toISOString().slice(0, 10);
-			if (clicksByPeriod[key] !== undefined) {
-				clicksByPeriod[key]++;
-			}
+			if (clicksByPeriod[key] !== undefined) clicksByPeriod[key]++;
 		}
 
-		// Aggregate purchase data
 		for (const purchase of rawPurchases) {
 			const key = isHourly
 				? purchase.purchasedAt.toISOString().slice(0, 13)
@@ -662,7 +556,6 @@ export async function getEventAnalytics(
 			}
 		}
 
-		// Convert to arrays for charting
 		const clicksData = periods.map((period) => ({
 			period,
 			label: isHourly
@@ -697,13 +590,10 @@ export async function getEventAnalytics(
 			items: purchasesByPeriod[period]?.items || 0,
 		}));
 
-		// Calculate totals
 		const totalClicks = rawClicks.length;
 		const totalOrders = rawPurchases.length;
 		const totalRevenue = rawPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
 		const totalItems = rawPurchases.reduce((sum, p) => sum + p.itemCount, 0);
-
-		// Calculate conversion rate (purchases / clicks * 100)
 		const conversionRate =
 			totalClicks > 0 ? ((totalOrders / totalClicks) * 100).toFixed(2) : "0.00";
 
@@ -730,44 +620,35 @@ export async function getEventAnalytics(
 	}
 }
 
-// Get sales data grouped by item and day for Excel export
 export async function getEventSalesByDay(eventId: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		const orders = await prisma.order.findMany({
-			where: {
-				eventId,
-				status: { not: "cancelled" },
-			},
-			select: {
-				createdAt: true,
+		const orders = await db.query.order.findMany({
+			where: and(eq(order.eventId, eventId), not(eq(order.status, "cancelled"))),
+			columns: { createdAt: true },
+			with: {
 				orderItems: {
-					select: {
-						quantity: true,
-						price: true,
-						size: true,
-						product: { select: { name: true } },
-						package: { select: { name: true } },
+					columns: { quantity: true, price: true, size: true },
+					with: {
+						product: { columns: { name: true } },
+						package: { columns: { name: true } },
 					},
 				},
 			},
-			orderBy: { createdAt: "asc" },
+			orderBy: [asc(order.createdAt)],
 		});
 
-		// Pivot: itemKey -> date -> { qty, revenue }
 		const itemsByDate: Record<string, Record<string, { qty: number; revenue: number }>> = {};
 		const allDates = new Set<string>();
 		const itemMeta: Record<string, { name: string; size: string }> = {};
 
-		for (const order of orders) {
-			const dateKey = order.createdAt.toISOString().slice(0, 10);
+		for (const o of orders) {
+			const dateKey = o.createdAt.toISOString().slice(0, 10);
 			allDates.add(dateKey);
 
-			for (const item of order.orderItems) {
+			for (const item of o.orderItems) {
 				const itemName = item.product?.name ?? item.package?.name ?? "Unknown";
 				const size = item.size ?? "-";
 				const itemKey = `${itemName}|||${size}`;
@@ -785,14 +666,12 @@ export async function getEventSalesByDay(eventId: string) {
 		}
 
 		const sortedDates = Array.from(allDates).sort();
-
 		const rows = Object.entries(itemsByDate).map(([key, dateData]) => {
 			const meta = itemMeta[key];
 			const dayQty: Record<string, number> = {};
 			const dayRevenue: Record<string, number> = {};
 			let totalQty = 0;
 			let totalRevenue = 0;
-
 			for (const date of sortedDates) {
 				const d = dateData[date] ?? { qty: 0, revenue: 0 };
 				dayQty[date] = d.qty;
@@ -800,7 +679,6 @@ export async function getEventSalesByDay(eventId: string) {
 				totalQty += d.qty;
 				totalRevenue += d.revenue;
 			}
-
 			return { name: meta.name, size: meta.size, dayQty, dayRevenue, totalQty, totalRevenue };
 		});
 
@@ -813,42 +691,24 @@ export async function getEventSalesByDay(eventId: string) {
 	}
 }
 
-// ============================================
-// Event Admin Management
-// ============================================
-
-// Get all users (for adding event admins)
 export async function searchUsers(query: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Only shop admins can manage event admins
-		const currentUser = await prisma.user.findUnique({
-			where: { id: authResult.userId },
-			select: { isShopAdmin: true },
+		const currentUser = await db.query.user.findFirst({
+			where: eq(user.id, a.userId),
+			columns: { isShopAdmin: true },
 		});
-
 		if (!currentUser?.isShopAdmin) {
 			return { success: false, message: "Only shop admins can manage event admins" };
 		}
 
-		const users = await prisma.user.findMany({
-			where: {
-				OR: [
-					{ email: { contains: query, mode: "insensitive" } },
-					{ name: { contains: query, mode: "insensitive" } },
-				],
-			},
-			select: {
-				id: true,
-				email: true,
-				name: true,
-				image: true,
-			},
-			take: 10,
+		const q = `%${query.toLowerCase()}%`;
+		const users = await db.query.user.findMany({
+			where: or(like(user.email, q), like(user.name, q)),
+			columns: { id: true, email: true, name: true, image: true },
+			limit: 10,
 		});
 
 		return { success: true, users };
@@ -858,25 +718,15 @@ export async function searchUsers(query: string) {
 	}
 }
 
-// Get event admins for an event
 export async function getEventAdmins(eventId: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		const admins = await prisma.eventAdmin.findMany({
-			where: { eventId },
-			include: {
-				user: {
-					select: {
-						id: true,
-						email: true,
-						name: true,
-						image: true,
-					},
-				},
+		const admins = await db.query.eventAdmin.findMany({
+			where: eq(eventAdmin.eventId, eventId),
+			with: {
+				user: { columns: { id: true, email: true, name: true, image: true } },
 			},
 		});
 
@@ -887,39 +737,25 @@ export async function getEventAdmins(eventId: string) {
 	}
 }
 
-// Add event admin
 export async function addEventAdmin(eventId: string, userId: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Only shop admins can add event admins
-		const currentUser = await prisma.user.findUnique({
-			where: { id: authResult.userId },
-			select: { isShopAdmin: true },
+		const currentUser = await db.query.user.findFirst({
+			where: eq(user.id, a.userId),
+			columns: { isShopAdmin: true },
 		});
-
 		if (!currentUser?.isShopAdmin) {
 			return { success: false, message: "Only shop admins can manage event admins" };
 		}
 
-		// Check if already an admin
-		const existing = await prisma.eventAdmin.findUnique({
-			where: {
-				eventId_userId: { eventId, userId },
-			},
+		const existing = await db.query.eventAdmin.findFirst({
+			where: and(eq(eventAdmin.eventId, eventId), eq(eventAdmin.userId, userId)),
 		});
+		if (existing) return { success: false, message: "User is already an admin for this event" };
 
-		if (existing) {
-			return { success: false, message: "User is already an admin for this event" };
-		}
-
-		await prisma.eventAdmin.create({
-			data: { eventId, userId },
-		});
-
+		await db.insert(eventAdmin).values({ eventId, userId });
 		return { success: true };
 	} catch (error) {
 		console.error("Add event admin error:", error);
@@ -927,30 +763,22 @@ export async function addEventAdmin(eventId: string, userId: string) {
 	}
 }
 
-// Remove event admin
 export async function removeEventAdmin(eventId: string, userId: string) {
 	try {
-		const authResult = await verifyEventsAdminAccess();
-		if (!authResult.authorized) {
-			return { success: false, message: authResult.message };
-		}
+		const a = await verifyEventsAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Only shop admins can remove event admins
-		const currentUser = await prisma.user.findUnique({
-			where: { id: authResult.userId },
-			select: { isShopAdmin: true },
+		const currentUser = await db.query.user.findFirst({
+			where: eq(user.id, a.userId),
+			columns: { isShopAdmin: true },
 		});
-
 		if (!currentUser?.isShopAdmin) {
 			return { success: false, message: "Only shop admins can manage event admins" };
 		}
 
-		await prisma.eventAdmin.delete({
-			where: {
-				eventId_userId: { eventId, userId },
-			},
-		});
-
+		await db
+			.delete(eventAdmin)
+			.where(and(eq(eventAdmin.eventId, eventId), eq(eventAdmin.userId, userId)));
 		return { success: true };
 	} catch (error) {
 		console.error("Remove event admin error:", error);
@@ -958,52 +786,37 @@ export async function removeEventAdmin(eventId: string, userId: string) {
 	}
 }
 
-// Get events that the current user can admin (for non-shop admins)
 export async function getMyEvents() {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
+		const session = await auth.api.getSession({ headers: await headers() });
+		if (!session?.user) return { success: false, message: "Unauthorized" };
+
+		const u = await db.query.user.findFirst({
+			where: eq(user.id, session.user.id),
+			columns: { isShopAdmin: true, isEventsAdmin: true },
+		});
+		if (!u) return { success: false, message: "User not found" };
+
+		const eventAdmins = await db.query.eventAdmin.findMany({
+			where: eq(eventAdmin.userId, session.user.id),
+			with: { event: true },
 		});
 
-		if (!session?.user) {
-			return { success: false, message: "Unauthorized" };
-		}
-
-		const user = await prisma.user.findUnique({
-			where: { id: session.user.id },
-			select: {
-				isShopAdmin: true,
-				isEventsAdmin: true,
-				eventAdmins: {
-					include: {
-						event: true,
-					},
-				},
-			},
-		});
-
-		if (!user) {
-			return { success: false, message: "User not found" };
-		}
-
-		// Shop admins can see all events
-		if (user.isShopAdmin) {
-			const events = await prisma.shopEvent.findMany({
-				orderBy: { createdAt: "desc" },
+		if (u.isShopAdmin) {
+			const events = await db.query.shopEvent.findMany({
+				orderBy: [desc(shopEvent.createdAt)],
 			});
 			return { success: true, events, isShopAdmin: true };
 		}
 
-		// Event admins or event-specific admins can see their assigned events
-		if (user.isEventsAdmin) {
-			const events = await prisma.shopEvent.findMany({
-				orderBy: { createdAt: "desc" },
+		if (u.isEventsAdmin) {
+			const events = await db.query.shopEvent.findMany({
+				orderBy: [desc(shopEvent.createdAt)],
 			});
 			return { success: true, events, isShopAdmin: false };
 		}
 
-		// Get events this user is specifically assigned to
-		const events = user.eventAdmins.map((ea) => ea.event);
+		const events = eventAdmins.map((ea) => ea.event);
 		return { success: true, events, isShopAdmin: false };
 	} catch (error) {
 		console.error("Get my events error:", error);

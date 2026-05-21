@@ -1,33 +1,31 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { cache, cacheKeys } from "@/lib/cache";
+import { desc, eq, asc } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	user,
+	packageTable,
+	packageItem,
+	packagePool,
+	packagePoolOption,
+	product,
+} from "@/db/schema";
+import { cache } from "@/lib/cache";
 
-// Get current session and verify admin access
 async function verifyAdminAccess() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) return { authorized: false as const, message: "Unauthorized" };
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true },
 	});
-
-	if (!session?.user) {
-		return { authorized: false, message: "Unauthorized" };
-	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isShopAdmin: true },
-	});
-
-	if (!user?.isShopAdmin) {
-		return { authorized: false, message: "Admin access required" };
-	}
-
-	return { authorized: true, userId: session.user.id };
+	if (!u?.isShopAdmin) return { authorized: false as const, message: "Admin access required" };
+	return { authorized: true as const, userId: session.user.id };
 }
 
-// Types for package data
 export type PackageItemInput = {
 	productId: string;
 	quantity: number;
@@ -39,10 +37,7 @@ export type PackagePoolInput = {
 	productIds: string[];
 };
 
-export type CropPosition = {
-	x: number;
-	y: number;
-};
+export type CropPosition = { x: number; y: number };
 
 export type PackageFormData = {
 	name: string;
@@ -57,29 +52,15 @@ export type PackageFormData = {
 	pools: PackagePoolInput[];
 };
 
-// Get all packages with their items and pools
 export async function getPackages() {
 	try {
-		const packages = await prisma.package.findMany({
-			include: {
-				items: {
-					include: {
-						product: true,
-					},
-				},
-				pools: {
-					include: {
-						options: {
-							include: {
-								product: true,
-							},
-						},
-					},
-				},
+		const packages = await db.query.packageTable.findMany({
+			with: {
+				items: { with: { product: true } },
+				pools: { with: { options: { with: { product: true } } } },
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [desc(packageTable.createdAt)],
 		});
-
 		return { success: true, packages };
 	} catch (error) {
 		console.error("Get packages error:", error);
@@ -87,14 +68,12 @@ export async function getPackages() {
 	}
 }
 
-// Get all available products for package creation
 export async function getAvailableProducts() {
 	try {
-		const products = await prisma.product.findMany({
-			where: { isAvailable: true },
-			orderBy: { name: "asc" },
+		const products = await db.query.product.findMany({
+			where: eq(product.isAvailable, true),
+			orderBy: [asc(product.name)],
 		});
-
 		return { success: true, products };
 	} catch (error) {
 		console.error("Get products error:", error);
@@ -102,16 +81,14 @@ export async function getAvailableProducts() {
 	}
 }
 
-// Create a new package
 export async function createPackage(data: PackageFormData) {
 	try {
-		const auth = await verifyAdminAccess();
-		if (!auth.authorized) {
-			return { success: false, message: auth.message };
-		}
+		const a = await verifyAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		const pkg = await prisma.package.create({
-			data: {
+		const inserted = await db
+			.insert(packageTable)
+			.values({
 				name: data.name,
 				description: data.description,
 				price: data.price,
@@ -120,51 +97,59 @@ export async function createPackage(data: PackageFormData) {
 				imageCropPositions: data.imageCropPositions || {},
 				isAvailable: data.isAvailable,
 				specialNote: data.specialNote || null,
-				items: {
-					create: data.items.map((item) => ({
-						productId: item.productId,
-						quantity: item.quantity,
-					})),
-				},
-				pools: {
-					create: data.pools.map((pool) => ({
-						name: pool.name,
-						selectCount: pool.selectCount,
-						options: {
-							create: pool.productIds.map((productId) => ({
-								productId,
-							})),
-						},
-					})),
-				},
-			},
-		});
+			})
+			.returning();
+		const pkgId = inserted[0].id;
 
-		// Invalidate cache
-		cache.deletePattern("packages:");
+		if (data.items.length > 0) {
+			await db.insert(packageItem).values(
+				data.items.map((item) => ({
+					packageId: pkgId,
+					productId: item.productId,
+					quantity: item.quantity,
+				})),
+			);
+		}
 
-		return { success: true, package: pkg };
+		for (const pool of data.pools) {
+			const poolRows = await db
+				.insert(packagePool)
+				.values({
+					packageId: pkgId,
+					name: pool.name,
+					selectCount: pool.selectCount,
+				})
+				.returning();
+			const poolId = poolRows[0].id;
+			if (pool.productIds.length > 0) {
+				await db.insert(packagePoolOption).values(
+					pool.productIds.map((productId) => ({
+						poolId,
+						productId,
+					})),
+				);
+			}
+		}
+
+		await cache.deletePattern("packages:");
+		return { success: true, package: inserted[0] };
 	} catch (error) {
 		console.error("Create package error:", error);
 		return { success: false, message: "Failed to create package" };
 	}
 }
 
-// Update an existing package
 export async function updatePackage(id: string, data: PackageFormData) {
 	try {
-		const auth = await verifyAdminAccess();
-		if (!auth.authorized) {
-			return { success: false, message: auth.message };
-		}
+		const a = await verifyAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
 
-		// Delete existing items and pools (will be recreated)
-		await prisma.packageItem.deleteMany({ where: { packageId: id } });
-		await prisma.packagePool.deleteMany({ where: { packageId: id } });
+		await db.delete(packageItem).where(eq(packageItem.packageId, id));
+		await db.delete(packagePool).where(eq(packagePool.packageId, id));
 
-		const pkg = await prisma.package.update({
-			where: { id },
-			data: {
+		const updated = await db
+			.update(packageTable)
+			.set({
 				name: data.name,
 				description: data.description,
 				price: data.price,
@@ -173,49 +158,47 @@ export async function updatePackage(id: string, data: PackageFormData) {
 				imageCropPositions: data.imageCropPositions || {},
 				isAvailable: data.isAvailable,
 				specialNote: data.specialNote || null,
-				items: {
-					create: data.items.map((item) => ({
-						productId: item.productId,
-						quantity: item.quantity,
-					})),
-				},
-				pools: {
-					create: data.pools.map((pool) => ({
-						name: pool.name,
-						selectCount: pool.selectCount,
-						options: {
-							create: pool.productIds.map((productId) => ({
-								productId,
-							})),
-						},
-					})),
-				},
-			},
-		});
+			})
+			.where(eq(packageTable.id, id))
+			.returning();
 
-		// Invalidate cache
-		cache.deletePattern("packages:");
+		if (data.items.length > 0) {
+			await db.insert(packageItem).values(
+				data.items.map((item) => ({
+					packageId: id,
+					productId: item.productId,
+					quantity: item.quantity,
+				})),
+			);
+		}
 
-		return { success: true, package: pkg };
+		for (const pool of data.pools) {
+			const poolRows = await db
+				.insert(packagePool)
+				.values({ packageId: id, name: pool.name, selectCount: pool.selectCount })
+				.returning();
+			const poolId = poolRows[0].id;
+			if (pool.productIds.length > 0) {
+				await db.insert(packagePoolOption).values(
+					pool.productIds.map((productId) => ({ poolId, productId })),
+				);
+			}
+		}
+
+		await cache.deletePattern("packages:");
+		return { success: true, package: updated[0] };
 	} catch (error) {
 		console.error("Update package error:", error);
 		return { success: false, message: "Failed to update package" };
 	}
 }
 
-// Delete a package
 export async function deletePackage(id: string) {
 	try {
-		const auth = await verifyAdminAccess();
-		if (!auth.authorized) {
-			return { success: false, message: auth.message };
-		}
-
-		await prisma.package.delete({ where: { id } });
-
-		// Invalidate cache
-		cache.deletePattern("packages:");
-
+		const a = await verifyAdminAccess();
+		if (!a.authorized) return { success: false, message: a.message };
+		await db.delete(packageTable).where(eq(packageTable.id, id));
+		await cache.deletePattern("packages:");
 		return { success: true };
 	} catch (error) {
 		console.error("Delete package error:", error);

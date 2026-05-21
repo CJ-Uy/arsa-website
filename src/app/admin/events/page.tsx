@@ -1,92 +1,78 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { asc, desc, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	user,
+	eventAdmin,
+	shopEvent,
+	eventProduct,
+	eventCategory,
+	product,
+	packageTable,
+} from "@/db/schema";
 import { EventsManagement } from "./events-management";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) redirect("/shop");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isShopAdmin: true, isEventsAdmin: true },
+	});
+	const eventAdmins = await db.query.eventAdmin.findMany({
+		where: eq(eventAdmin.userId, session.user.id),
+		columns: { eventId: true },
 	});
 
-	if (!session?.user) {
-		redirect("/shop");
-	}
+	const hasAccess = u?.isShopAdmin || u?.isEventsAdmin || eventAdmins.length > 0;
+	if (!hasAccess) redirect("/shop");
 
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: {
-			isShopAdmin: true,
-			isEventsAdmin: true,
-			eventAdmins: {
-				select: { eventId: true },
-			},
-		},
-	});
+	const isShopAdmin = u?.isShopAdmin ?? false;
+	const isGlobalEventsAdmin = u?.isEventsAdmin ?? false;
+	const assignedEventIds = eventAdmins.map((ea) => ea.eventId);
 
-	// Access: shop admin, global events admin, or assigned to specific events
-	const hasAccess =
-		user?.isShopAdmin || user?.isEventsAdmin || (user?.eventAdmins?.length ?? 0) > 0;
-
-	if (!hasAccess) {
-		redirect("/shop");
-	}
-
-	const isShopAdmin = user?.isShopAdmin ?? false;
-	const isGlobalEventsAdmin = user?.isEventsAdmin ?? false;
-	const assignedEventIds = user?.eventAdmins?.map((ea) => ea.eventId) ?? [];
-
-	// Fetch events with their products, categories, and admins
-	const allEvents = await prisma.shopEvent.findMany({
-		include: {
+	const allEvents = await db.query.shopEvent.findMany({
+		with: {
 			products: {
-				include: {
-					product: true,
-					package: true,
-					category: true,
-				},
-				orderBy: { sortOrder: "asc" },
+				with: { product: true, package: true, category: true },
+				orderBy: [asc(eventProduct.sortOrder)],
 			},
-			categories: {
-				orderBy: { displayOrder: "asc" },
-			},
+			categories: { orderBy: [asc(eventCategory.displayOrder)] },
 			admins: {
-				include: {
+				with: {
 					user: {
-						select: {
-							id: true,
-							email: true,
-							name: true,
-							image: true,
-						},
+						columns: { id: true, email: true, name: true, image: true },
 					},
 				},
 			},
-			_count: {
-				select: { orders: true },
-			},
+			orders: { columns: { id: true } },
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [desc(shopEvent.createdAt)],
 	});
 
-	// Filter events based on access level
+	const eventsDecorated = allEvents.map((e) => ({
+		...e,
+		_count: { orders: e.orders.length },
+	}));
+
 	const events =
 		isShopAdmin || isGlobalEventsAdmin
-			? allEvents
-			: allEvents.filter((e) => assignedEventIds.includes(e.id));
+			? eventsDecorated
+			: eventsDecorated.filter((e) => assignedEventIds.includes(e.id));
 
-	// Fetch all available products for the form
-	const products = await prisma.product.findMany({
-		where: { isAvailable: true },
-		orderBy: { name: "asc" },
+	const products = await db.query.product.findMany({
+		where: eq(product.isAvailable, true),
+		orderBy: [asc(product.name)],
 	});
 
-	// Fetch all available packages for the form
-	const packages = await prisma.package.findMany({
-		where: { isAvailable: true },
-		orderBy: { name: "asc" },
+	const packages = await db.query.packageTable.findMany({
+		where: eq(packageTable.isAvailable, true),
+		orderBy: [asc(packageTable.name)],
 	});
 
 	return (

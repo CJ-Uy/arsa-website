@@ -1,66 +1,31 @@
-import { prisma } from "@/lib/prisma";
+import { asc, desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { product, shopEvent } from "@/db/schema";
 import { ProductsManagement } from "./products-management";
 
-type Product = {
-	id: string;
-	name: string;
-	description: string;
-	price: number;
-	category: "merch" | "arsari-sari" | "other";
-	image: string | null;
-	imageUrls: string[];
-	imageCropPositions: Record<string, { x: number; y: number }> | null;
-	stock: number | null;
-	isAvailable: boolean;
-	isPreOrder: boolean;
-	isEventExclusive: boolean;
-	availableSizes: string[];
-	sizePricing: any;
-	specialNote: string | null;
-};
-
-type ShopEvent = {
-	id: string;
-	name: string;
-	slug: string;
-};
-
 export default async function AdminProductsPage() {
-	const productsRaw = await prisma.product.findMany({
-		include: {
+	const productsRaw = await db.query.product.findMany({
+		with: {
 			eventProducts: {
-				select: {
+				columns: {
 					eventId: true,
 					eventPrice: true,
 					productCode: true,
 					categoryId: true,
 					sortOrder: true,
-					event: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
 				},
+				with: { event: { columns: { id: true, name: true, slug: true } } },
 			},
 		},
-		orderBy: { createdAt: "desc" },
+		orderBy: [desc(product.createdAt)],
 	});
 
-	// Fetch all available events for the assignment dropdown
-	const events = await prisma.shopEvent.findMany({
-		where: { isActive: true },
-		select: {
-			id: true,
-			name: true,
-			slug: true,
-		},
-		orderBy: { name: "asc" },
+	const events = await db.query.shopEvent.findMany({
+		where: eq(shopEvent.isActive, true),
+		columns: { id: true, name: true, slug: true },
+		orderBy: [asc(shopEvent.name)],
 	});
 
-	// Type cast to ensure category is properly typed
 	const products = productsRaw as any[];
-
 	return <ProductsManagement initialProducts={products} availableEvents={events} />;
 }

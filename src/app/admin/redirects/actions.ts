@@ -1,33 +1,30 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { and, asc, eq, gte, lt, ne } from "drizzle-orm";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+	user,
+	redirects,
+	redirectClick,
+	redirectTag,
+	redirectTagAssignment,
+} from "@/db/schema";
 
 async function checkRedirectsAdmin() {
-	const session = await auth.api.getSession({
-		headers: await headers(),
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) throw new Error("Unauthorized");
+
+	const u = await db.query.user.findFirst({
+		where: eq(user.id, session.user.id),
+		columns: { isRedirectsAdmin: true },
 	});
-
-	if (!session?.user) {
-		throw new Error("Unauthorized");
-	}
-
-	const user = await prisma.user.findUnique({
-		where: { id: session.user.id },
-		select: { isRedirectsAdmin: true },
-	});
-
-	if (!user?.isRedirectsAdmin) {
-		throw new Error("Forbidden: Redirects admin access required");
-	}
-
+	if (!u?.isRedirectsAdmin) throw new Error("Forbidden: Redirects admin access required");
 	return session;
 }
-
-// --- Tag Management ---
 
 export type RedirectTagData = {
 	id: string;
@@ -37,17 +34,18 @@ export type RedirectTagData = {
 
 export async function getTags(): Promise<RedirectTagData[]> {
 	await checkRedirectsAdmin();
-	return prisma.redirectTag.findMany({ orderBy: { name: "asc" } });
+	return db.query.redirectTag.findMany({ orderBy: [asc(redirectTag.name)] });
 }
 
 export async function createTag(name: string, color: string) {
 	try {
 		await checkRedirectsAdmin();
-		const tag = await prisma.redirectTag.create({
-			data: { name: name.trim().toLowerCase(), color },
-		});
+		const inserted = await db
+			.insert(redirectTag)
+			.values({ name: name.trim().toLowerCase(), color })
+			.returning();
 		revalidatePath("/admin/redirects");
-		return { success: true, tag } as const;
+		return { success: true, tag: inserted[0] } as const;
 	} catch {
 		return { success: false, message: "Failed to create tag. It may already exist." } as const;
 	}
@@ -56,12 +54,13 @@ export async function createTag(name: string, color: string) {
 export async function updateTag(id: string, name: string, color: string) {
 	try {
 		await checkRedirectsAdmin();
-		const tag = await prisma.redirectTag.update({
-			where: { id },
-			data: { name: name.trim().toLowerCase(), color },
-		});
+		const updated = await db
+			.update(redirectTag)
+			.set({ name: name.trim().toLowerCase(), color })
+			.where(eq(redirectTag.id, id))
+			.returning();
 		revalidatePath("/admin/redirects");
-		return { success: true, tag } as const;
+		return { success: true, tag: updated[0] } as const;
 	} catch {
 		return { success: false, message: "Failed to update tag." } as const;
 	}
@@ -70,7 +69,7 @@ export async function updateTag(id: string, name: string, color: string) {
 export async function deleteTag(id: string) {
 	try {
 		await checkRedirectsAdmin();
-		await prisma.redirectTag.delete({ where: { id } });
+		await db.delete(redirectTag).where(eq(redirectTag.id, id));
 		revalidatePath("/admin/redirects");
 		return { success: true, message: "Tag deleted." } as const;
 	} catch {
@@ -81,12 +80,13 @@ export async function deleteTag(id: string) {
 export async function assignTagsToRedirect(redirectId: string, tagIds: string[]) {
 	try {
 		await checkRedirectsAdmin();
-		// Remove all current assignments, then create new ones
-		await prisma.redirectTagAssignment.deleteMany({ where: { redirectId } });
+		await db
+			.delete(redirectTagAssignment)
+			.where(eq(redirectTagAssignment.redirectId, redirectId));
 		if (tagIds.length > 0) {
-			await prisma.redirectTagAssignment.createMany({
-				data: tagIds.map((tagId) => ({ redirectId, tagId })),
-			});
+			await db
+				.insert(redirectTagAssignment)
+				.values(tagIds.map((tagId) => ({ redirectId, tagId })));
 		}
 		revalidatePath("/admin/redirects");
 		return { success: true, message: "Tags updated." } as const;
@@ -95,13 +95,11 @@ export async function assignTagsToRedirect(redirectId: string, tagIds: string[])
 	}
 }
 
-// --- Redirect CRUD ---
-
 const redirectSchema = z.object({
 	id: z.string().optional(),
 	newURL: z.string().url("Must be a valid URL"),
 	redirectCode: z.string().min(1, "Short Code is required"),
-	tagIds: z.string().optional(), // comma-separated tag IDs
+	tagIds: z.string().optional(),
 });
 
 function parseTagIds(tagIdsStr: string | undefined): string[] {
@@ -115,17 +113,21 @@ export async function createRedirect(formData: FormData) {
 		const data = redirectSchema.parse(Object.fromEntries(formData));
 		const tagIds = parseTagIds(data.tagIds);
 
-		const redirect = await prisma.redirects.create({
-			data: {
-				newURL: data.newURL,
-				redirectCode: data.redirectCode,
-				redirectTags:
-					tagIds.length > 0 ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
-			},
-		});
+		const inserted = await db
+			.insert(redirects)
+			.values({ newURL: data.newURL, redirectCode: data.redirectCode })
+			.returning();
+		const redirectId = inserted[0].id;
+
+		if (tagIds.length > 0) {
+			await db
+				.insert(redirectTagAssignment)
+				.values(tagIds.map((tagId) => ({ redirectId, tagId })));
+		}
+
 		revalidatePath("/admin/redirects");
 		return { success: true, message: "Redirect created successfully." };
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to create redirect." };
 	}
 }
@@ -137,22 +139,23 @@ export async function updateRedirect(formData: FormData) {
 		if (!data.id) throw new Error("ID is required for update.");
 		const tagIds = parseTagIds(data.tagIds);
 
-		await prisma.redirects.update({
-			where: { id: data.id },
-			data: { newURL: data.newURL, redirectCode: data.redirectCode },
-		});
+		await db
+			.update(redirects)
+			.set({ newURL: data.newURL, redirectCode: data.redirectCode })
+			.where(eq(redirects.id, data.id));
 
-		// Update tag assignments
-		await prisma.redirectTagAssignment.deleteMany({ where: { redirectId: data.id } });
+		await db
+			.delete(redirectTagAssignment)
+			.where(eq(redirectTagAssignment.redirectId, data.id));
 		if (tagIds.length > 0) {
-			await prisma.redirectTagAssignment.createMany({
-				data: tagIds.map((tagId) => ({ redirectId: data.id!, tagId })),
-			});
+			await db
+				.insert(redirectTagAssignment)
+				.values(tagIds.map((tagId) => ({ redirectId: data.id!, tagId })));
 		}
 
 		revalidatePath("/admin/redirects");
 		return { success: true, message: "Redirect updated successfully." };
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to update redirect." };
 	}
 }
@@ -160,15 +163,13 @@ export async function updateRedirect(formData: FormData) {
 export async function deleteRedirect(id: string) {
 	try {
 		await checkRedirectsAdmin();
-		await prisma.redirects.delete({ where: { id } });
+		await db.delete(redirects).where(eq(redirects.id, id));
 		revalidatePath("/admin/redirects");
 		return { success: true, message: "Redirect deleted successfully." };
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to delete redirect." };
 	}
 }
-
-// --- Analytics ---
 
 export type TimeRange = "24h" | "7d" | "30d" | "lifetime";
 
@@ -199,17 +200,13 @@ export async function getRedirectAnalytics(
 	try {
 		await checkRedirectsAdmin();
 
-		const redirect = await prisma.redirects.findUnique({
-			where: { id: redirectId },
+		const redirect = await db.query.redirects.findFirst({
+			where: eq(redirects.id, redirectId),
 		});
-
-		if (!redirect) {
-			return { success: false, message: "Redirect not found." };
-		}
+		if (!redirect) return { success: false, message: "Redirect not found." };
 
 		const now = new Date();
 		let startDate = new Date();
-
 		let intervalCount: number;
 		let groupByHour = false;
 		let groupByWeek = false;
@@ -234,7 +231,9 @@ export async function getRedirectAnalytics(
 			case "lifetime": {
 				startDate = new Date(redirect.createdAt);
 				startDate.setHours(0, 0, 0, 0);
-				const daysDiff = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+				const daysDiff = Math.ceil(
+					(now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+				);
 				if (daysDiff <= 60) {
 					intervalCount = Math.max(daysDiff, 1);
 				} else if (daysDiff <= 365) {
@@ -252,12 +251,12 @@ export async function getRedirectAnalytics(
 			}
 		}
 
-		const clicks = await prisma.redirectClick.findMany({
-			where: {
-				redirectId,
-				clickedAt: { gte: startDate },
-			},
-			orderBy: { clickedAt: "asc" },
+		const clicks = await db.query.redirectClick.findMany({
+			where: and(
+				eq(redirectClick.redirectId, redirectId),
+				gte(redirectClick.clickedAt, startDate),
+			),
+			orderBy: [asc(redirectClick.clickedAt)],
 		});
 
 		const clicksByInterval = new Map<string, number>();
@@ -286,11 +285,8 @@ export async function getRedirectAnalytics(
 				const clickTime = click.clickedAt.getTime();
 				let assignedKey: string | null = null;
 				for (const key of bucketKeys) {
-					if (new Date(key).getTime() <= clickTime) {
-						assignedKey = key;
-					} else {
-						break;
-					}
+					if (new Date(key).getTime() <= clickTime) assignedKey = key;
+					else break;
 				}
 				if (assignedKey && clicksByInterval.has(assignedKey)) {
 					clicksByInterval.set(assignedKey, (clicksByInterval.get(assignedKey) || 0) + 1);
@@ -324,7 +320,7 @@ export async function getRedirectAnalytics(
 		}
 
 		const clickData: ClickAnalytics[] = Array.from(clicksByInterval.entries()).map(
-			([date, clicks]) => ({ date, clicks }),
+			([date, c]) => ({ date, clicks: c }),
 		);
 
 		const totalClicks = timeRange === "lifetime" ? redirect.clicks : clicks.length;
@@ -338,7 +334,7 @@ export async function getRedirectAnalytics(
 			success: true,
 			data: { redirect, clickData, totalClicks, avgClicks, peakPeriod, timeRange },
 		};
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to fetch analytics." };
 	}
 }
@@ -346,24 +342,20 @@ export async function getRedirectAnalytics(
 export async function cleanupOldClicks(): Promise<{ success: boolean; message: string }> {
 	try {
 		await checkRedirectsAdmin();
-
 		const thirtyDaysAgo = new Date();
 		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-		const result = await prisma.redirectClick.deleteMany({
-			where: { clickedAt: { lt: thirtyDaysAgo } },
-		});
-
+		const result = await db
+			.delete(redirectClick)
+			.where(lt(redirectClick.clickedAt, thirtyDaysAgo))
+			.returning();
 		return {
 			success: true,
-			message: `Cleaned up ${result.count} old click records.`,
+			message: `Cleaned up ${result.length} old click records.`,
 		};
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to cleanup old clicks." };
 	}
 }
-
-// --- Export/Import ---
 
 export type RedirectExportData = {
 	version: 1;
@@ -372,7 +364,7 @@ export type RedirectExportData = {
 	redirects: {
 		redirectCode: string;
 		newURL: string;
-		tags: string[]; // tag names
+		tags: string[];
 		clicks: number;
 		createdAt: string;
 	}[];
@@ -383,13 +375,12 @@ export async function exportRedirects(): Promise<
 > {
 	try {
 		await checkRedirectsAdmin();
-
-		const [redirects, tags] = await Promise.all([
-			prisma.redirects.findMany({
-				orderBy: { redirectCode: "asc" },
-				include: { redirectTags: { include: { tag: true } } },
+		const [allRedirects, tags] = await Promise.all([
+			db.query.redirects.findMany({
+				orderBy: [asc(redirects.redirectCode)],
+				with: { redirectTags: { with: { tag: true } } },
 			}),
-			prisma.redirectTag.findMany({ orderBy: { name: "asc" } }),
+			db.query.redirectTag.findMany({ orderBy: [asc(redirectTag.name)] }),
 		]);
 
 		return {
@@ -398,7 +389,7 @@ export async function exportRedirects(): Promise<
 				version: 1,
 				exportedAt: new Date().toISOString(),
 				tags: tags.map((t) => ({ name: t.name, color: t.color })),
-				redirects: redirects.map((r) => ({
+				redirects: allRedirects.map((r) => ({
 					redirectCode: r.redirectCode,
 					newURL: r.newURL,
 					tags: r.redirectTags.map((rt) => rt.tag.name),
@@ -407,7 +398,7 @@ export async function exportRedirects(): Promise<
 				})),
 			},
 		};
-	} catch (error) {
+	} catch {
 		return { success: false, message: "Failed to export redirects." };
 	}
 }
@@ -443,31 +434,44 @@ export async function importRedirects(
 }> {
 	try {
 		await checkRedirectsAdmin();
-
 		const parsed = JSON.parse(jsonData);
 		const validated = importSchema.parse(parsed);
 
-		// Upsert tags first
-		const tagMap = new Map<string, string>(); // name -> id
+		const tagMap = new Map<string, string>();
 		for (const tagData of validated.tags) {
-			const tag = await prisma.redirectTag.upsert({
-				where: { name: tagData.name },
-				update: { color: tagData.color },
-				create: { name: tagData.name, color: tagData.color },
+			const existing = await db.query.redirectTag.findFirst({
+				where: eq(redirectTag.name, tagData.name),
 			});
-			tagMap.set(tag.name, tag.id);
+			if (existing) {
+				await db
+					.update(redirectTag)
+					.set({ color: tagData.color })
+					.where(eq(redirectTag.id, existing.id));
+				tagMap.set(existing.name, existing.id);
+			} else {
+				const inserted = await db
+					.insert(redirectTag)
+					.values({ name: tagData.name, color: tagData.color })
+					.returning();
+				tagMap.set(inserted[0].name, inserted[0].id);
+			}
 		}
 
-		// Also ensure any tag names referenced in redirects exist
-		for (const redirect of validated.redirects) {
-			for (const tagName of redirect.tags) {
+		for (const r of validated.redirects) {
+			for (const tagName of r.tags) {
 				if (!tagMap.has(tagName)) {
-					const tag = await prisma.redirectTag.upsert({
-						where: { name: tagName },
-						update: {},
-						create: { name: tagName, color: "#6b7280" },
+					const existing = await db.query.redirectTag.findFirst({
+						where: eq(redirectTag.name, tagName),
 					});
-					tagMap.set(tag.name, tag.id);
+					if (existing) {
+						tagMap.set(existing.name, existing.id);
+					} else {
+						const inserted = await db
+							.insert(redirectTag)
+							.values({ name: tagName, color: "#6b7280" })
+							.returning();
+						tagMap.set(inserted[0].name, inserted[0].id);
+					}
 				}
 			}
 		}
@@ -476,42 +480,45 @@ export async function importRedirects(
 		let updated = 0;
 		let skipped = 0;
 
-		for (const redirect of validated.redirects) {
-			const existing = await prisma.redirects.findUnique({
-				where: { redirectCode: redirect.redirectCode },
+		for (const r of validated.redirects) {
+			const existing = await db.query.redirects.findFirst({
+				where: eq(redirects.redirectCode, r.redirectCode),
 			});
 
-			const tagIds = redirect.tags.map((name) => tagMap.get(name)).filter(Boolean) as string[];
+			const tagIds = r.tags.map((name) => tagMap.get(name)).filter(Boolean) as string[];
 
 			if (existing) {
 				if (mode === "update") {
-					await prisma.redirects.update({
-						where: { id: existing.id },
-						data: { newURL: redirect.newURL },
-					});
-					// Update tag assignments
-					await prisma.redirectTagAssignment.deleteMany({
-						where: { redirectId: existing.id },
-					});
+					await db
+						.update(redirects)
+						.set({ newURL: r.newURL })
+						.where(eq(redirects.id, existing.id));
+					await db
+						.delete(redirectTagAssignment)
+						.where(eq(redirectTagAssignment.redirectId, existing.id));
 					if (tagIds.length > 0) {
-						await prisma.redirectTagAssignment.createMany({
-							data: tagIds.map((tagId) => ({ redirectId: existing.id, tagId })),
-						});
+						await db
+							.insert(redirectTagAssignment)
+							.values(tagIds.map((tagId) => ({ redirectId: existing.id, tagId })));
 					}
 					updated++;
 				} else {
 					skipped++;
 				}
 			} else {
-				await prisma.redirects.create({
-					data: {
-						redirectCode: redirect.redirectCode,
-						newURL: redirect.newURL,
-						clicks: redirect.clicks ?? 0,
-						redirectTags:
-							tagIds.length > 0 ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
-					},
-				});
+				const inserted = await db
+					.insert(redirects)
+					.values({
+						redirectCode: r.redirectCode,
+						newURL: r.newURL,
+						clicks: r.clicks ?? 0,
+					})
+					.returning();
+				if (tagIds.length > 0) {
+					await db
+						.insert(redirectTagAssignment)
+						.values(tagIds.map((tagId) => ({ redirectId: inserted[0].id, tagId })));
+				}
 				created++;
 			}
 		}

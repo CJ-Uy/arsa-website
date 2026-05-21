@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { eq, like } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { siteContent } from "@/db/schema";
 
 export type HeroContent = {
 	title: string;
@@ -133,7 +135,7 @@ const defaultSocials: SocialLink[] = [
 
 export async function getSiteContent(key: string) {
 	try {
-		const content = await prisma.siteContent.findUnique({ where: { key } });
+		const content = await db.query.siteContent.findFirst({ where: eq(siteContent.key, key) });
 		return content?.data ?? null;
 	} catch {
 		return null;
@@ -142,12 +144,8 @@ export async function getSiteContent(key: string) {
 
 export async function getAllHomepageContent() {
 	try {
-		const contents = await prisma.siteContent.findMany({
-			where: {
-				key: {
-					startsWith: "homepage-",
-				},
-			},
+		const contents = await db.query.siteContent.findMany({
+			where: like(siteContent.key, "homepage-%"),
 		});
 
 		const map: Record<string, unknown> = {};
@@ -177,11 +175,12 @@ export async function getAllHomepageContent() {
 
 export async function saveSiteContent(key: string, data: unknown) {
 	try {
-		await prisma.siteContent.upsert({
-			where: { key },
-			create: { key, data: data as object },
-			update: { data: data as object },
-		});
+		const existing = await db.query.siteContent.findFirst({ where: eq(siteContent.key, key) });
+		if (existing) {
+			await db.update(siteContent).set({ data }).where(eq(siteContent.key, key));
+		} else {
+			await db.insert(siteContent).values({ key, data });
+		}
 
 		// All consuming pages use force-dynamic, so they re-render on every
 		// request automatically.  Calling revalidatePath is unnecessary and

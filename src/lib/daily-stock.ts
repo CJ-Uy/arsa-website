@@ -1,115 +1,77 @@
 "use server";
 
-import { prisma } from "./prisma";
+import { and, between, count, eq, inArray, not, or } from "drizzle-orm";
+import { db } from "./db";
+import { eventProduct, order, orderItem } from "@/db/schema";
 
-type DailyStockOverrides = Record<string, number | null>; // date string => max orders (null = blocked)
+type DailyStockOverrides = Record<string, number | null>;
 
-/**
- * Get the daily stock limit for a specific event product on a specific date
- * Returns null if date is blocked, otherwise returns the max orders allowed
- */
 export async function getDailyStockLimit(
 	eventProductId: string,
 	date: Date,
 ): Promise<number | null> {
-	const eventProduct = await prisma.eventProduct.findUnique({
-		where: { id: eventProductId },
-		select: {
+	const ep = await db.query.eventProduct.findFirst({
+		where: eq(eventProduct.id, eventProductId),
+		columns: {
 			hasDailyStockLimit: true,
 			defaultMaxOrdersPerDay: true,
 			dailyStockOverrides: true,
 		},
 	});
 
-	if (!eventProduct || !eventProduct.hasDailyStockLimit) {
-		return null; // No limit
-	}
+	if (!ep || !ep.hasDailyStockLimit) return null;
 
-	const dateString = date.toISOString().split("T")[0]; // YYYY-MM-DD
-	const overrides = (eventProduct.dailyStockOverrides as DailyStockOverrides | null) || {};
-
-	// Check if there's an override for this date
-	if (dateString in overrides) {
-		return overrides[dateString]; // null = blocked, number = custom limit
-	}
-
-	// Return default limit
-	return eventProduct.defaultMaxOrdersPerDay ?? null;
+	const dateString = date.toISOString().split("T")[0];
+	const overrides = (ep.dailyStockOverrides as DailyStockOverrides | null) || {};
+	if (dateString in overrides) return overrides[dateString];
+	return ep.defaultMaxOrdersPerDay ?? null;
 }
 
-/**
- * Count the number of orders for a specific event product on a specific date
- * Counts both delivery and pickup orders for this date
- */
 export async function getOrderCountForDate(eventProductId: string, date: Date): Promise<number> {
 	const dateString = date.toISOString().split("T")[0];
 	const startOfDay = new Date(dateString + "T00:00:00Z");
 	const endOfDay = new Date(dateString + "T23:59:59Z");
 
-	// Get the event product to find product/package ID
-	const eventProduct = await prisma.eventProduct.findUnique({
-		where: { id: eventProductId },
-		select: {
-			productId: true,
-			packageId: true,
-			eventId: true,
-		},
+	const ep = await db.query.eventProduct.findFirst({
+		where: eq(eventProduct.id, eventProductId),
+		columns: { productId: true, packageId: true, eventId: true },
 	});
+	if (!ep) return 0;
 
-	if (!eventProduct) {
-		return 0;
-	}
+	// Find matching orderItem rows then count distinct orders matching date + event.
+	const itemFilter = ep.productId
+		? eq(orderItem.productId, ep.productId)
+		: eq(orderItem.packageId, ep.packageId!);
 
-	// Count orders with this product/package and delivery date
-	const count = await prisma.order.count({
-		where: {
-			eventId: eventProduct.eventId,
-			deliveryDate: {
-				gte: startOfDay,
-				lte: endOfDay,
-			},
-			status: {
-				notIn: ["cancelled"], // Don't count cancelled orders
-			},
-			orderItems: {
-				some: eventProduct.productId
-					? { productId: eventProduct.productId }
-					: { packageId: eventProduct.packageId },
-			},
-		},
-	});
+	const rows = await db
+		.select({ orderId: orderItem.orderId })
+		.from(orderItem)
+		.innerJoin(order, eq(orderItem.orderId, order.id))
+		.where(
+			and(
+				itemFilter,
+				eq(order.eventId, ep.eventId),
+				between(order.deliveryDate, startOfDay, endOfDay),
+				not(eq(order.status, "cancelled")),
+			),
+		);
 
-	return count;
+	const unique = new Set(rows.map((r) => r.orderId));
+	return unique.size;
 }
 
-/**
- * Get remaining stock for a specific event product on a specific date
- * Returns null if no limit, -1 if blocked, or the number of remaining slots
- */
 export async function getRemainingStock(
 	eventProductId: string,
 	date: Date,
 ): Promise<number | null> {
 	const limit = await getDailyStockLimit(eventProductId, date);
-
-	if (limit === null) {
-		return null; // No limit
-	}
-
-	if (limit === 0) {
-		return -1; // Blocked
-	}
+	if (limit === null) return null;
+	if (limit === 0) return -1;
 
 	const orderCount = await getOrderCountForDate(eventProductId, date);
-	const remaining = limit - orderCount;
-
-	return Math.max(0, remaining); // Never return negative
+	return Math.max(0, limit - orderCount);
 }
 
-/**
- * Get all available dates for an event product within a date range
- * Returns an array of dates with their remaining stock
- */
 export async function getAvailableDates(
 	eventProductId: string,
 	startDate: Date,
@@ -120,33 +82,20 @@ export async function getAvailableDates(
 
 	while (currentDate <= endDate) {
 		const remaining = await getRemainingStock(eventProductId, new Date(currentDate));
-
-		// Only include dates that are not blocked (remaining !== -1)
 		if (remaining !== -1) {
-			dates.push({
-				date: new Date(currentDate),
-				remaining,
-			});
+			dates.push({ date: new Date(currentDate), remaining });
 		}
-
 		currentDate.setDate(currentDate.getDate() + 1);
 	}
 
 	return dates;
 }
 
-/**
- * Check if a date is blocked for an event product
- */
 export async function isDateBlocked(eventProductId: string, date: Date): Promise<boolean> {
 	const remaining = await getRemainingStock(eventProductId, date);
 	return remaining === -1 || remaining === 0;
 }
 
-/**
- * Validate that all cart items can be ordered for a specific delivery date
- * Returns { valid: true } or { valid: false, errors: [...] }
- */
 export async function validateDailyStockForCart(
 	cartItems: Array<{
 		eventProductId?: string;
@@ -159,75 +108,58 @@ export async function validateDailyStockForCart(
 ): Promise<{ valid: boolean; errors: string[] }> {
 	const errors: string[] = [];
 
-	// Find event products with daily stock limits
 	for (const item of cartItems) {
 		let eventProductId = item.eventProductId;
 
-		// If not provided, try to find it
 		if (!eventProductId && eventId) {
-			const eventProduct = await prisma.eventProduct.findFirst({
-				where: {
-					eventId,
-					...(item.productId ? { productId: item.productId } : { packageId: item.packageId }),
-				},
-				select: {
-					id: true,
-					hasDailyStockLimit: true,
-					product: { select: { name: true } },
-					package: { select: { name: true } },
+			const ep = await db.query.eventProduct.findFirst({
+				where: and(
+					eq(eventProduct.eventId, eventId),
+					item.productId
+						? eq(eventProduct.productId, item.productId)
+						: eq(eventProduct.packageId, item.packageId!),
+				),
+				columns: { id: true, hasDailyStockLimit: true },
+				with: {
+					product: { columns: { name: true } },
+					package: { columns: { name: true } },
 				},
 			});
 
-			if (!eventProduct || !eventProduct.hasDailyStockLimit) {
-				continue; // No daily limit for this item
-			}
-
-			eventProductId = eventProduct.id;
+			if (!ep || !ep.hasDailyStockLimit) continue;
+			eventProductId = ep.id;
 		}
 
-		if (!eventProductId) {
-			continue;
-		}
+		if (!eventProductId) continue;
 
 		const remaining = await getRemainingStock(eventProductId, deliveryDate);
 
 		if (remaining === -1) {
-			// Get product name
-			const eventProduct = await prisma.eventProduct.findUnique({
-				where: { id: eventProductId },
-				include: {
-					product: { select: { name: true } },
-					package: { select: { name: true } },
+			const ep = await db.query.eventProduct.findFirst({
+				where: eq(eventProduct.id, eventProductId),
+				with: {
+					product: { columns: { name: true } },
+					package: { columns: { name: true } },
 				},
 			});
-
-			const name = eventProduct?.product?.name || eventProduct?.package?.name || "This item";
+			const name = ep?.product?.name || ep?.package?.name || "This item";
 			errors.push(`${name} is not available for delivery on this date.`);
 		} else if (remaining !== null && remaining === 0) {
-			// Get product name
-			const eventProduct = await prisma.eventProduct.findUnique({
-				where: { id: eventProductId },
-				include: {
-					product: { select: { name: true } },
-					package: { select: { name: true } },
+			const ep = await db.query.eventProduct.findFirst({
+				where: eq(eventProduct.id, eventProductId),
+				with: {
+					product: { columns: { name: true } },
+					package: { columns: { name: true } },
 				},
 			});
-
-			const name = eventProduct?.product?.name || eventProduct?.package?.name || "This item";
+			const name = ep?.product?.name || ep?.package?.name || "This item";
 			errors.push(`${name} is sold out for this date. Only ${remaining} slots remaining.`);
 		}
 	}
 
-	return {
-		valid: errors.length === 0,
-		errors,
-	};
+	return { valid: errors.length === 0, errors };
 }
 
-/**
- * Get all products/packages in cart that have daily stock limits
- * Returns product names with their daily stock notes
- */
 export async function getCartItemsWithDailyLimits(
 	cartItems: Array<{
 		productId?: string;
@@ -241,9 +173,7 @@ export async function getCartItemsWithDailyLimits(
 		eventProductId: string;
 	}>
 > {
-	if (!eventId) {
-		return [];
-	}
+	if (!eventId) return [];
 
 	const itemsWithLimits: Array<{
 		name: string;
@@ -252,25 +182,26 @@ export async function getCartItemsWithDailyLimits(
 	}> = [];
 
 	for (const item of cartItems) {
-		const eventProduct = await prisma.eventProduct.findFirst({
-			where: {
-				eventId,
-				...(item.productId ? { productId: item.productId } : { packageId: item.packageId }),
-				hasDailyStockLimit: true,
-			},
-			select: {
-				id: true,
-				dailyStockNote: true,
-				product: { select: { name: true } },
-				package: { select: { name: true } },
+		const ep = await db.query.eventProduct.findFirst({
+			where: and(
+				eq(eventProduct.eventId, eventId),
+				eq(eventProduct.hasDailyStockLimit, true),
+				item.productId
+					? eq(eventProduct.productId, item.productId)
+					: eq(eventProduct.packageId, item.packageId!),
+			),
+			columns: { id: true, dailyStockNote: true },
+			with: {
+				product: { columns: { name: true } },
+				package: { columns: { name: true } },
 			},
 		});
 
-		if (eventProduct) {
+		if (ep) {
 			itemsWithLimits.push({
-				name: eventProduct.product?.name || eventProduct.package?.name || "Unknown",
-				note: eventProduct.dailyStockNote || null,
-				eventProductId: eventProduct.id,
+				name: ep.product?.name || ep.package?.name || "Unknown",
+				note: ep.dailyStockNote || null,
+				eventProductId: ep.id,
 			});
 		}
 	}

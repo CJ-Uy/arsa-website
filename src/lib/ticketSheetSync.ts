@@ -7,7 +7,9 @@
  */
 
 import { google } from "googleapis";
-import { prisma } from "@/lib/prisma";
+import { asc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { shopSettings, ticket, ticketEvent } from "@/db/schema";
 import { signTicketCode } from "@/lib/ticketUtils";
 
 const SETTINGS_KEY = "ticketGoogleSheets";
@@ -42,8 +44,8 @@ export async function getTicketSheetSettings(): Promise<{
 	sheetName: string;
 } | null> {
 	try {
-		const settings = await prisma.shopSettings.findUnique({
-			where: { key: SETTINGS_KEY },
+		const settings = await db.query.shopSettings.findFirst({
+			where: eq(shopSettings.key, SETTINGS_KEY),
 		});
 
 		if (settings?.value) {
@@ -69,18 +71,21 @@ export async function saveTicketSheetSettings(
 	settings: { spreadsheetId: string; sheetName: string },
 	userId: string,
 ) {
-	await prisma.shopSettings.upsert({
-		where: { key: SETTINGS_KEY },
-		update: {
-			value: settings,
-			updatedBy: userId,
-		},
-		create: {
+	const existing = await db.query.shopSettings.findFirst({
+		where: eq(shopSettings.key, SETTINGS_KEY),
+	});
+	if (existing) {
+		await db
+			.update(shopSettings)
+			.set({ value: settings, updatedBy: userId })
+			.where(eq(shopSettings.key, SETTINGS_KEY));
+	} else {
+		await db.insert(shopSettings).values({
 			key: SETTINGS_KEY,
 			value: settings,
 			updatedBy: userId,
-		},
-	});
+		});
+	}
 }
 
 const TICKET_HEADERS = [
@@ -121,20 +126,20 @@ export async function syncTicketsToGoogleSheets(ticketEventId: string): Promise<
 		const { spreadsheetId, sheetName } = sheetSettings;
 
 		// Fetch the event name
-		const event = await prisma.ticketEvent.findUnique({
-			where: { id: ticketEventId },
-			select: { name: true },
+		const event = await db.query.ticketEvent.findFirst({
+			where: eq(ticketEvent.id, ticketEventId),
+			columns: { name: true },
 		});
 		if (!event) return { success: false, message: "Ticket event not found" };
 
 		// Fetch all tickets for this event
-		const tickets = await prisma.ticket.findMany({
-			where: { ticketEventId },
-			include: {
-				scannedBy: { select: { name: true, email: true } },
-				ticketEvent: { select: { name: true } },
+		const tickets = await db.query.ticket.findMany({
+			where: eq(ticket.ticketEventId, ticketEventId),
+			with: {
+				scannedBy: { columns: { name: true, email: true } },
+				ticketEvent: { columns: { name: true } },
 			},
-			orderBy: { createdAt: "asc" },
+			orderBy: [asc(ticket.createdAt)],
 		});
 
 		if (tickets.length === 0) {
