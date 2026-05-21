@@ -27,6 +27,7 @@
 		{ "binding": "CACHE", "id": "2c91299375b844a494e0b29633188811" }
 	],
 	"vars": {
-		"NEXT_PUBLIC_APP_URL": "https://ateneoarsa.org"
+		"NEXT_PUBLIC_APP_URL": "https://ateneoarsa.org",
+		"R2_PUBLIC_DOMAIN": "https://r2.ateneoarsa.org"
 	}
 }
