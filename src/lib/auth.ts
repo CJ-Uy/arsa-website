@@ -7,6 +7,10 @@ import * as schema from "@/db/schema";
 const isProduction = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
+	// Wrangler secrets aren't available at build time; fallback prevents
+	// Better Auth from throwing "using default secret" during `next build`.
+	// The real BETTER_AUTH_SECRET wrangler secret overrides this at runtime.
+	secret: process.env.BETTER_AUTH_SECRET || "cf-build-placeholder-not-used-at-runtime",
 	baseURL: process.env.BETTER_AUTH_URL,
 	trustedOrigins: [process.env.BETTER_AUTH_URL!, process.env.NEXT_PUBLIC_APP_URL!].filter(Boolean),
 	database: drizzleAdapter(db, {
