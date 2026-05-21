@@ -24,7 +24,8 @@
 		{ "binding": "BUCKET", "bucket_name": "arsa-storage" }
 	],
 	"kv_namespaces": [
-		{ "binding": "CACHE", "id": "abab3d5d34654a77a263f0b892d839af" }
+		{ "binding": "CACHE", "id": "abab3d5d34654a77a263f0b892d839af" },
+		{ "binding": "NEXT_INC_CACHE_KV", "id": "e8b2588ccb1a497b9b43255c13bbfe91" }
 	],
 	"vars": {
 		"NEXT_PUBLIC_APP_URL": "https://ateneoarsa.org",
