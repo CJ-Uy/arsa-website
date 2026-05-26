@@ -772,7 +772,7 @@ export const event = sqliteTable(
 	"event",
 	{
 		id: id(),
-		slug: text("slug").notNull().unique(),
+		slug: text("slug").notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
 		status: text("status").notNull().default("draft"), // 'draft' | 'active' | 'archived'

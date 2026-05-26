@@ -17,7 +17,6 @@ CREATE TABLE `event` (
 	`updatedAt` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `event_slug_unique` ON `event` (`slug`);--> statement-breakpoint
 CREATE UNIQUE INDEX `event_slug_key` ON `event` (`slug`);--> statement-breakpoint
 CREATE INDEX `event_status_idx` ON `event` (`status`);--> statement-breakpoint
 CREATE INDEX `event_dates_idx` ON `event` (`startDate`,`endDate`);--> statement-breakpoint
