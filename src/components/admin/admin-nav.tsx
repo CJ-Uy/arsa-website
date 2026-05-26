@@ -22,6 +22,7 @@ import {
 	Home,
 	Moon,
 	Sun,
+	ChevronRight,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { signOut } from "@/lib/auth-client";
@@ -36,9 +37,13 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSub,
+	SidebarMenuSubButton,
+	SidebarMenuSubItem,
 	SidebarRail,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -77,6 +82,8 @@ export type NavItemDef = {
 	label: string;
 	iconKey: keyof typeof iconMap;
 	group?: string;
+	subitems?: { href: string; label: string }[];
+	eventStatus?: "draft" | "active" | "archived";
 };
 
 type AdminNavProps = {
@@ -226,8 +233,44 @@ export function AdminNav({ items, user }: AdminNavProps) {
 							<SidebarMenu>
 								{group.items.map((item) => {
 									const Icon = iconMap[item.iconKey];
-									const isActive = pathname === item.href;
+									const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 									const isLoading = loadingPath === item.href;
+
+									if (item.subitems) {
+										return (
+											<Collapsible
+												key={item.href}
+												defaultOpen={pathname.startsWith(item.href)}
+												className="group/collapsible"
+											>
+												<SidebarMenuItem>
+													<CollapsibleTrigger asChild>
+														<SidebarMenuButton isActive={isActive} tooltip={item.label}>
+															{isLoading ? <Loader2 className="animate-spin" /> : <Icon />}
+															<span>{item.label}</span>
+															{item.eventStatus === "active" && (
+																<span className="ml-auto h-2 w-2 rounded-full bg-[#f7bc37]" />
+															)}
+															<ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+														</SidebarMenuButton>
+													</CollapsibleTrigger>
+													<CollapsibleContent>
+														<SidebarMenuSub>
+															{item.subitems.map((sub) => (
+																<SidebarMenuSubItem key={sub.href}>
+																	<SidebarMenuSubButton asChild isActive={pathname === sub.href}>
+																		<Link href={sub.href} onClick={() => handleNavigate(sub.href)}>
+																			{sub.label}
+																		</Link>
+																	</SidebarMenuSubButton>
+																</SidebarMenuSubItem>
+															))}
+														</SidebarMenuSub>
+													</CollapsibleContent>
+												</SidebarMenuItem>
+											</Collapsible>
+										);
+									}
 
 									return (
 										<SidebarMenuItem key={item.href}>
@@ -256,6 +299,13 @@ export function AdminNav({ items, user }: AdminNavProps) {
 /** Displays the current page name in the header based on pathname */
 export function AdminPageTitle({ items }: { items: NavItemDef[] }) {
 	const pathname = usePathname();
+	// Check subitems first for more specific matches
+	for (const item of items) {
+		if (item.subitems) {
+			const sub = item.subitems.find((s) => pathname === s.href || pathname.startsWith(s.href + "/"));
+			if (sub) return <h1 className="text-lg font-semibold">{sub.label}</h1>;
+		}
+	}
 	const currentItem = items.find(
 		(item) => pathname === item.href || pathname.startsWith(item.href + "/"),
 	);
