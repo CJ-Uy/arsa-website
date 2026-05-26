@@ -2,10 +2,10 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { event, eventShop, eventTickets, eventLanding, redirects, eventRoleGrant } from "@/db/schema";
+import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant } from "@/db/schema";
 import { requireEventRole, ForbiddenError, type EventRole } from "@/lib/eventPermissions";
 
 const RESERVED_SLUGS = new Set([
@@ -186,4 +186,90 @@ export async function saveLanding(
 		columns: { slug: true },
 	});
 	if (e) revalidatePath(`/admin/events/${e.slug}/landing`);
+}
+
+// ─── Event Page CRUD ────────────────────────────────────────────────────────
+
+export async function listPages(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["content_admin"]);
+	return db.query.eventPage.findMany({
+		where: eq(eventPage.eventId, eventId),
+		orderBy: (p, { asc }) => [asc(p.sortOrder), asc(p.title)],
+	});
+}
+
+export async function createPage(eventId: string, pageSlug: string, title: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["content_admin"]);
+	const id = crypto.randomUUID();
+	const now = new Date();
+	await db.insert(eventPage).values({
+		id,
+		eventId,
+		pageSlug,
+		title,
+		body: null,
+		published: false,
+		sortOrder: 0,
+		createdAt: now,
+		updatedAt: now,
+	});
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/pages`);
+	return { id, pageSlug };
+}
+
+export async function updatePage(
+	pageId: string,
+	body: unknown,
+	title: string,
+	codePath: string | null,
+	published: boolean,
+	sortOrder: number,
+) {
+	const userId = await authedUserId();
+	const p = await db.query.eventPage.findFirst({ where: eq(eventPage.id, pageId) });
+	if (!p) throw new Error("Page not found");
+	await requireEventRole(userId, p.eventId, ["content_admin"]);
+	const now = new Date();
+	await db
+		.update(eventPage)
+		.set({
+			title,
+			body,
+			codePath,
+			sortOrder,
+			updatedAt: now,
+			...(published !== p.published
+				? { published, lastToggledBy: userId, lastToggledAt: now }
+				: {}),
+		})
+		.where(eq(eventPage.id, pageId));
+	const e = await db.query.event.findFirst({
+		where: eq(event.id, p.eventId),
+		columns: { slug: true },
+	});
+	if (e) revalidatePath(`/admin/events/${e.slug}/pages`);
+}
+
+export async function deletePage(pageId: string) {
+	const userId = await authedUserId();
+	const p = await db.query.eventPage.findFirst({ where: eq(eventPage.id, pageId) });
+	if (!p) return;
+	await requireEventRole(userId, p.eventId, ["content_admin"]);
+	await db.delete(eventPage).where(eq(eventPage.id, pageId));
+	const e = await db.query.event.findFirst({
+		where: eq(event.id, p.eventId),
+		columns: { slug: true },
+	});
+	if (e) revalidatePath(`/admin/events/${e.slug}/pages`);
+}
+
+export async function getPageBySlug(eventId: string, pageSlug: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["content_admin"]);
+	return db.query.eventPage.findFirst({
+		where: and(eq(eventPage.eventId, eventId), eq(eventPage.pageSlug, pageSlug)),
+	});
 }
