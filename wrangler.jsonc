@@ -29,6 +29,7 @@
 	],
 	"vars": {
 		"NEXT_PUBLIC_APP_URL": "https://ateneoarsa.org",
+		"BETTER_AUTH_URL": "https://ateneoarsa.org",
 		"R2_PUBLIC_DOMAIN": "https://r2.ateneoarsa.org"
 	}
 }
