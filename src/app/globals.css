@@ -65,6 +65,38 @@
 	--shadow-offset-x: 0px;
 	--shadow-offset-y: 2px;
 	--letter-spacing: 0rem;
+
+	/* ──────────── ARSA brand palette (DESIGN.md §2) ────────────
+	   Parallel to shadcn tokens. Use these for brand-critical surfaces. */
+	--brand-maroon: #a2250f;
+	--brand-orange: #bc3700;
+	--brand-crimson: #da1e39;
+	--brand-violet: #9f1d51;
+	--brand-navy: #0e3663;
+	--brand-blue: #206299;
+	--brand-saffron: #f7bc37;
+	--brand-cream: #ffefcd;
+
+	/* Surface helpers for warm-toned long-form pages (FAQ, About, Resources) */
+	--brand-page-bg: #fdf6df;
+	--brand-page-bg-translucent: rgba(253, 246, 223, 0.9);
+	--brand-card: #ffffff;
+	--brand-ink: #0e3663;
+	--brand-ink-soft: rgba(14, 54, 99, 0.72);
+	--brand-ink-line: rgba(14, 54, 99, 0.2);
+	--brand-ink-line-soft: rgba(14, 54, 99, 0.1);
+	--brand-border-soft: rgba(162, 37, 15, 0.12);
+	--brand-border-mid: rgba(162, 37, 15, 0.22);
+	--brand-border-strong: rgba(162, 37, 15, 0.32);
+	--brand-grain-mix: multiply;
+	--brand-grain-opacity: 0.06;
+
+	/* Highlight (search mark) — saffron + navy always */
+	--brand-mark-bg: #f7bc37;
+	--brand-mark-fg: #0e3663;
+
+	/* Signature gradient as a reusable token (DESIGN.md §3) */
+	--brand-gradient: linear-gradient(135deg, #9f1d51 0%, #a2250f 50%, #bc3700 100%);
 }
 
 .dark {
@@ -120,6 +152,41 @@
 	--shadow-offset-y: 2px;
 	--spacing: 0.25rem;
 	--letter-spacing: 0rem;
+
+	/* ──────────── ARSA brand palette — dark mode (DESIGN.md §2) ────────────
+	   Hue-shifted slightly toward red so maroon stays "brick" not "orange".
+	   Cream text picks up a subtle red undertone to harmonize with wine-black bg. */
+	--brand-maroon: #e0492b;
+	--brand-orange: #f06d2e;
+	--brand-crimson: #f24a60;
+	--brand-violet: #d35083;
+	--brand-navy: #8db8e8;
+	--brand-blue: #6da6dd;
+	--brand-saffron: #ffd068;
+	--brand-cream: #fbeacf;
+
+	/* Surfaces: wine-black page, clearly-elevated card (~6% lift) */
+	--brand-page-bg: #170a0b;
+	--brand-page-bg-translucent: rgba(23, 10, 11, 0.92);
+	--brand-card: #2a161a;
+	--brand-ink: #fbeacf;
+	--brand-ink-soft: rgba(251, 234, 207, 0.68);
+	--brand-ink-line: rgba(251, 234, 207, 0.16);
+	--brand-ink-line-soft: rgba(251, 234, 207, 0.08);
+
+	/* Borders use warm primary instead of neutral cream — keeps maroon hairlines */
+	--brand-border-soft: rgba(224, 73, 43, 0.16);
+	--brand-border-mid: rgba(224, 73, 43, 0.28);
+	--brand-border-strong: rgba(224, 73, 43, 0.42);
+
+	--brand-grain-mix: screen;
+	--brand-grain-opacity: 0.06;
+
+	/* Saffron highlight stays bright; foreground is very dark warm for max contrast */
+	--brand-mark-bg: #ffd068;
+	--brand-mark-fg: #2a0a08;
+
+	--brand-gradient: linear-gradient(135deg, #b1356c 0%, #c4341a 50%, #e0541e 100%);
 }
 
 @theme inline {
@@ -158,7 +225,21 @@
 
 	--font-sans: "Lexend Deca", sans-serif;
 	--font-mono: monospace;
-	--font-serif: serif;
+	--font-serif: "Fraunces", Georgia, serif;
+
+	/* ARSA brand palette exposed to Tailwind — use as bg-brand-maroon, text-brand-cream, etc.
+	   These resolve to the light/dark values defined in :root / .dark above. */
+	--color-brand-maroon: var(--brand-maroon);
+	--color-brand-orange: var(--brand-orange);
+	--color-brand-crimson: var(--brand-crimson);
+	--color-brand-violet: var(--brand-violet);
+	--color-brand-navy: var(--brand-navy);
+	--color-brand-blue: var(--brand-blue);
+	--color-brand-saffron: var(--brand-saffron);
+	--color-brand-cream: var(--brand-cream);
+	--color-brand-page: var(--brand-page-bg);
+	--color-brand-card: var(--brand-card);
+	--color-brand-ink: var(--brand-ink);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -245,4 +326,375 @@ body {
 
 .animate-float {
 	animation: float linear infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FAQ rich-text rendering (DESIGN.md §2/§4/§7)
+   All colors via --brand-* tokens — react to .dark automatically.
+   ───────────────────────────────────────────────────────────── */
+.faq-rich {
+	color: var(--brand-ink);
+}
+
+.faq-rich > * + * {
+	margin-top: 1.1em;
+}
+
+.faq-rich p {
+	line-height: 1.75;
+}
+
+.faq-rich h2,
+.faq-rich h3,
+.faq-rich h4 {
+	color: var(--brand-ink);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	line-height: 1.25;
+}
+
+.faq-rich h2 {
+	font-size: 1.625rem;
+	margin-top: 2em;
+	padding-bottom: 0.4em;
+	border-bottom: 2px solid var(--brand-maroon);
+	display: inline-block;
+	padding-right: 1.5rem;
+}
+
+.faq-rich h3 {
+	font-size: 1.25rem;
+	margin-top: 1.6em;
+	color: var(--brand-maroon);
+}
+
+.faq-rich h4 {
+	font-size: 1.05rem;
+	margin-top: 1.4em;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--brand-violet);
+}
+
+.faq-rich a {
+	color: var(--brand-crimson);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+	transition:
+		color 150ms ease-out,
+		text-decoration-thickness 150ms ease-out;
+}
+
+.faq-rich a:hover {
+	color: var(--brand-maroon);
+	text-decoration-thickness: 2px;
+}
+
+.faq-rich strong,
+.faq-rich b {
+	font-weight: 700;
+	color: var(--brand-ink);
+}
+
+.faq-rich em,
+.faq-rich i {
+	font-family: "Fraunces", Georgia, serif;
+	font-style: italic;
+	font-weight: 400;
+}
+
+.faq-rich mark {
+	background-color: var(--brand-mark-bg);
+	color: var(--brand-mark-fg);
+	padding: 0 3px;
+	border-radius: 2px;
+}
+
+.faq-rich ul,
+.faq-rich ol {
+	padding-left: 1.5rem;
+}
+
+.faq-rich ul {
+	list-style: none;
+}
+
+.faq-rich ul > li {
+	position: relative;
+	padding-left: 1.25rem;
+}
+
+.faq-rich ul > li::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0.7em;
+	width: 0.5rem;
+	height: 2px;
+	background: linear-gradient(90deg, var(--brand-violet), var(--brand-maroon));
+	border-radius: 1px;
+}
+
+.faq-rich ol {
+	list-style: none;
+	counter-reset: faq-ol;
+}
+
+.faq-rich ol > li {
+	position: relative;
+	padding-left: 2rem;
+	counter-increment: faq-ol;
+}
+
+.faq-rich ol > li::before {
+	content: counter(faq-ol, decimal-leading-zero);
+	position: absolute;
+	left: 0;
+	top: 0.1em;
+	font-size: 0.75em;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	color: var(--brand-maroon);
+	font-variant-numeric: tabular-nums;
+}
+
+.faq-rich li + li {
+	margin-top: 0.55em;
+}
+
+.faq-rich li > ul,
+.faq-rich li > ol {
+	margin-top: 0.55em;
+}
+
+.faq-rich blockquote {
+	margin: 1.5em 0;
+	padding: 1rem 1.25rem;
+	border-left: 3px solid var(--brand-maroon);
+	background: color-mix(in srgb, var(--brand-cream) 55%, transparent);
+	font-family: "Fraunces", Georgia, serif;
+	font-style: italic;
+	font-weight: 350;
+	font-size: 1.075em;
+	color: var(--brand-ink);
+	border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.dark .faq-rich blockquote {
+	background: color-mix(in srgb, var(--brand-cream) 8%, transparent);
+}
+
+.faq-rich blockquote p {
+	margin: 0;
+}
+
+.faq-rich blockquote p + p {
+	margin-top: 0.6em;
+}
+
+.faq-rich code {
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	font-size: 0.9em;
+	background: color-mix(in srgb, var(--brand-cream) 70%, transparent);
+	color: var(--brand-maroon);
+	padding: 0.15em 0.4em;
+	border-radius: 0.25rem;
+	border: 1px solid var(--brand-border-mid);
+}
+
+.dark .faq-rich code {
+	background: color-mix(in srgb, var(--brand-cream) 10%, transparent);
+}
+
+.faq-rich pre {
+	margin: 1.5em 0;
+	padding: 1rem 1.25rem;
+	background: #0e3663;
+	color: #ffefcd;
+	border-radius: 0.5rem;
+	overflow-x: auto;
+	font-size: 0.9em;
+	line-height: 1.6;
+}
+
+.dark .faq-rich pre {
+	background: #050a14;
+	border: 1px solid var(--brand-border-mid);
+}
+
+.faq-rich pre code {
+	background: transparent;
+	color: inherit;
+	padding: 0;
+	border: 0;
+	font-size: inherit;
+}
+
+.faq-rich img {
+	margin: 1.5em 0;
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.5rem;
+	box-shadow:
+		0 2px 8px rgba(0, 0, 0, 0.12),
+		0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.faq-rich figure {
+	margin: 1.5em 0;
+}
+
+.faq-rich figcaption {
+	margin-top: 0.5em;
+	font-size: 0.85em;
+	font-style: italic;
+	color: var(--brand-ink-soft);
+	text-align: center;
+}
+
+.faq-rich hr {
+	margin: 2.25em 0;
+	border: 0;
+	height: 2px;
+	background: var(--brand-gradient);
+	border-radius: 1px;
+}
+
+/* Tables — defensive against CMS inline styles (width / bg / color)
+   Editors often emit <table style="width:1200px"> and <th style="background:#f3f4f6">,
+   sometimes without <thead>. Override aggressively. */
+.faq-rich :where(.table-wrap, .faq-rich) {
+	/* placeholder so :where() selector remains valid */
+}
+
+.faq-rich table {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 1.5em 0;
+	border-collapse: separate;
+	border-spacing: 0;
+	border-radius: 0.5rem;
+	overflow: hidden;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+	font-size: 0.95em;
+	table-layout: auto;
+	background: var(--brand-card) !important;
+}
+
+/* Header — applies to <thead>, and to first <tr> in editors that skip thead */
+.faq-rich thead,
+.faq-rich thead tr,
+.faq-rich tbody > tr:first-child {
+	background: var(--brand-maroon) !important;
+}
+
+.faq-rich thead th,
+.faq-rich thead td,
+.faq-rich tbody > tr:first-child > th,
+.faq-rich tbody > tr:first-child > td,
+.faq-rich th {
+	background: var(--brand-maroon) !important;
+	color: var(--brand-cream) !important;
+	font-weight: 700 !important;
+	text-align: left;
+	padding: 0.7rem 0.9rem;
+	letter-spacing: 0.06em;
+	font-size: 0.8em;
+	text-transform: uppercase;
+	border: 0 !important;
+	vertical-align: middle;
+}
+
+.faq-rich td {
+	padding: 0.7rem 0.9rem;
+	border-top: 1px solid var(--brand-border-soft) !important;
+	color: var(--brand-ink) !important;
+	background: transparent;
+	vertical-align: top;
+	overflow-wrap: anywhere;
+	word-break: normal;
+	hyphens: auto;
+}
+
+/* Body row zebra — skip the first row since it's our forced header */
+.faq-rich tbody > tr:nth-child(odd):not(:first-child) {
+	background: var(--brand-card) !important;
+}
+
+.faq-rich tbody > tr:nth-child(even):not(:first-child) {
+	background: color-mix(in srgb, var(--brand-cream) 30%, transparent) !important;
+}
+
+.dark .faq-rich tbody > tr:nth-child(even):not(:first-child) {
+	background: color-mix(in srgb, var(--brand-cream) 6%, transparent) !important;
+}
+
+/* Strip inline widths from cells that force overflow */
+.faq-rich table th[width],
+.faq-rich table td[width],
+.faq-rich table[width] {
+	width: auto !important;
+}
+
+/* Nested lists in table cells need slightly tighter spacing */
+.faq-rich td ul,
+.faq-rich td ol {
+	padding-left: 1.1rem;
+	margin: 0.4em 0;
+}
+
+.faq-rich td li {
+	padding-left: 1rem;
+}
+
+.faq-rich td p {
+	margin: 0;
+}
+
+.faq-rich td p + p,
+.faq-rich td p + ul,
+.faq-rich td p + ol,
+.faq-rich td ul + p,
+.faq-rich td ol + p {
+	margin-top: 0.5em;
+}
+
+/* Mobile fallback — let very wide tables scroll horizontally inside their cell */
+@media (max-width: 640px) {
+	.faq-rich table {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+}
+
+.faq-rich kbd {
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	font-size: 0.85em;
+	background: var(--brand-page-bg);
+	border: 1px solid var(--brand-border-mid);
+	border-bottom-width: 2px;
+	border-radius: 0.25rem;
+	padding: 0.1em 0.4em;
+	color: var(--brand-ink);
+}
+
+.faq-rich abbr[title] {
+	text-decoration: underline dotted;
+	text-decoration-color: var(--brand-maroon);
+	cursor: help;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Paper grain overlay (DESIGN.md §6) — used by .faq-page wrapper
+   ───────────────────────────────────────────────────────────── */
+.faq-grain {
+	opacity: var(--brand-grain-opacity);
+	mix-blend-mode: var(--brand-grain-mix);
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.faq-rich :is(h2, h3, h4):first-child {
+	margin-top: 0;
 }
