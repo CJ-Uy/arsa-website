@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { event, eventShop, eventTickets, eventLanding, redirects } from "@/db/schema";
-import { requireEventRole, ForbiddenError } from "@/lib/eventPermissions";
+import { event, eventShop, eventTickets, eventLanding, redirects, eventRoleGrant } from "@/db/schema";
+import { requireEventRole, ForbiddenError, type EventRole } from "@/lib/eventPermissions";
 
 const RESERVED_SLUGS = new Set([
 	"shop", "admin", "api", "about", "calendar", "publications", "merch",
@@ -96,4 +96,47 @@ export async function toggleModule(
 
 	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
 	if (e) revalidatePath(`/admin/events/${e.slug}`);
+}
+
+export async function listGrants(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["overseer"]);
+	return db.query.eventRoleGrant.findMany({
+		where: eq(eventRoleGrant.eventId, eventId),
+		with: { user: true },
+	});
+}
+
+export async function grantRole(
+	eventId: string,
+	targetUserId: string,
+	role: EventRole,
+) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["overseer"]);
+	await db.insert(eventRoleGrant).values({
+		eventId,
+		userId: targetUserId,
+		role,
+		grantedBy: userId,
+	}).onConflictDoNothing();
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/admins`);
+}
+
+export async function revokeRole(eventId: string, grantId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["overseer"]);
+	await db.delete(eventRoleGrant).where(eq(eventRoleGrant.id, grantId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/admins`);
+}
+
+export async function searchUsersForGrant(query: string) {
+	if (query.length < 2) return [];
+	return db.query.user.findMany({
+		where: (u, { or, like }) => or(like(u.email, `%${query}%`), like(u.name, `%${query}%`)),
+		columns: { id: true, name: true, email: true, image: true },
+		limit: 10,
+	});
 }
