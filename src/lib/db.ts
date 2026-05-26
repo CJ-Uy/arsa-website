@@ -78,19 +78,30 @@ function createHttpClient(): DbClient {
 	) as unknown as DbClient;
 }
 
-const globalForDb = globalThis as unknown as { db: DbClient | undefined };
+const globalForDb = globalThis as unknown as {
+	dbNative: DbClient | undefined;
+	dbHttp: DbClient | undefined;
+};
 const isDev = process.env.NODE_ENV === "development";
+
+function resolveClient(): DbClient {
+	if (isDev) {
+		if (!globalForDb.dbHttp) globalForDb.dbHttp = createHttpClient();
+		return globalForDb.dbHttp;
+	}
+	if (!globalForDb.dbNative) {
+		const native = createNativeClient();
+		if (native) globalForDb.dbNative = native;
+	}
+	if (globalForDb.dbNative) return globalForDb.dbNative;
+	if (!globalForDb.dbHttp) globalForDb.dbHttp = createHttpClient();
+	return globalForDb.dbHttp;
+}
 
 export const db = new Proxy({} as DbClient, {
 	get(_target, prop) {
-		if (!globalForDb.db) {
-			if (isDev) {
-				globalForDb.db = createHttpClient();
-			} else {
-				globalForDb.db = createNativeClient() ?? createHttpClient();
-			}
-		}
-		return (globalForDb.db as unknown as Record<string | symbol, unknown>)[prop];
+		const client = resolveClient();
+		return (client as unknown as Record<string | symbol, unknown>)[prop];
 	},
 });
 

@@ -12,22 +12,22 @@ export async function redirectMiddleware(req: NextRequest): Promise<NextResponse
 	}
 
 	try {
-		const redirect = await db.query.redirects.findFirst({
-			where: eq(redirects.redirectCode, code),
-		});
+		const [redirect] = await db
+			.select()
+			.from(redirects)
+			.where(eq(redirects.redirectCode, code))
+			.limit(1);
 
-		if (redirect) {
-			await db.batch([
-				db
-					.update(redirects)
-					.set({ clicks: sql`${redirects.clicks} + 1` })
-					.where(eq(redirects.id, redirect.id)),
-				db.insert(redirectClick).values({
-					redirectId: redirect.id,
-					userAgent: req.headers.get("user-agent") || null,
-					referer: req.headers.get("referer") || null,
-				}),
-			]);
+		if (redirect?.id) {
+			await db
+				.update(redirects)
+				.set({ clicks: sql`${redirects.clicks} + 1` })
+				.where(eq(redirects.id, redirect.id));
+			await db.insert(redirectClick).values({
+				redirectId: redirect.id,
+				userAgent: req.headers.get("user-agent") || null,
+				referer: req.headers.get("referer") || null,
+			});
 
 			return NextResponse.redirect(new URL(redirect.newURL));
 		}
