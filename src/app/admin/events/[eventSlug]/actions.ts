@@ -2,10 +2,10 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant } from "@/db/schema";
+import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant, eventCategory } from "@/db/schema";
 import { requireEventRole, ForbiddenError, type EventRole } from "@/lib/eventPermissions";
 
 const RESERVED_SLUGS = new Set([
@@ -281,4 +281,92 @@ export async function getPageBySlug(eventId: string, pageSlug: string) {
 	return db.query.eventPage.findFirst({
 		where: and(eq(eventPage.eventId, eventId), eq(eventPage.pageSlug, pageSlug)),
 	});
+}
+
+// ─── Shop Config ────────────────────────────────────────────────────────────
+
+export type ShopConfigForm = {
+	isShopClosed: boolean;
+	closureMessage: string | null;
+	codePath: string | null;
+	allowScheduledDelivery: boolean;
+	deliveryLeadDays: number;
+	dailyCutoffTime: string | null;
+	hasCustomCheckout: boolean;
+};
+
+export async function saveShopConfig(eventId: string, form: ShopConfigForm) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["shop_admin"]);
+	await db
+		.update(eventShop)
+		.set({
+			isShopClosed: form.isShopClosed,
+			closureMessage: form.closureMessage,
+			codePath: form.codePath,
+			allowScheduledDelivery: form.allowScheduledDelivery,
+			deliveryLeadDays: form.deliveryLeadDays,
+			dailyCutoffTime: form.dailyCutoffTime,
+			hasCustomCheckout: form.hasCustomCheckout,
+		})
+		.where(eq(eventShop.eventId, eventId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/shop`);
+}
+
+// ─── Categories ─────────────────────────────────────────────────────────────
+
+export async function listCategories(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["shop_admin"]);
+	return db
+		.select()
+		.from(eventCategory)
+		.where(eq(eventCategory.eventId, eventId))
+		.orderBy(asc(eventCategory.displayOrder));
+}
+
+export async function createCategory(eventId: string, name: string, color: string | null) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["shop_admin"]);
+	const existing = await db
+		.select({ displayOrder: eventCategory.displayOrder })
+		.from(eventCategory)
+		.where(eq(eventCategory.eventId, eventId));
+	const maxOrder = existing.reduce((m, c) => Math.max(m, c.displayOrder), -1);
+	const catId = crypto.randomUUID();
+	await db.insert(eventCategory).values({ id: catId, eventId, name, displayOrder: maxOrder + 1, color });
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/shop/categories`);
+	return catId;
+}
+
+export async function updateCategory(categoryId: string, name: string, color: string | null) {
+	const userId = await authedUserId();
+	const cat = await db.query.eventCategory.findFirst({ where: eq(eventCategory.id, categoryId) });
+	if (!cat) throw new Error("Category not found");
+	await requireEventRole(userId, cat.eventId, ["shop_admin"]);
+	await db.update(eventCategory).set({ name, color }).where(eq(eventCategory.id, categoryId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, cat.eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/shop/categories`);
+}
+
+export async function deleteCategory(categoryId: string) {
+	const userId = await authedUserId();
+	const cat = await db.query.eventCategory.findFirst({ where: eq(eventCategory.id, categoryId) });
+	if (!cat) throw new Error("Category not found");
+	await requireEventRole(userId, cat.eventId, ["shop_admin"]);
+	await db.delete(eventCategory).where(eq(eventCategory.id, categoryId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, cat.eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/shop/categories`);
+}
+
+export async function reorderCategory(categoryId: string, newOrder: number) {
+	const userId = await authedUserId();
+	const cat = await db.query.eventCategory.findFirst({ where: eq(eventCategory.id, categoryId) });
+	if (!cat) throw new Error("Category not found");
+	await requireEventRole(userId, cat.eventId, ["shop_admin"]);
+	await db.update(eventCategory).set({ displayOrder: newOrder }).where(eq(eventCategory.id, categoryId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, cat.eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/shop/categories`);
 }
