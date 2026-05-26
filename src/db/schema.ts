@@ -772,7 +772,7 @@ export const event = sqliteTable(
 	"event",
 	{
 		id: id(),
-		slug: text("slug").notNull(),
+		slug: text("slug").notNull().unique(),
 		name: text("name").notNull(),
 		description: text("description"),
 		status: text("status").notNull().default("draft"), // 'draft' | 'active' | 'archived'
@@ -789,7 +789,6 @@ export const event = sqliteTable(
 		updatedAt: updated(),
 	},
 	(t) => ({
-		slugIdx: uniqueIndex("event_slug_key").on(t.slug),
 		statusIdx: index("event_status_idx").on(t.status),
 		dateIdx: index("event_dates_idx").on(t.startDate, t.endDate),
 	}),
@@ -815,6 +814,8 @@ export const eventShop = sqliteTable("event_shop", {
 	blockedDeliverySlots: text("blockedDeliverySlots", { mode: "json" }),
 	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
 	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+	createdAt: now(),
+	updatedAt: updated(),
 });
 
 export const eventTickets = sqliteTable("event_tickets", {
@@ -827,6 +828,8 @@ export const eventTickets = sqliteTable("event_tickets", {
 	sheetId: text("sheetId"),
 	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
 	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+	createdAt: now(),
+	updatedAt: updated(),
 });
 
 export const eventLanding = sqliteTable("event_landing", {
@@ -838,6 +841,8 @@ export const eventLanding = sqliteTable("event_landing", {
 	published: integer("published", { mode: "boolean" }).notNull().default(false),
 	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
 	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+	createdAt: now(),
+	updatedAt: updated(),
 });
 
 export const eventPage = sqliteTable(

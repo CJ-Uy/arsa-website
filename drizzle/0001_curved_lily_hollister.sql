@@ -17,7 +17,7 @@ CREATE TABLE `event` (
 	`updatedAt` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `event_slug_key` ON `event` (`slug`);--> statement-breakpoint
+CREATE UNIQUE INDEX `event_slug_unique` ON `event` (`slug`);--> statement-breakpoint
 CREATE INDEX `event_status_idx` ON `event` (`status`);--> statement-breakpoint
 CREATE INDEX `event_dates_idx` ON `event` (`startDate`,`endDate`);--> statement-breakpoint
 CREATE TABLE `event_landing` (
@@ -27,6 +27,8 @@ CREATE TABLE `event_landing` (
 	`published` integer DEFAULT false NOT NULL,
 	`lastToggledBy` text,
 	`lastToggledAt` integer,
+	`createdAt` integer NOT NULL,
+	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`eventId`) REFERENCES `event`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`lastToggledBy`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -83,6 +85,8 @@ CREATE TABLE `event_shop` (
 	`blockedDeliverySlots` text,
 	`lastToggledBy` text,
 	`lastToggledAt` integer,
+	`createdAt` integer NOT NULL,
+	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`eventId`) REFERENCES `event`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`lastToggledBy`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
@@ -95,6 +99,8 @@ CREATE TABLE `event_tickets` (
 	`sheetId` text,
 	`lastToggledBy` text,
 	`lastToggledAt` integer,
+	`createdAt` integer NOT NULL,
+	`updatedAt` integer NOT NULL,
 	FOREIGN KEY (`eventId`) REFERENCES `event`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`lastToggledBy`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
