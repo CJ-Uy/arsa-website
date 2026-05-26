@@ -764,3 +764,125 @@ export const sso26NominationRelations = relations(sso26Nomination, ({ one }) => 
 export const sso26DdayVoteRelations = relations(sso26DdayVote, ({ one }) => ({
 	user: one(user, { fields: [sso26DdayVote.userId], references: [user.id] }),
 }));
+
+// ============================================
+// Event Umbrella (new)
+// ============================================
+export const event = sqliteTable(
+	"event",
+	{
+		id: id(),
+		slug: text("slug").notNull().unique(),
+		name: text("name").notNull(),
+		description: text("description"),
+		status: text("status").notNull().default("draft"), // 'draft' | 'active' | 'archived'
+		startDate: integer("startDate", { mode: "timestamp_ms" }),
+		endDate: integer("endDate", { mode: "timestamp_ms" }),
+		heroImages: text("heroImages", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+		theme: text("theme", { mode: "json" }),
+		priority: integer("priority").notNull().default(0),
+		tabLabel: text("tabLabel"),
+		ogImage: text("ogImage"),
+		metaTitle: text("metaTitle"),
+		metaDescription: text("metaDescription"),
+		createdAt: now(),
+		updatedAt: updated(),
+	},
+	(t) => ({
+		slugIdx: uniqueIndex("event_slug_key").on(t.slug),
+		statusIdx: index("event_status_idx").on(t.status),
+		dateIdx: index("event_dates_idx").on(t.startDate, t.endDate),
+	}),
+);
+
+export const eventShop = sqliteTable("event_shop", {
+	eventId: text("eventId")
+		.primaryKey()
+		.references(() => event.id, { onDelete: "cascade" }),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+	checkoutFields: text("checkoutFields", { mode: "json" }),
+	checkoutConfig: text("checkoutConfig", { mode: "json" }),
+	hasCustomCheckout: integer("hasCustomCheckout", { mode: "boolean" }).notNull().default(false),
+	exclusivePricing: integer("exclusivePricing", { mode: "boolean" }).notNull().default(false),
+	codePath: text("codePath"),
+	dailyCutoffTime: text("dailyCutoffTime"),
+	deliveryLeadDays: integer("deliveryLeadDays").notNull().default(1),
+	isShopClosed: integer("isShopClosed", { mode: "boolean" }).notNull().default(false),
+	closureMessage: text("closureMessage"),
+	allowScheduledDelivery: integer("allowScheduledDelivery", { mode: "boolean" }).notNull().default(false),
+	minDeliveryDate: integer("minDeliveryDate", { mode: "timestamp_ms" }),
+	maxDeliveryDate: integer("maxDeliveryDate", { mode: "timestamp_ms" }),
+	blockedDeliverySlots: text("blockedDeliverySlots", { mode: "json" }),
+	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
+	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+});
+
+export const eventTickets = sqliteTable("event_tickets", {
+	eventId: text("eventId")
+		.primaryKey()
+		.references(() => event.id, { onDelete: "cascade" }),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+	defaultActive: integer("defaultActive", { mode: "boolean" }).notNull().default(true),
+	sheetSyncEnabled: integer("sheetSyncEnabled", { mode: "boolean" }).notNull().default(false),
+	sheetId: text("sheetId"),
+	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
+	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+});
+
+export const eventLanding = sqliteTable("event_landing", {
+	eventId: text("eventId")
+		.primaryKey()
+		.references(() => event.id, { onDelete: "cascade" }),
+	body: text("body", { mode: "json" }),
+	codePath: text("codePath"),
+	published: integer("published", { mode: "boolean" }).notNull().default(false),
+	lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
+	lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+});
+
+export const eventPage = sqliteTable(
+	"event_page",
+	{
+		id: id(),
+		eventId: text("eventId")
+			.notNull()
+			.references(() => event.id, { onDelete: "cascade" }),
+		pageSlug: text("pageSlug").notNull(),
+		title: text("title").notNull(),
+		body: text("body", { mode: "json" }),
+		codePath: text("codePath"),
+		published: integer("published", { mode: "boolean" }).notNull().default(false),
+		sortOrder: integer("sortOrder").notNull().default(0),
+		lastToggledBy: text("lastToggledBy").references(() => user.id, { onDelete: "set null" }),
+		lastToggledAt: integer("lastToggledAt", { mode: "timestamp_ms" }),
+		createdAt: now(),
+		updatedAt: updated(),
+	},
+	(t) => ({
+		uniq: uniqueIndex("event_page_event_slug_key").on(t.eventId, t.pageSlug),
+		eventIdx: index("event_page_event_idx").on(t.eventId),
+	}),
+);
+
+export const eventRoleGrant = sqliteTable(
+	"event_role_grant",
+	{
+		id: id(),
+		eventId: text("eventId")
+			.notNull()
+			.references(() => event.id, { onDelete: "cascade" }),
+		userId: text("userId")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		role: text("role").notNull(), // 'overseer' | 'shop_admin' | 'tickets_admin' | 'content_admin'
+		grantedBy: text("grantedBy").references(() => user.id, { onDelete: "set null" }),
+		grantedAt: integer("grantedAt", { mode: "timestamp_ms" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => ({
+		uniq: uniqueIndex("event_role_grant_uniq").on(t.eventId, t.userId, t.role),
+		userIdx: index("event_role_grant_user_idx").on(t.userId),
+		eventIdx: index("event_role_grant_event_idx").on(t.eventId),
+	}),
+);
