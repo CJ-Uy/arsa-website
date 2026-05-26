@@ -202,12 +202,21 @@ export async function listPages(eventId: string) {
 export async function createPage(eventId: string, pageSlug: string, title: string) {
 	const userId = await authedUserId();
 	await requireEventRole(userId, eventId, ["content_admin"]);
+
+	const cleanSlug = pageSlug.trim().toLowerCase();
+	if (!/^[a-z0-9-]+$/.test(cleanSlug)) throw new Error("Slug must contain only lowercase letters, numbers, and hyphens");
+	const conflict = await db.query.eventPage.findFirst({
+		where: and(eq(eventPage.eventId, eventId), eq(eventPage.pageSlug, cleanSlug)),
+		columns: { id: true },
+	});
+	if (conflict) throw new Error("A page with this slug already exists");
+
 	const id = crypto.randomUUID();
 	const now = new Date();
 	await db.insert(eventPage).values({
 		id,
 		eventId,
-		pageSlug,
+		pageSlug: cleanSlug,
 		title,
 		body: null,
 		published: false,
@@ -217,7 +226,7 @@ export async function createPage(eventId: string, pageSlug: string, title: strin
 	});
 	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
 	if (e) revalidatePath(`/admin/events/${e.slug}/pages`);
-	return { id, pageSlug };
+	return { id, pageSlug: cleanSlug };
 }
 
 export async function updatePage(
@@ -256,7 +265,7 @@ export async function updatePage(
 export async function deletePage(pageId: string) {
 	const userId = await authedUserId();
 	const p = await db.query.eventPage.findFirst({ where: eq(eventPage.id, pageId) });
-	if (!p) return;
+	if (!p) throw new Error("Page not found");
 	await requireEventRole(userId, p.eventId, ["content_admin"]);
 	await db.delete(eventPage).where(eq(eventPage.id, pageId));
 	const e = await db.query.event.findFirst({
