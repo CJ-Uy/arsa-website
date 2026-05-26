@@ -891,3 +891,37 @@ export const eventRoleGrant = sqliteTable(
 		eventIdx: index("event_role_grant_event_idx").on(t.eventId),
 	}),
 );
+
+export const eventRelations = relations(event, ({ one, many }) => ({
+	shop: one(eventShop, { fields: [event.id], references: [eventShop.eventId] }),
+	tickets: one(eventTickets, { fields: [event.id], references: [eventTickets.eventId] }),
+	landing: one(eventLanding, { fields: [event.id], references: [eventLanding.eventId] }),
+	pages: many(eventPage),
+	grants: many(eventRoleGrant),
+}));
+
+export const eventShopRelations = relations(eventShop, ({ one }) => ({
+	event: one(event, { fields: [eventShop.eventId], references: [event.id] }),
+	toggledBy: one(user, { fields: [eventShop.lastToggledBy], references: [user.id] }),
+}));
+
+export const eventTicketsRelations = relations(eventTickets, ({ one }) => ({
+	event: one(event, { fields: [eventTickets.eventId], references: [event.id] }),
+	toggledBy: one(user, { fields: [eventTickets.lastToggledBy], references: [user.id] }),
+}));
+
+export const eventLandingRelations = relations(eventLanding, ({ one }) => ({
+	event: one(event, { fields: [eventLanding.eventId], references: [event.id] }),
+	toggledBy: one(user, { fields: [eventLanding.lastToggledBy], references: [user.id] }),
+}));
+
+export const eventPageRelations = relations(eventPage, ({ one }) => ({
+	event: one(event, { fields: [eventPage.eventId], references: [event.id] }),
+	toggledBy: one(user, { fields: [eventPage.lastToggledBy], references: [user.id] }),
+}));
+
+export const eventRoleGrantRelations = relations(eventRoleGrant, ({ one }) => ({
+	event: one(event, { fields: [eventRoleGrant.eventId], references: [event.id] }),
+	user: one(user, { fields: [eventRoleGrant.userId], references: [user.id] }),
+	grantedBy: one(user, { fields: [eventRoleGrant.grantedBy], references: [user.id] }),
+}));
