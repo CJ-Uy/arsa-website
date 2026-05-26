@@ -133,6 +133,7 @@ export async function revokeRole(eventId: string, grantId: string) {
 }
 
 export async function searchUsersForGrant(query: string) {
+	await authedUserId();
 	if (query.length < 2) return [];
 	return db.query.user.findMany({
 		where: (u, { or, like }) => or(like(u.email, `%${query}%`), like(u.name, `%${query}%`)),

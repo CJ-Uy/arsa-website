@@ -103,10 +103,14 @@ export function AdminsClient({
 								disabled={pending}
 								onClick={() =>
 									start(async () => {
-										await grantRole(eventId, u.id, selectedRole);
-										toast.success(`Granted ${selectedRole}`);
-										setQ("");
-										setResults([]);
+										try {
+											await grantRole(eventId, u.id, selectedRole);
+											toast.success(`Granted ${selectedRole}`);
+											setQ("");
+											setResults([]);
+										} catch {
+											toast.error("Failed to grant role");
+										}
 									})
 								}
 							>
@@ -151,9 +155,13 @@ export function AdminsClient({
 								disabled={pending}
 								onClick={() =>
 									start(async () => {
-										await revokeRole(eventId, g.id);
-										toast.success("Revoked");
-										setGrants((prev) => prev.filter((x) => x.id !== g.id));
+										try {
+											await revokeRole(eventId, g.id);
+											toast.success("Revoked");
+											setGrants((prev) => prev.filter((x) => x.id !== g.id));
+										} catch {
+											toast.error("Failed to revoke role");
+										}
 									})
 								}
 							>

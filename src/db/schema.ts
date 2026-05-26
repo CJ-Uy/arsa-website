@@ -641,6 +641,8 @@ export const userRelations = relations(user, ({ many }) => ({
 	ticketVerifiers: many(ticketVerifier),
 	sso26Nominations: many(sso26Nomination),
 	sso26DdayVotes: many(sso26DdayVote),
+	receivedGrants: many(eventRoleGrant, { relationName: "grant_recipient" }),
+	givenGrants: many(eventRoleGrant, { relationName: "grant_grantor" }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -922,6 +924,14 @@ export const eventPageRelations = relations(eventPage, ({ one }) => ({
 
 export const eventRoleGrantRelations = relations(eventRoleGrant, ({ one }) => ({
 	event: one(event, { fields: [eventRoleGrant.eventId], references: [event.id] }),
-	user: one(user, { fields: [eventRoleGrant.userId], references: [user.id] }),
-	grantedBy: one(user, { fields: [eventRoleGrant.grantedBy], references: [user.id] }),
+	user: one(user, {
+		fields: [eventRoleGrant.userId],
+		references: [user.id],
+		relationName: "grant_recipient",
+	}),
+	grantedBy: one(user, {
+		fields: [eventRoleGrant.grantedBy],
+		references: [user.id],
+		relationName: "grant_grantor",
+	}),
 }));
