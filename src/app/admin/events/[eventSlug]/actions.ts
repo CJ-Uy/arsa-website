@@ -155,14 +155,16 @@ export async function saveLanding(
 		where: eq(eventLanding.eventId, eventId),
 	});
 
+	const now = new Date();
 	if (existing) {
 		await db
 			.update(eventLanding)
 			.set({
 				body,
 				codePath,
+				updatedAt: now,
 				...(publish !== existing.published
-					? { published: publish, lastToggledBy: userId, lastToggledAt: new Date() }
+					? { published: publish, lastToggledBy: userId, lastToggledAt: now }
 					: {}),
 			})
 			.where(eq(eventLanding.eventId, eventId));
@@ -173,7 +175,9 @@ export async function saveLanding(
 			codePath,
 			published: publish,
 			lastToggledBy: publish ? userId : null,
-			lastToggledAt: publish ? new Date() : null,
+			lastToggledAt: publish ? now : null,
+			createdAt: now,
+			updatedAt: now,
 		});
 	}
 
