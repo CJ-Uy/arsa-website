@@ -5,8 +5,19 @@ import { revalidatePath } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant, eventCategory } from "@/db/schema";
+import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant, eventCategory, ticketVerifier } from "@/db/schema";
 import { requireEventRole, ForbiddenError, type EventRole } from "@/lib/eventPermissions";
+import {
+	bulkGenerateTickets as _bulkGenerateTickets,
+	getTicketsForEvent as _getTicketsForEvent,
+	deleteTickets as _deleteTickets,
+	resetTicketScans as _resetTicketScans,
+	exportTicketsForMailMerge as _exportTicketsForMailMerge,
+	addTicketVerifier as _addTicketVerifier,
+	removeTicketVerifier as _removeTicketVerifier,
+	searchUsers as _searchUsers,
+	syncTicketsToSheet as _syncTicketsToSheet,
+} from "@/app/admin/tickets/actions";
 
 const RESERVED_SLUGS = new Set([
 	"shop", "admin", "api", "about", "calendar", "publications", "merch",
@@ -369,4 +380,83 @@ export async function reorderCategory(categoryId: string, newOrder: number) {
 	await db.update(eventCategory).set({ displayOrder: newOrder }).where(eq(eventCategory.id, categoryId));
 	const e = await db.query.event.findFirst({ where: eq(event.id, cat.eventId), columns: { slug: true } });
 	if (e) revalidatePath(`/admin/events/${e.slug}/shop/categories`);
+}
+
+// ─── Ticket wrappers ────────────────────────────────────────────────────────
+
+export async function getEventTickets(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _getTicketsForEvent(eventId);
+}
+
+export async function generateTickets(eventId: string, csvText: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _bulkGenerateTickets(eventId, csvText);
+}
+
+export async function deleteEventTickets(eventId: string, ticketIds: string[]) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _deleteTickets(ticketIds);
+}
+
+export async function resetEventTicketScans(eventId: string, ticketIds: string[]) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _resetTicketScans(ticketIds);
+}
+
+export async function exportTicketsCsv(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _exportTicketsForMailMerge(eventId);
+}
+
+export async function syncEventTicketsToSheet(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _syncTicketsToSheet(eventId);
+}
+
+export async function addEventTicketVerifier(eventId: string, targetUserId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _addTicketVerifier(eventId, targetUserId);
+}
+
+export async function removeEventTicketVerifier(eventId: string, targetUserId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return _removeTicketVerifier(eventId, targetUserId);
+}
+
+export async function searchUsersForTickets(query: string) {
+	await authedUserId();
+	return _searchUsers(query);
+}
+
+export async function listEventVerifiers(eventId: string) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	return db.query.ticketVerifier.findMany({
+		where: eq(ticketVerifier.ticketEventId, eventId),
+		with: { user: { columns: { id: true, name: true, email: true, image: true } } },
+	});
+}
+
+export async function saveTicketConfig(eventId: string, config: { sheetSyncEnabled: boolean }) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	await db
+		.update(eventTickets)
+		.set({
+			sheetSyncEnabled: config.sheetSyncEnabled,
+			lastToggledBy: userId,
+			lastToggledAt: new Date(),
+		})
+		.where(eq(eventTickets.eventId, eventId));
+	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
+	if (e) revalidatePath(`/admin/events/${e.slug}/tickets`);
 }
