@@ -141,3 +141,45 @@ export async function searchUsersForGrant(query: string) {
 		limit: 10,
 	});
 }
+
+export async function saveLanding(
+	eventId: string,
+	body: unknown,
+	codePath: string | null,
+	publish: boolean,
+) {
+	const userId = await authedUserId();
+	await requireEventRole(userId, eventId, ["content_admin"]);
+
+	const existing = await db.query.eventLanding.findFirst({
+		where: eq(eventLanding.eventId, eventId),
+	});
+
+	if (existing) {
+		await db
+			.update(eventLanding)
+			.set({
+				body,
+				codePath,
+				...(publish !== existing.published
+					? { published: publish, lastToggledBy: userId, lastToggledAt: new Date() }
+					: {}),
+			})
+			.where(eq(eventLanding.eventId, eventId));
+	} else {
+		await db.insert(eventLanding).values({
+			eventId,
+			body,
+			codePath,
+			published: publish,
+			lastToggledBy: publish ? userId : null,
+			lastToggledAt: publish ? new Date() : null,
+		});
+	}
+
+	const e = await db.query.event.findFirst({
+		where: eq(event.id, eventId),
+		columns: { slug: true },
+	});
+	if (e) revalidatePath(`/admin/events/${e.slug}/landing`);
+}
