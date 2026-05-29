@@ -2,10 +2,10 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant, eventCategory, ticketVerifier } from "@/db/schema";
+import { event, eventShop, eventTickets, eventLanding, eventPage, redirects, eventRoleGrant, eventCategory, ticket, ticketVerifier } from "@/db/schema";
 import { requireEventRole, ForbiddenError, type EventRole } from "@/lib/eventPermissions";
 import {
 	bulkGenerateTickets as _bulkGenerateTickets,
@@ -399,12 +399,18 @@ export async function generateTickets(eventId: string, csvText: string) {
 export async function deleteEventTickets(eventId: string, ticketIds: string[]) {
 	const userId = await authedUserId();
 	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	const owned = await db.select({ id: ticket.id }).from(ticket)
+		.where(and(inArray(ticket.id, ticketIds), eq(ticket.ticketEventId, eventId)));
+	if (owned.length !== ticketIds.length) throw new ForbiddenError();
 	return _deleteTickets(ticketIds);
 }
 
 export async function resetEventTicketScans(eventId: string, ticketIds: string[]) {
 	const userId = await authedUserId();
 	await requireEventRole(userId, eventId, ["tickets_admin"]);
+	const owned = await db.select({ id: ticket.id }).from(ticket)
+		.where(and(inArray(ticket.id, ticketIds), eq(ticket.ticketEventId, eventId)));
+	if (owned.length !== ticketIds.length) throw new ForbiddenError();
 	return _resetTicketScans(ticketIds);
 }
 
@@ -451,11 +457,7 @@ export async function saveTicketConfig(eventId: string, config: { sheetSyncEnabl
 	await requireEventRole(userId, eventId, ["tickets_admin"]);
 	await db
 		.update(eventTickets)
-		.set({
-			sheetSyncEnabled: config.sheetSyncEnabled,
-			lastToggledBy: userId,
-			lastToggledAt: new Date(),
-		})
+		.set({ sheetSyncEnabled: config.sheetSyncEnabled, updatedAt: new Date() })
 		.where(eq(eventTickets.eventId, eventId));
 	const e = await db.query.event.findFirst({ where: eq(event.id, eventId), columns: { slug: true } });
 	if (e) revalidatePath(`/admin/events/${e.slug}/tickets`);

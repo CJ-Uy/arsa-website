@@ -77,6 +77,7 @@ export function GenerateClient({ eventId, eventSlug, tickets: initialTickets }: 
 				if (result.success) {
 					toast.success(result.message);
 					setCsvText("");
+					setSelectedIds(new Set());
 					router.refresh();
 				} else {
 					toast.error(result.message ?? "Failed to generate tickets");
@@ -108,7 +109,7 @@ export function GenerateClient({ eventId, eventSlug, tickets: initialTickets }: 
 			a.href = url;
 			a.download = `tickets-${eventId}.csv`;
 			a.click();
-			URL.revokeObjectURL(url);
+			setTimeout(() => URL.revokeObjectURL(url), 100);
 			toast.success(`Exported ${result.data.length} tickets`);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Export failed");
