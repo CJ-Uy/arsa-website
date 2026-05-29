@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -35,7 +35,8 @@ export default async function AdminOrdersPage({
 		return <OrdersManagement initialOrders={[]} availableEvents={[]} />;
 	}
 
-	const eventFilter = inArray(order.eventId, shopEventIds);
+	// Include null-eventId orders (general shop orders) for all authorized admins
+	const eventFilter = or(inArray(order.eventId, shopEventIds), isNull(order.eventId));
 	const orders = await db.query.order.findMany({
 		where: statusFilter
 			? and(eventFilter, eq(order.status, statusFilter))
