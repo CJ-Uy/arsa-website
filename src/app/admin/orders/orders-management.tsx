@@ -66,6 +66,7 @@ type Order = {
 	receiptImageUrl: string | null;
 	gcashReferenceNumber: string | null;
 	notes: string | null;
+	eventId: string | null;
 	createdAt: Date;
 	confirmationEmailSent: boolean;
 	user: {
@@ -89,15 +90,17 @@ type Order = {
 
 type OrdersManagementProps = {
 	initialOrders: Order[];
+	availableEvents: Array<{ id: string; name: string }>;
 };
 
-export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
+export function OrdersManagement({ initialOrders, availableEvents }: OrdersManagementProps) {
 	const [orders, setOrders] = useState<Order[]>(initialOrders);
 	const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 	const [showDialog, setShowDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
 	const [statusFilter, setStatusFilter] = useState<string>("all");
+	const [eventFilter, setEventFilter] = useState<string>("all");
 	const [showExportDialog, setShowExportDialog] = useState(false);
 	const [showSyncDialog, setShowSyncDialog] = useState(false);
 	const [sendingEmailOrderId, setSendingEmailOrderId] = useState<string | null>(null);
@@ -116,8 +119,9 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 		}
 	});
 
-	const filteredOrders =
-		statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
+	const filteredOrders = orders
+		.filter((o) => statusFilter === "all" || o.status === statusFilter)
+		.filter((o) => eventFilter === "all" || o.eventId === eventFilter);
 
 	const handleStatusChange = async (orderId: string, newStatus: string) => {
 		const result = await updateOrderStatus(orderId, newStatus);
@@ -295,16 +299,33 @@ export function OrdersManagement({ initialOrders }: OrdersManagementProps) {
 					</div>
 
 					{/* Filter Tabs */}
-					<Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-						<TabsList>
-							<TabsTrigger value="all">All Orders</TabsTrigger>
-							<TabsTrigger value="pending">Pending</TabsTrigger>
-							<TabsTrigger value="paid">Paid</TabsTrigger>
-							<TabsTrigger value="confirmed">Confirmed</TabsTrigger>
-							<TabsTrigger value="completed">Completed</TabsTrigger>
-							<TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-						</TabsList>
-					</Tabs>
+					<div className="mb-6 flex flex-wrap items-center gap-4">
+						<Tabs value={statusFilter} onValueChange={setStatusFilter}>
+							<TabsList>
+								<TabsTrigger value="all">All Orders</TabsTrigger>
+								<TabsTrigger value="pending">Pending</TabsTrigger>
+								<TabsTrigger value="paid">Paid</TabsTrigger>
+								<TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+								<TabsTrigger value="completed">Completed</TabsTrigger>
+								<TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+							</TabsList>
+						</Tabs>
+						{availableEvents.length > 0 && (
+							<Select value={eventFilter} onValueChange={setEventFilter}>
+								<SelectTrigger className="w-[200px]">
+									<SelectValue placeholder="Filter by event" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Events</SelectItem>
+									{availableEvents.map((ev) => (
+										<SelectItem key={ev.id} value={ev.id}>
+											{ev.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
+					</div>
 
 					{/* Orders List */}
 					<div className="space-y-4">

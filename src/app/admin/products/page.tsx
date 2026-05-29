@@ -1,9 +1,30 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { product, shopEvent } from "@/db/schema";
+import { product, event } from "@/db/schema";
+import { getUserAccessibleEvents } from "@/lib/eventPermissions";
 import { ProductsManagement } from "./products-management";
 
 export default async function AdminProductsPage() {
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) redirect("/shop");
+
+	const accessible = await getUserAccessibleEvents(session.user.id);
+	const shopEventIds: string[] = [];
+	for (const [eid, roles] of accessible) {
+		if (roles.includes("overseer") || roles.includes("shop_admin")) shopEventIds.push(eid);
+	}
+
+	if (!shopEventIds.length) redirect("/shop");
+
+	// Fetch accessible events from the umbrella event table for the assignment dropdown
+	const events = await db.query.event.findMany({
+		where: inArray(event.id, shopEventIds),
+		columns: { id: true, name: true, slug: true },
+	});
+
 	const productsRaw = await db.query.product.findMany({
 		with: {
 			eventProducts: {
@@ -18,12 +39,6 @@ export default async function AdminProductsPage() {
 			},
 		},
 		orderBy: [desc(product.createdAt)],
-	});
-
-	const events = await db.query.shopEvent.findMany({
-		where: eq(shopEvent.isActive, true),
-		columns: { id: true, name: true, slug: true },
-		orderBy: [asc(shopEvent.name)],
 	});
 
 	const products = productsRaw as any[];
