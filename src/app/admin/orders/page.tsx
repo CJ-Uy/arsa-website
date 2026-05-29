@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -35,8 +35,11 @@ export default async function AdminOrdersPage({
 		return <OrdersManagement initialOrders={[]} availableEvents={[]} />;
 	}
 
+	const eventFilter = inArray(order.eventId, shopEventIds);
 	const orders = await db.query.order.findMany({
-		where: statusFilter ? eq(order.status, statusFilter) : undefined,
+		where: statusFilter
+			? and(eventFilter, eq(order.status, statusFilter))
+			: eventFilter,
 		with: {
 			user: { columns: { id: true, name: true, email: true } },
 			orderItems: { with: { product: true } },
