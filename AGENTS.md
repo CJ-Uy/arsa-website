@@ -1,0 +1,931 @@
+# AGENTS.md
+
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+
+> 📚 **Additional Documentation**: See the [docs/](docs/) folder for detailed guides on specific features and deployment.
+
+## Project Overview
+
+This is the ARSA (Ateneo Resident Students Association) website - a Next.js 15 application for a university dormitory system. The site is a comprehensive platform with:
+
+- **Public Pages**: Home, About, Calendar, Publications (Bridges Magazine), Merchandise showcase with gacha system, Resources, Contact
+- **E-Commerce Shop**: Full-featured shop with cart, checkout, order history, and GCash payment integration with OCR
+- **Shop Events System**: Event-based product organization with custom themes, checkout fields, and analytics
+- **Package System**: Product bundles with fixed items and selection pools ("Pick N from X" options)
+- **Admin Dashboard**: Product, package, event, order, banner, email logs, and settings management with role-based access
+- **Google Sheets Sync**: Automatic order syncing to a configurable Google Sheets spreadsheet
+- **Email System**: Order confirmation emails via SMTP or Resend; admin bulk email sender with logs
+- **Daily Stock Overrides**: Per-day stock and availability overrides for products
+- **Delivery Scheduling**: Configurable delivery date/time slot selection at checkout
+- **Custom Event Pages**: Events can load custom React components for unique experiences
+- **Ticket System**: Ticket generation and QR code verification for events, with Mail Merge integration and camera scanning
+- **URL Shortener**: Custom short URL system with click tracking and analytics
+- **Authentication**: Better Auth with Google OAuth integration
+- **Storage**: Cloudflare R2 (S3-compatible) for product images and receipt storage
+- **Analytics**: Shop click tracking and purchase analytics per event
+
+## Development Commands
+
+```bash
+# Development server (Turbopack)
+pnpm dev
+
+# Production build
+pnpm build
+
+# Workers preview (local) and deploy
+pnpm preview
+pnpm deploy
+
+# Linting
+pnpm lint
+
+# Database (Drizzle + D1)
+pnpm db:generate            # Generate SQL migration from schema changes
+pnpm db:migrate             # Apply migrations to remote D1
+pnpm db:migrate:local       # Apply to local D1 (wrangler dev)
+pnpm db:studio              # Open Drizzle Studio
+
+# Cloudflare Worker types
+pnpm cf-typegen
+```
+
+## Tech Stack
+
+- **Runtime**: Cloudflare Workers via `@opennextjs/cloudflare`
+- **Framework**: Next.js 15 (App Router) with React 19
+- **Styling**: Tailwind CSS v4 with PostCSS
+- **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
+- **Authentication**: Better Auth + drizzleAdapter (sqlite provider), Google OAuth
+- **Storage**: Cloudflare R2 (S3-compatible)
+- **Cache**: Cloudflare KV
+- **OCR**: Tesseract.js (client-side only)
+- **PDF parsing**: pdfjs-dist (client-side)
+- **Image optim**: browser-image-compression (client; Sharp removed)
+- **UI Components**: 57 shadcn/ui components (Radix UI primitives + Tailwind)
+- **Forms**: react-hook-form with Zod validation
+- **Notifications**: Sonner for toast notifications
+- **Charts**: Recharts for analytics dashboards
+- **Email**: Resend (Nodemailer dropped — TCP-incompatible with Workers)
+- **Google APIs**: googleapis (HTTPS-only paths; Drive upload uses Web ReadableStream)
+- **Excel Export**: XLSX / ExcelJS for order exports
+- **Package Manager**: pnpm
+- **Deployment**: Cloudflare Workers (build cmd `npx opennextjs-cloudflare build`)
+
+## Architecture
+
+### Database and ORM
+
+- **Drizzle Schema**: [src/db/schema.ts](src/db/schema.ts) — 23 tables, JSON columns via `mode: "json"`, application-level `crypto.randomUUID()` IDs, integer-timestamp datetimes.
+- **DB Client**: [src/lib/db.ts](src/lib/db.ts) — lazy `Proxy` that returns the native D1 binding inside a Worker request, and falls back to the D1 HTTP REST API in `next dev`.
+- **Migrations**: `pnpm db:generate` writes SQL into `drizzle/`; `pnpm db:migrate` applies them to remote D1.
+
+#### Database Models
+
+**Authentication (Better Auth)**
+
+- `User` - User accounts with admin role flags (`isShopAdmin`, `isEventsAdmin`, `isRedirectsAdmin`), student ID, name fields
+- `Session` - Session management with IP address and user agent tracking
+- `Account` - OAuth provider accounts (Google)
+- `Verification` - Email verification tokens
+
+**E-Commerce Shop**
+
+- `Product` - Products with multiple images, size variants (XXXS-XXXL), pre-order support, categories (merch/arsari-sari/other), event exclusivity
+- `Package` - Product bundles with fixed items and selection pools
+- `PackageItem` - Fixed items included in packages (quantity support)
+- `PackagePool` - Selection pools for packages ("Pick X from Y")
+- `PackagePoolOption` - Available products in a selection pool
+- `CartItem` - Shopping cart with size-aware items for products and packages
+- `Order` - Orders with status workflow, receipt storage, GCash reference numbers, event association, custom checkout data
+- `OrderItem` - Order line items with size and price snapshots for products and packages, purchase codes for tracking
+
+**Shop Events System**
+
+- `ShopEvent` - Event tabs with custom themes, hero images, timing, priority, checkout customization, custom component paths
+- `EventProduct` - Many-to-many relation linking products/packages to events with optional event-specific pricing, product codes, and category assignment
+- `EventCategory` - Categories within events for organizing products (e.g., "Solo Flowers", "Bouquets") with display order and color
+- `EventAdmin` - Event-specific admin assignments (in addition to global shop admins)
+
+**Shop Analytics**
+
+- `ShopClick` - Click tracking for shop pages and event tabs
+- `ShopPurchase` - Purchase tracking for analytics and event performance graphs
+
+**URL Redirect System**
+
+- `Redirects` - Short URL codes with click tracking
+- `RedirectClick` - Detailed click logs with user agent and referrer tracking
+
+**Content Management**
+
+- `Banner` - Site-wide announcements with countdown timer support
+
+**Email & Notifications**
+
+- `EmailLog` - Audit log of all sent emails (recipient, subject, status, timestamp)
+
+**Delivery & Stock**
+
+- `DailyStockOverride` - Per-day stock and availability overrides for products (overrides default stock for a specific date)
+- `DeliverySchedule` - Configurable delivery date/time slots for checkout (managed via admin settings)
+
+**Ticket System**
+
+- `TicketEvent` - Lightweight event for ticket generation (separate from ShopEvent), with name, description, date, active status
+- `Ticket` - Individual ticket instances with unique 8-char `shortCode` for QR codes, email, scan status, scanner tracking
+- `TicketVerifier` - Junction table assigning users as ticket verifiers for specific events
+
+### Middleware Architecture
+
+The application uses a chainable middleware pattern in [src/middleware.ts](src/middleware.ts):
+
+1. **Entry Point**: All requests matching the matcher config flow through the main middleware
+2. **Redirect Middleware** ([src/lib/middleware/redirectMiddleware.ts](src/lib/middleware/redirectMiddleware.ts)):
+   - Intercepts all non-static paths
+   - Checks if the path matches a redirect code in the database
+   - Updates click tracking and performs redirects
+   - Returns `undefined` to continue to Next.js routing if no redirect found
+3. **Extensible Design**: Additional middleware can be chained by adding more checks after the redirect middleware
+
+### Caching System
+
+**Cloudflare KV** ([src/lib/cache.ts](src/lib/cache.ts)):
+
+- Distributed across the Worker edge.
+- TTL via `expirationTtl` (minimum 60s in KV).
+- `withCache()` does per-isolate in-flight dedup to prevent stampede.
+- Cache key generators for products, cart, orders, redirects.
+
+### Storage System
+
+**Cloudflare R2** ([src/lib/r2.ts](src/lib/r2.ts)):
+
+- Four buckets bound by name in `wrangler.jsonc`: PRODUCTS, RECEIPTS, EVENTS, CONTENT.
+- Public reads via a custom R2 domain (`R2_PUBLIC_DOMAIN` env, e.g. `https://r2.ateneoarsa.org`).
+- `uploadFile/deleteFile/getFileStream` preserve the original MinIO API surface so call sites stayed unchanged.
+- Upload endpoint at `/api/upload`; receipt serving at `/api/receipts/[filename]` streams via `R2Bucket.get()`.
+
+**Image Optimization** (client-side):
+
+- [src/lib/imageCompress.ts](src/lib/imageCompress.ts) wraps `browser-image-compression` to resize → WebP at quality 0.85 in the browser before upload.
+- Sharp removed (native bindings don't run on Workers).
+- Receipts stay raw (no compression) to preserve OCR fidelity.
+
+### URL Redirect System
+
+The core feature that enables custom short URLs (e.g., `domain.com/shortcode` → full URL):
+
+- **Dashboard**: [src/app/redirects/page.tsx](src/app/redirects/page.tsx) - Server Component that fetches initial data
+- **Client UI**: [src/app/redirects/dashboardClient.tsx](src/app/redirects/dashboardClient.tsx) - Interactive dashboard for CRUD operations
+- **Server Actions**: [src/app/redirects/actions.ts](src/app/redirects/actions.ts):
+  - `verifyCredentials()`: Authentication check
+  - `createRedirect()`, `updateRedirect()`, `deleteRedirect()`: Redirect management with validation
+- **Middleware**: Handles the actual redirects at runtime and tracks click analytics
+
+### Component Structure
+
+**Main Components** ([src/components/main/](src/components/main/)):
+
+- `Header.tsx` - Navigation with responsive mobile menu, user dropdown, role-based admin links
+- `Footer.tsx` - Site footer with social media links and contact info
+- `theme-provider.tsx` - next-themes integration for dark mode
+- `theme-toggle.tsx` - Theme switcher component
+- `announcement-banner.tsx` - Dismissible banner with countdown timer support
+
+**Feature Components** ([src/components/features/](src/components/features/)):
+
+- `gacha-banner.tsx` - Interactive gacha system for merchandise with rarity tiers (5★/4★/3★)
+- `event-card.tsx` - Event display with attendance tracking
+- `product-image-carousel.tsx` - Multi-image carousel with zoom, swipe gestures, thumbnails
+- `cart-counter.tsx` - Shopping cart item counter badge (listens to `cartUpdated` event)
+- `daily-stock-dialog.tsx` - UI dialog for viewing/editing per-day stock overrides
+- `daily-stock-overrides.tsx` - Admin component for managing daily stock overrides
+- `image-crop-editor.tsx` - Image cropping tool used during product image uploads
+- `package-selection-modal.tsx` - Modal for customers to make selections from package pools
+
+**Shop Components** ([src/components/shop/](src/components/shop/)):
+
+- `delivery-schedule-selector.tsx` - Delivery date/time slot picker shown at checkout
+
+**Admin Components** ([src/components/admin/](src/components/admin/)):
+
+- `admin-nav.tsx` - Admin sidebar navigation
+- `admin-theme-forcer.tsx` - Forces light theme in admin dashboard
+
+**Layout Components**:
+
+- `layout-wrapper.tsx` - Wraps pages with header/footer and manages banner positioning
+
+**UI Components** ([src/components/ui/](src/components/ui/)): 57 shadcn/ui components including:
+
+- Forms: button, input, textarea, checkbox, radio-group, select, switch, slider
+- Overlays: dialog, sheet, drawer, popover, hover-card, tooltip, alert-dialog
+- Navigation: dropdown-menu, context-menu, navigation-menu, menubar, tabs
+- Display: card, badge, alert, avatar, separator, skeleton
+- Data: table, calendar, chart, progress
+- Layout: accordion, collapsible, resizable, scroll-area, sidebar
+- Advanced: command, carousel, sonner (toasts), form (react-hook-form integration)
+
+### App Router Pages
+
+All pages use the App Router structure in [src/app/](src/app/):
+
+**Public Routes**:
+
+- `/` - Home page with events, stats, quick actions, social media links
+- `/about` - About ARSA with council/directory information
+- `/calendar` - Event calendar
+- `/publications` - Publications and Bridges magazine
+- `/merch` - Merchandise showcase with gacha system
+- `/resources` - Resource links and venue booking
+- `/contact` - Contact information and grievance forms
+
+**Shop Routes** (Authentication Required):
+
+- `/shop` - Shop homepage with product browsing, filtering, sorting (Default/Name/Price)
+- `/shop/cart` - Shopping cart with quantity management
+- `/shop/checkout` - Checkout with GCash payment and receipt upload (OCR)
+- `/shop/orders` - Order history
+- `/shop/orders/[orderId]` - Individual order details
+
+**Admin Routes** (isShopAdmin or isEventsAdmin Required):
+
+- `/admin` - Admin dashboard homepage
+- `/admin/orders` - Order management with Excel export, tabbed interface (Orders/Verify)
+- `/admin/orders` (Verify Tab) - OCR processing, invoice upload, manual verification
+- `/admin/products` - Product management with CRUD operations, event assignment
+- `/admin/packages` - Package management (bundles with fixed items and selection pools)
+- `/admin/events` - Event management with theme customization, checkout config, admin assignments, product/package assignment
+- `/admin/banner` - Banner/announcement management with countdown timers
+- `/admin/email-logs` - Email audit logs and bulk email sender
+- `/admin/settings` - Admin settings: email configuration, Google Sheets sync
+
+**Note on Event Admin Access:**
+
+- `isShopAdmin = true`: Full access to all shop features including all events
+- `isEventsAdmin = true`: Full access to all events (cannot manage shop admins)
+- Event-specific admins (via `EventAdmin`): Access only to assigned events
+
+**Redirect Dashboard** (isRedirectsAdmin Required):
+
+- `/redirects` - URL redirect management with click analytics
+
+**Ticket System**:
+
+- `/admin/tickets` - Ticket event management, bulk generation, verifier assignment (isTicketsAdmin Required)
+- `/ticket-verify` - QR code scanner and manual verification page for assigned verifiers
+
+**Error Pages**:
+
+- `/not-found` - Custom 404 page
+
+### API Routes
+
+Located in [src/app/api/](src/app/api/):
+
+- `/api/auth/[...all]` - Better Auth routes (sign in, sign out, OAuth callbacks)
+- `/api/upload` - File upload endpoint (receipts, product images, event images)
+- `/api/receipts/[filename]` - Receipt file serving
+- `/api/user/roles` - Fetch current user's admin roles
+- `/api/health` - Health check endpoint
+- `/api/shop/track` - Shop click tracking (event tab analytics)
+- `/api/shop/sync-orders` - Trigger Google Sheets order sync (cron-compatible, requires `CRON_SECRET`)
+- `/api/tickets/qr` - QR code PNG generation (HMAC-signed, no auth — for email `<img>` embeds)
+- `/api/tickets/suggest` - Ticket short code autocomplete for manual verification input
+
+### Server Actions
+
+Located throughout the app:
+
+**Shop Actions:**
+
+- `src/app/shop/actions.ts` - Shop operations (cart management, order creation, event-aware checkout)
+- `src/app/shop/gcashActions.ts` - GCash PDF reference extraction
+
+**Admin Order Actions:**
+
+- `src/app/admin/orders/actions.ts` - Order management, status updates, Excel export
+- `src/app/admin/orders/batchOcrActions.ts` - Server-side batch OCR (legacy)
+- `src/app/admin/orders/clientBatchOcrActions.ts` - Client-side batch OCR actions
+- `src/app/admin/orders/invoiceActions.ts` - Invoice upload and OCR processing
+
+**Admin Product/Package/Event Actions:**
+
+- `src/app/admin/products/actions.ts` - Product CRUD with event assignment
+- `src/app/admin/packages/actions.ts` - Package CRUD with fixed items and selection pools
+- `src/app/admin/events/actions.ts` - Event CRUD, admin management, analytics, product/package assignment
+
+**Other Admin Actions:**
+
+- `src/app/admin/banner/actions.ts` - Banner management
+- `src/app/admin/email-logs/actions.ts` - Email log fetching and bulk email sending
+- `src/app/admin/settings/actions.ts` - Email config, Google Sheets settings management
+- `src/app/redirects/actions.ts` - URL redirect CRUD with authentication
+
+**Ticket Actions:**
+
+- `src/app/admin/tickets/actions.ts` - Ticket event CRUD, bulk ticket generation, verifier management, mail merge export
+- `src/app/ticket-verify/actions.ts` - Ticket lookup and scan verification with access control
+
+### Styling
+
+- **Global Styles**: [src/app/globals.css](src/app/globals.css)
+- **Tailwind v4**: PostCSS configuration with Tailwind CSS v4
+- **Fonts**: Geist and Geist Mono (auto-optimized via next/font)
+- **Theme System**: CSS variables for light/dark modes with next-themes
+- **Notifications**: Sonner for toast notifications (configured in root layout)
+- **Mobile-First**: Responsive design with Tailwind breakpoints (sm, md, lg, xl)
+
+## Shop Events System
+
+The shop features a powerful event-based organization system that allows products and packages to be grouped into themed event tabs with custom UI, pricing, and checkout flows.
+
+### Event Features
+
+**Core Capabilities:**
+
+- **Event Tabs**: Events appear as tabs in the shop interface during their active date range
+- **Custom Theming**: Each event can have custom colors, animations (confetti, hearts, snow, sparkles, petals), and styling
+- **Hero Images**: Multiple hero images per event displayed in carousels
+- **Priority System**: Set one event as the default landing tab
+- **Tab Ordering**: Control the order of event tabs
+- **Custom Components**: Events can load custom React components for unique experiences (e.g., [src/app/shop/events/2026/flower-fest-2026/](src/app/shop/events/2026/flower-fest-2026/))
+
+**Product/Package Assignment:**
+
+- Products and packages can be assigned to multiple events
+- Event-specific pricing overrides base price
+- Event-exclusive items (only appear under event tabs, not in All/categories)
+- Sort order control for display within events
+- **Product codes** for generating purchase codes (e.g., "LLY" generates "LLY_01-28-26-15:33_1")
+- **Category assignment** - Organize products into categories within an event
+
+**Event Categories:**
+
+- Create categories to organize products within events (e.g., "Solo Flowers", "Mini Bouquets", "Cookies")
+- Categories appear as filter tabs in the shop UI
+- Reorder categories with up/down arrows - order determines shop display order
+- Optional color coding for visual distinction
+- Products without categories appear at the end of the list
+- Category included in Excel and Google Sheets exports
+
+**Custom Checkout:**
+
+- Additional checkout fields per event (text, textarea, select, checkbox, date)
+- Required/optional field support
+- Custom header messages and confirmation messages
+- Custom terms and conditions per event
+- Responses stored in `Order.eventData` as JSON
+
+**Admin Access Control:**
+
+- Global shop admins: Full access to all events
+- Global events admins: Full event access (cannot manage admins)
+- Event-specific admins: Access only to assigned events
+- Admin management interface in events dashboard
+
+**Analytics:**
+
+- Click tracking per event tab (`ShopClick` model) via `/api/shop/track`
+- Purchase analytics per event (`ShopPurchase` model) - recorded on order creation
+- **Analytics Tab** in event editor with:
+  - Time range selection: 24 Hours, 7 Days, 30 Days, All Time (event duration)
+  - Stats cards: Total Clicks, Total Orders, Revenue, Conversion Rate
+  - Line charts with data points for clicks and orders over time
+  - Conversion rate calculation (orders ÷ clicks × 100%)
+
+### Event Management
+
+**Location**: [src/app/admin/events/](src/app/admin/events/)
+
+**Key Files:**
+
+- `page.tsx` - Server component with auth check and data fetching
+- `events-management.tsx` - Full CRUD interface with tabbed UI (Basic Info, Products, Theme, Checkout, Admins, Analytics)
+- `actions.ts` - Server actions for event operations
+
+**Event Creation Workflow:**
+
+1. Basic Info: Name, slug, description, dates, status, priority
+2. Hero Images: Upload multiple images for carousel
+3. Products Tab:
+   - Create categories first (reorderable with up/down arrows)
+   - Assign products/packages with optional event pricing
+   - Set product codes for purchase code generation
+   - Assign products to categories
+4. Theme Tab: Colors, animations, background patterns, header text
+5. Checkout Tab: Custom fields, messages, terms, payment options
+6. Analytics Tab: View click/purchase statistics with time ranges and conversion rate (only when editing)
+
+## Package System
+
+The package system allows creating product bundles with two types of contents:
+
+### Package Types
+
+**Fixed Items:**
+
+- Products always included in the package
+- Quantity support (e.g., 2x of Product A, 1x of Product B)
+- Managed via `PackageItem` model
+
+**Selection Pools:**
+
+- "Pick N from these options" functionality
+- Example: "Choose 3 shirts from 8 options"
+- Customer selects which items they want during checkout
+- Managed via `PackagePool` and `PackagePoolOption` models
+
+### Package Features
+
+- **Bundle Pricing**: Usually discounted compared to individual items
+- **Multiple Images**: Image carousel support
+- **Event Assignment**: Can be assigned to events just like products
+- **Event-Exclusive**: Optional flag to only show in event tabs
+- **Size Selections**: For items with sizes, customers select sizes for each item in package
+- **Cart Integration**: Full cart support with package selection snapshots
+- **Order Integration**: Package selections stored in `OrderItem.packageSelections` as JSON
+
+### Package Management
+
+**Location**: [src/app/admin/packages/](src/app/admin/packages/)
+
+**Package Creation Workflow:**
+
+1. Basic Info: Name, description, bundle price, images
+2. Fixed Items: Add products that are always included (with quantities)
+3. Selection Pools: Create pools with selection count and available products
+4. Event Assignment: Assign to events with optional event pricing
+5. Availability: Control availability status
+
+## Shop System & GCash Integration
+
+### GCash Reference Number Auto-Extraction
+
+The checkout system includes **automatic GCash reference number extraction** using client-side OCR:
+
+**OCR Processing** ([src/lib/gcashReaders/](src/lib/gcashReaders/)):
+
+- `readReceipt.client.ts` - Client-side OCR using Tesseract.js (runs in browser)
+- `readReceipt.server.ts` - Server-side OCR (currently not in use, client-side preferred)
+- `parseReceipt.ts` - Parses OCR text to extract reference numbers, amounts, recipient info
+- `readInvoice.ts` - PDF invoice parser for GCash transaction history
+- `parseInvoiceTable.ts` - Extracts transaction tables from invoice OCR text
+
+**Features**:
+
+- Automatic extraction from receipt screenshots during checkout
+- Handles reference numbers with spaces (e.g., "1234 567 890")
+- Robust regex patterns for OCR errors
+- ~8-12 seconds per receipt processing time
+- Duplicate detection: Server-side validation prevents using same payment for multiple orders
+- Admin visibility: Reference numbers displayed in admin dashboard with duplicate warnings
+- Excel export: Includes "GCash Ref No" column in order exports
+- Batch reprocessing: Admin can reprocess existing orders to extract missing reference numbers
+- Invoice verification: Upload GCash transaction history PDFs for automatic matching
+
+**Documentation**: See [docs/](docs/) folder for complete documentation:
+
+- [docs/README.md](docs/README.md) - Documentation index and navigation
+- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick reference for developers
+- [docs/GCASH.md](docs/GCASH.md) - Complete OCR implementation reference
+- [docs/IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md) - Technical implementation details
+- [docs/FEATURE_GUIDE.md](docs/FEATURE_GUIDE.md) - User and admin guides
+- [docs/PDF_IMAGE_SUPPORT.md](docs/PDF_IMAGE_SUPPORT.md) - Image vs PDF detailed guide
+- [docs/BATCH_OCR_GUIDE.md](docs/BATCH_OCR_GUIDE.md) - Batch processing for existing orders
+- [docs/CLIENT_SIDE_OCR.md](docs/CLIENT_SIDE_OCR.md) - Client-side OCR implementation
+
+### Order Management
+
+**Customer Flow**:
+Cart → Checkout → GCash Payment → Receipt Upload → Auto-extraction → Order Creation
+
+**Order Status Workflow**:
+`pending` → `paid` → `confirmed` → `completed` (or `cancelled`)
+
+**Admin Dashboard** ([src/app/admin/orders/](src/app/admin/orders/)):
+
+- Tabbed interface (Orders tab / Verify tab)
+- View all orders with filtering by status
+- Update order status
+- Delete orders
+- Detect duplicate GCash reference numbers with visual badges
+- Excel export with transaction information
+- Batch OCR reprocessing for existing orders
+- Invoice upload and automatic transaction matching
+- Manual verification dashboard for unmatched payments
+
+**Excel Export Format**:
+
+- Order ID, Order Date, Customer Name, Email, Student ID
+- Product Name, Description, Category, Size, Quantity, Purchase Code
+- Unit Price, Item Total, Order Total
+- Order Status, GCash Ref No, Notes, Receipt URL
+- Delivery Date, Delivery Time, Event
+- Properly formatted with transaction info only on first row per order
+- Custom checkout field data expanded into columns
+
+## Email System
+
+Order confirmation emails are sent automatically when an order is created.
+
+**Implementation** ([src/lib/email.ts](src/lib/email.ts)):
+
+- Resend-only (Nodemailer/SMTP removed for Workers compatibility)
+- Provider selection and sender email configured in Admin → Settings → Email Configuration
+- Settings stored in database and loaded at send time (not env-only)
+- All sent emails logged to `EmailLog` model for auditing
+
+**Admin Features** ([src/app/admin/email-logs/](src/app/admin/email-logs/)):
+
+- View full email audit log (recipient, subject, status, timestamp, error details)
+- Bulk email sender for sending announcements to order recipients
+- Filter logs by status (sent/failed)
+
+**Environment Variables** (fallback if no DB config):
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
+- `RESEND_API_KEY`
+
+## Google Sheets Sync
+
+Orders are automatically synced to a Google Sheets spreadsheet for offline tracking and reporting.
+
+**Implementation** ([src/lib/googleSheets.ts](src/lib/googleSheets.ts)):
+
+- Uses Google Sheets API v4 via `googleapis`
+- Service account authentication via `GOOGLE_SHEETS_CREDENTIALS` env variable (JSON)
+- Spreadsheet ID and sheet name configurable via Admin → Settings (stored in database)
+- Sync triggered automatically on order creation and via cron at `/api/shop/sync-orders`
+
+**Exported Columns**: Same format as Excel export — Order ID, customer info, products, sizes, quantities, purchase codes, prices, GCash ref, event category, custom checkout fields, delivery details.
+
+**Setup**:
+
+1. Create a Google Cloud service account and download credentials JSON
+2. Share the spreadsheet with the service account email (Editor access)
+3. Set `GOOGLE_SHEETS_CREDENTIALS` env variable
+4. Configure Spreadsheet ID in Admin → Settings
+
+## Daily Stock Override System
+
+Allows admins to override product stock and availability on a per-day basis (e.g., limit quantities for specific delivery dates).
+
+**Implementation** ([src/lib/daily-stock.ts](src/lib/daily-stock.ts)):
+
+- `DailyStockOverride` model stores overrides per product per date
+- Overrides can set: available quantity, whether the product is available that day
+- Checkout reads overrides to validate stock for the selected delivery date
+- Admin UI via `daily-stock-dialog.tsx` and `daily-stock-overrides.tsx` components
+
+## Delivery Scheduling
+
+Customers can select a delivery date and time slot during checkout.
+
+**Implementation** ([src/lib/deliveryScheduling.ts](src/lib/deliveryScheduling.ts)):
+
+- Configurable delivery slots (date + time options) managed via Admin → Settings
+- `delivery-schedule-selector.tsx` component renders the picker in checkout
+- Selected delivery date/time stored in `Order` model and included in exports
+- Daily stock overrides apply per delivery date, allowing per-day quantity limits
+
+## Ticket System
+
+The ticket system enables generating tickets for events, distributing them via email with QR codes, and verifying them at the door with a camera scanner or manual input.
+
+### Architecture
+
+- **TicketEvent**: Lightweight event model (separate from ShopEvent) — just name, description, date, active status
+- **Ticket**: Each ticket has a unique 8-char `shortCode` (unambiguous charset, no 0/O/1/I) used in QR codes and manual entry
+- **TicketVerifier**: Junction table assigning users as verifiers for specific events
+- **HMAC-signed QR URLs**: `/api/tickets/qr?id=CODE&sig=HMAC` serves QR PNG without authentication, safe for email `<img>` tags
+
+### Key Files
+
+| File                                                                                             | Purpose                                                             |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [src/lib/ticketUtils.ts](src/lib/ticketUtils.ts)                                                 | Short code generator, HMAC sign/verify                              |
+| [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts)                                         | Append-only Google Sheets sync for tickets                          |
+| [src/app/admin/tickets/actions.ts](src/app/admin/tickets/actions.ts)                             | Event CRUD, bulk generation, verifier management, mail merge export |
+| [src/app/admin/tickets/page.tsx](src/app/admin/tickets/page.tsx)                                 | Admin page (Server Component)                                       |
+| [src/app/admin/tickets/tickets-management.tsx](src/app/admin/tickets/tickets-management.tsx)     | Admin UI (event list, ticket table, generate tab, verifiers)        |
+| [src/app/api/tickets/qr/route.ts](src/app/api/tickets/qr/route.ts)                               | QR code PNG generation API                                          |
+| [src/app/api/tickets/suggest/route.ts](src/app/api/tickets/suggest/route.ts)                     | Autocomplete API for manual verification                            |
+| [src/app/ticket-verify/actions.ts](src/app/ticket-verify/actions.ts)                             | Scan verification server action                                     |
+| [src/app/ticket-verify/page.tsx](src/app/ticket-verify/page.tsx)                                 | Verification page (Server Component)                                |
+| [src/app/ticket-verify/ticket-verify-client.tsx](src/app/ticket-verify/ticket-verify-client.tsx) | Camera QR scanner + manual input UI                                 |
+
+### Workflow
+
+1. **Admin creates a TicketEvent** in `/admin/tickets`
+2. **Admin pastes email list** (email, count per line) to bulk-generate tickets
+3. **Admin assigns verifiers** (search users by name/email)
+4. **Admin exports CSV** with `email, shortCode, qrImageUrl, verifyUrl` for Mail Merge
+5. **Admin sends emails** via external Mail Merge tool using `<img src="{{qrImageUrl}}">` for the QR code
+6. **Verifier goes to `/ticket-verify`**, logs in, and scans QR codes or types short codes
+7. **System shows result**: green (valid + marked as scanned), yellow (already scanned — shows who/when), red (not found)
+
+### Google Sheets Sync
+
+Tickets can be synced to a Google Sheet via the Settings tab in `/admin/tickets`. Unlike order sync which clears and rewrites, ticket sync is **append-only**:
+
+- **First sync**: Writes headers + all tickets
+- **Subsequent syncs**: Reads existing short codes from column A, appends only new tickets
+- **Status updates**: Updates Status/Scanned At/Scanned By columns for existing rows without rewriting
+
+**Implementation**: [src/lib/ticketSheetSync.ts](src/lib/ticketSheetSync.ts)
+
+**Settings stored in**: `ShopSettings` table with key `"ticketGoogleSheets"`
+
+**Columns**: Short Code, Email, Event, Status, Scanned At, Scanned By, Created At, QR Image URL, Verify URL
+
+### Environment Variable
+
+- `TICKET_HMAC_SECRET` — Used to sign QR image URLs. Generate with `openssl rand -hex 32`.
+
+## Custom Event Pages
+
+Events can optionally load custom React components for unique shop experiences (e.g., special headers, animations, or additional UI).
+
+**Location**: [src/app/shop/events/](src/app/shop/events/)
+
+**Structure**:
+
+- Custom pages live under `src/app/shop/events/[year]/[event-slug]/`
+- The `ShopEvent.customComponentPath` field points to the component directory
+- Example: [src/app/shop/events/2026/flower-fest-2026/](src/app/shop/events/2026/flower-fest-2026/)
+
+**Development Guide**: See [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)
+
+## Cloudflare Deployment
+
+The application runs on Cloudflare Workers via `@opennextjs/cloudflare`:
+
+- **Worker name**: `arsa-website` (already configured in the Cloudflare dashboard).
+- **Build command**: `npx opennextjs-cloudflare build` (set in the dashboard for non-prod branches).
+- **Config**: [wrangler.jsonc](wrangler.jsonc) declares bindings for `DB` (D1), `PRODUCTS_BUCKET/RECEIPTS_BUCKET/EVENTS_BUCKET/CONTENT_BUCKET` (R2), `CACHE` (KV), `ASSETS` (static assets).
+- **Compatibility flags**: `nodejs_compat`, `global_fetch_strictly_public`.
+- **Account ID**: `c0316c17e2973be4ae27ddc85b94edab` (ARSA org).
+
+**Local development**:
+
+- `pnpm dev` runs Next.js with the D1 HTTP REST proxy fallback (set `CLOUDFLARE_D1_TOKEN` in `.dev.vars`).
+- `pnpm preview` builds the Worker bundle and runs `wrangler dev` for a real Workers preview.
+
+## Important Notes
+
+### Database Workflow
+
+**Always run** `pnpm db:generate` after modifying [src/db/schema.ts](src/db/schema.ts) to emit a new SQL migration into `drizzle/`.
+
+**Use** `pnpm db:migrate` (remote) or `pnpm db:migrate:local` (local Wrangler D1) to apply migrations.
+
+### Authentication
+
+The system uses **Better Auth** for user authentication:
+
+- Google OAuth only (no email/password login)
+- Auto-populates `firstName` and `lastName` from Google OAuth
+- Session-based authentication with IP and user agent tracking
+- Admin access controlled via `isShopAdmin`, `isEventsAdmin`, `isRedirectsAdmin`, `isTicketsAdmin`, `isSSO26Admin`, `isBackupAdmin`, `isSuperAdmin` flags on User model
+- Event-specific admin access via `EventAdmin` model (many-to-many User ↔ ShopEvent)
+- Role-based access control for admin dashboards
+- User roles fetched from `/api/user/roles` endpoint
+
+### Admin Role Summary
+
+**isShopAdmin (Boolean on User model):**
+
+- Full access to products, packages, orders, events, banner management
+- Can manage all events and assign event-specific admins
+- Can manage shop-wide settings
+
+**isEventsAdmin (Boolean on User model):**
+
+- Full access to all events (create, edit, delete)
+- Can assign products/packages to events
+- Cannot manage event-specific admins
+- Cannot access products/packages/orders management
+
+**isRedirectsAdmin (Boolean on User model):**
+
+- Full access to URL redirect system
+- Can create, edit, delete redirects
+- Can view click analytics
+
+**isTicketsAdmin (Boolean on User model):**
+
+- Full access to ticket event management
+- Can create ticket events, bulk-generate tickets, assign verifiers
+- Can export tickets for Mail Merge with HMAC-signed QR image URLs
+- Can also verify tickets (in addition to assigned verifiers)
+
+**Event-Specific Admin (via EventAdmin model):**
+
+- Access only to assigned events
+- Can edit event details, assign products/packages
+- Cannot delete events
+- Cannot assign other admins
+
+### Build Configuration
+
+- **ESLint**: Errors are ignored during builds (`ignoreDuringBuilds: true`)
+- **Turbopack**: Used for faster builds and development
+- **opennextjs-cloudflare**: Wraps the Next.js build for the Workers runtime; `initOpenNextCloudflareForDev()` in [next.config.ts](next.config.ts) exposes the Cloudflare context during `next dev`.
+- **Image Optimization**: Disabled (images pre-optimized client-side via `browser-image-compression` at upload)
+- **Console Removal**: Production builds remove `console.log` statements
+- **Memory Optimizations**: Configured in next.config.ts for large builds
+
+### Path Aliases
+
+- `@/` maps to `src/` (configured in [tsconfig.json](tsconfig.json))
+
+### Server Components vs Client Components
+
+- **Most pages are Server Components** by default (can directly query database)
+- **Client Components** marked with `"use client"` directive:
+  - Interactive components: gacha-banner, product carousel, cart counter
+  - Dashboard clients: shop-client, cart-client, checkout-client, orders-management
+  - Form components: All forms with react-hook-form
+- **Server Actions** use `"use server"` directive and are located in `actions.ts` files
+
+### Mobile Responsiveness
+
+The application is designed **mobile-first** with responsive Tailwind classes:
+
+- Responsive grid layouts: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
+- Mobile navigation: Hamburger menu with slide-out drawer
+- Touch-friendly buttons: Appropriate sizes for mobile interaction
+- Responsive spacing: `px-4 sm:px-6 lg:px-8`
+- Product carousel: Swipe gestures for mobile, thumbnails for desktop
+- Conditional rendering: Different UI for mobile vs desktop where appropriate
+
+**Note**: Tables in admin dashboards may require horizontal scrolling on mobile devices.
+
+## Recommended Admin Workflow
+
+### Event-First Product Management
+
+The shop system is designed with an **event-first workflow** to streamline product management:
+
+**Step 1: Create Events** ([/admin/events](src/app/admin/events/))
+
+- Navigate to the Events dashboard
+- Create events with dates, themes, and custom checkout fields
+- Events will appear as tabs in the shop during their active period
+
+**Step 2: Create Products** ([/admin/products](src/app/admin/products/))
+
+- When creating a product, the **Event Assignment** section appears prominently near the top of the form (after description)
+- Select which events the product should appear under
+- Optionally set event-specific pricing (e.g., discounted price for a specific event)
+- Toggle "Event Exclusive" if the product should ONLY appear under event tabs (not in "All" or category tabs)
+
+**Benefits of this workflow:**
+
+- Products are assigned to events during creation, not as an afterthought
+- Clear visibility into which events a product belongs to
+- Event-specific pricing can be set immediately
+- Products can be reused across multiple events with different prices
+
+**Note:** Products can still be managed from the Events dashboard if needed, but the recommended flow is to assign during product creation.
+
+## Recent Features
+
+### Email System & Google Sheets Sync
+
+- **Email Notifications**: Order confirmation emails on purchase via SMTP or Resend
+- **Email Logs**: Full audit trail of all sent emails at `/admin/email-logs`
+- **Bulk Email Sender**: Send announcements to all order recipients from the email logs page
+- **Google Sheets Sync**: Auto-sync orders to a configurable spreadsheet; trigger via cron or manually
+- **Admin Settings Page**: Central config for email provider, sender address, and spreadsheet settings
+
+### Daily Stock & Delivery Scheduling
+
+- **Daily Stock Overrides**: Set per-day stock limits per product (e.g., limit roses to 20 on Valentine's Day)
+- **Delivery Scheduling**: Customers select delivery date/time slot at checkout; configurable slots in Admin Settings
+- **Per-Day Enforcement**: Checkout validates stock against the selected delivery date's override
+
+### Event Categories & Product Codes
+
+- **Event Categories**: Organize products within events into categories (e.g., "Solo Flowers", "Bouquets")
+  - Categories appear as filter tabs in the shop
+  - Reorderable with up/down arrows
+  - Category included in exports
+- **Product Codes**: Assign codes to products (e.g., "LLY" for Lily)
+  - Generates purchase codes on order: `LLY_01-28-26-15:33_1` (code_timestamp_sequential)
+  - Purchase codes included in exports
+- **Enhanced Analytics**: Event analytics tab with line charts, time ranges, conversion rate
+- **Shop Sorting**: "Default" sort option preserves category order; price/name sorting works for events
+
+### GCash Invoice OCR
+
+- Upload GCash transaction history PDFs
+- OCR extraction of transaction tables
+- Automatic matching of transactions with orders by reference number
+- Manual verification dashboard for unmatched payments
+
+### Event-First Product Workflow
+
+- Event assignment section moved to top of product creation form
+- Visual highlighting with colored card and prominent styling
+- Clear messaging about event exclusive vs shared products
+- Message shown when no events are available, directing admins to create events first
+
+### Client-Side Batch OCR
+
+- Moved from server-side to client-side OCR processing
+- Uses Tesseract.js in browser for faster processing
+- Batch reprocessing feature to fix false positives
+- Collapsible section in admin dashboard
+
+### Banner System
+
+- Dismissible announcement banners
+- Countdown timer support with `{timer}` placeholder
+- Minimized banner at bottom when dismissed
+- Persistent state via localStorage
+
+### Product Image Carousel
+
+- Multiple images per product
+- Zoom in/out feature (click to toggle)
+- Touch swipe gestures for mobile
+- Thumbnail navigation for desktop
+- Dot indicators for mobile
+
+### Performance Optimizations
+
+- Cloudflare KV cache with per-isolate request dedup
+- Client-side image compression before upload
+- Global edge runtime via Cloudflare Workers
+- Efficient queries with Drizzle's relational API
+
+### Ticket Generation & Verification System
+
+- **Ticket Events**: Lightweight event model (separate from ShopEvent) for ticket management
+- **Bulk Generation**: Paste CSV/text (email, count) to generate tickets with unique 8-char short codes
+- **QR Code API**: HMAC-signed `/api/tickets/qr` endpoint serves QR code PNGs embeddable in emails without auth
+- **Mail Merge Export**: CSV export with email, shortCode, qrImageUrl, verifyUrl columns for external email tools
+- **Verification Page**: `/ticket-verify` with camera QR scanner and manual input with autocomplete
+- **Scan Tracking**: Records who scanned each ticket and when; duplicate scan detection with details
+- **Verifier Assignment**: Assign users as verifiers per event; verifiers can only scan tickets for their events
+- **Google Sheets Sync**: Append-only sync to Google Sheets — no flickering, updates scan statuses in place
+- **Role**: `isTicketsAdmin` on User model for full ticket management access
+
+## Configuration Files
+
+- **package.json** - Dependencies and scripts
+- **next.config.ts** - Next.js + `initOpenNextCloudflareForDev()`
+- **wrangler.jsonc** - Cloudflare Worker config (D1/R2/KV bindings, compat flags)
+- **drizzle.config.ts** - Drizzle Kit config (D1 HTTP driver for dev migrations)
+- **open-next.config.ts** - opennextjs-cloudflare adapter (KV incremental cache)
+- **src/db/schema.ts** - Drizzle schema (single source of truth for D1)
+- **tsconfig.json** - TypeScript configuration with path aliases
+- **postcss.config.mjs** - PostCSS with Tailwind CSS v4
+- **.env.example** - Example environment variables
+- **.dev.vars.example** - Cloudflare local dev env vars
+- **.prettierrc.json** - Prettier code formatting
+- **eslint.config.mjs** - ESLint configuration
+- **components.json** - shadcn/ui component configuration
+
+## Development Tips
+
+1. **Database changes**: Edit [src/db/schema.ts](src/db/schema.ts), then `pnpm db:generate` → `pnpm db:migrate` (remote) or `pnpm db:migrate:local`.
+2. **Cache management**: KV TTL handles eviction; for forced invalidation call `cache.delete(key)` from a server action.
+3. **OCR testing**: Test with real GCash receipts, processing time is ~8-12 seconds (client-side only).
+4. **Image uploads**: Use `compressForUpload(file)` from `@/lib/imageCompress` before POSTing to `/api/upload`.
+5. **Admin access**: Set `isShopAdmin`, `isEventsAdmin`, etc. directly in D1 via `wrangler d1 execute arsa-db --command="UPDATE user SET isShopAdmin = 1 WHERE email = '...'"` or via Drizzle Studio.
+6. **Event admin assignment**: Use the admin management interface in the events dashboard (UI-based)
+7. **Cloudflare deploy**: Worker `arsa-website` builds with `npx opennextjs-cloudflare build`; secrets via `wrangler secret put <NAME>`.
+8. **Mobile testing**: Test on actual mobile devices for touch gestures and responsiveness
+9. **Event timing**: Events only appear as tabs when current date is between `startDate` and `endDate`
+10. **Package testing**: Test packages with both fixed items and selection pools for complete coverage
+11. **Event theming**: Test custom theme configs in different color schemes and animations
+12. **Cart updates**: Dispatch `window.dispatchEvent(new Event("cartUpdated"))` after cart changes to update the header counter
+13. **Event categories**: Categories must be created before products can be assigned to them
+14. **Google Sheets**: Use `GOOGLE_SHEETS_CREDENTIALS` env with full service account JSON; configure Spreadsheet ID in Admin → Settings
+15. **Email testing**: Configure SMTP or Resend in Admin → Settings → Email; check `/admin/email-logs` for delivery status
+16. **Daily stock**: Overrides apply per delivery date — test checkout with different dates to verify stock enforcement
+17. **Delivery scheduling**: Configure available slots in Admin → Settings before enabling delivery date selection
+18. **Package manager**: Project uses pnpm — use `pnpm install` instead of `npm install`
+19. **Ticket system**: Set `isTicketsAdmin = true` in the database, add `TICKET_HMAC_SECRET` to `.env` (generate with `openssl rand -hex 32`)
+20. **Ticket QR codes**: The QR image URL is HMAC-signed so it works in email `<img>` tags without authentication — use the "Export for Mail Merge" CSV
+21. **Ticket verification**: Verifiers must be logged in and assigned to the event; admins (`isTicketsAdmin`) can verify any event
+
+## Useful Links
+
+- **Documentation**: [docs/README.md](docs/README.md)
+- **Quick Reference**: [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)
+- **Deployment Guide**: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- **Coolify Deployment**: [docs/COOLIFY.md](docs/COOLIFY.md)
+- **GCash OCR**: [docs/GCASH.md](docs/GCASH.md)
+- **Shop Setup**: [docs/SHOP_SETUP.md](docs/SHOP_SETUP.md)
+- **E-Shop Architecture**: [docs/ESHOP_SYSTEM.md](docs/ESHOP_SYSTEM.md)
+- **GCash OCR System**: [docs/GCASH_OCR_SYSTEM.md](docs/GCASH_OCR_SYSTEM.md)
+- **Google Sheets Sync**: [docs/GOOGLE_SHEETS_SYNC.md](docs/GOOGLE_SHEETS_SYNC.md)
+- **Bulk Email Guide**: [docs/BULK_EMAIL_GUIDE.md](docs/BULK_EMAIL_GUIDE.md)
+- **Daily Stock Integration**: [docs/DAILY_STOCK_INTEGRATION.md](docs/DAILY_STOCK_INTEGRATION.md)
+- **Delivery Cutoff Setup**: [docs/DELIVERY_CUTOFF_SETUP.md](docs/DELIVERY_CUTOFF_SETUP.md)
+- **Custom Event Pages**: [docs/CUSTOM_EVENT_PAGES.md](docs/CUSTOM_EVENT_PAGES.md)

@@ -40,10 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
 # Claude
 .claude/
 .superpowers/
+
+# Codex
+.codex/
 
 # Cloudflare
 .dev.vars
