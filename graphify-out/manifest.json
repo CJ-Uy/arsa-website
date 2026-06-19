@@ -1,0 +1,2082 @@
+{
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.mcp.json": {
+    "mtime": 1770464141.3385038,
+    "ast_hash": "772034bb6ff83e7bbc4045f55987bd3c",
+    "semantic_hash": "772034bb6ff83e7bbc4045f55987bd3c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.prettierrc.json": {
+    "mtime": 1756574735.1079974,
+    "ast_hash": "f8a94cbd07c419badcaaf80e9f69e8c6",
+    "semantic_hash": "f8a94cbd07c419badcaaf80e9f69e8c6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\tmp\\last-ndc.ts": {
+    "mtime": 1780013396.5724683,
+    "ast_hash": "577f668ff19e2300648e512b5868d390",
+    "semantic_hash": "577f668ff19e2300648e512b5868d390"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\tmp\\last-save.json": {
+    "mtime": 1780013396.3528316,
+    "ast_hash": "fe4f0f39e47073a9b850c5d3f9c0e119",
+    "semantic_hash": "fe4f0f39e47073a9b850c5d3f9c0e119"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\components.json": {
+    "mtime": 1756574735.1122642,
+    "ast_hash": "cbc0c2624f4b21a8805b90caa2b9516c",
+    "semantic_hash": "cbc0c2624f4b21a8805b90caa2b9516c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle.config.ts": {
+    "mtime": 1779353763.7235842,
+    "ast_hash": "b27e324f8cb275e397065ad4d675fdcf",
+    "semantic_hash": "b27e324f8cb275e397065ad4d675fdcf"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\0000_tan_shriek.sql": {
+    "mtime": 1779353763.7235842,
+    "ast_hash": "8a3d650066588c6fd183c521433e3439",
+    "semantic_hash": "8a3d650066588c6fd183c521433e3439"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\0001_curved_lily_hollister.sql": {
+    "mtime": 1779822728.0461695,
+    "ast_hash": "d7fed6030dd941d2b87c50e5b64f3855",
+    "semantic_hash": "d7fed6030dd941d2b87c50e5b64f3855"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\backfill_event_role_grants.sql": {
+    "mtime": 1779823374.7532268,
+    "ast_hash": "0f332a673e7e5c39d496d9217bc450c1",
+    "semantic_hash": "0f332a673e7e5c39d496d9217bc450c1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\backfill_event_umbrella.sql": {
+    "mtime": 1779822984.014896,
+    "ast_hash": "a18849e94d8bd28175417e690247aac1",
+    "semantic_hash": "a18849e94d8bd28175417e690247aac1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\meta\\0000_snapshot.json": {
+    "mtime": 1779353763.728571,
+    "ast_hash": "32be5b806805e8fd56c71ef8e51ebea1",
+    "semantic_hash": "32be5b806805e8fd56c71ef8e51ebea1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\meta\\0001_snapshot.json": {
+    "mtime": 1779822728.045546,
+    "ast_hash": "cc7d99b6cf0beb31dce540908af3b12f",
+    "semantic_hash": "cc7d99b6cf0beb31dce540908af3b12f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\meta\\_journal.json": {
+    "mtime": 1779822728.0461695,
+    "ast_hash": "1bf9e3da1324ab2f8369aee27ac9a131",
+    "semantic_hash": "1bf9e3da1324ab2f8369aee27ac9a131"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\drizzle\\repoint_ticket_fks.sql": {
+    "mtime": 1779823385.5489097,
+    "ast_hash": "a36d5a9983b3b2b56050ecd48c155d7f",
+    "semantic_hash": "a36d5a9983b3b2b56050ecd48c155d7f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\eslint.config.mjs": {
+    "mtime": 1756574735.1499746,
+    "ast_hash": "083477dd9eb0cc7e140d8235bb596083",
+    "semantic_hash": "083477dd9eb0cc7e140d8235bb596083"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\next.config.ts": {
+    "mtime": 1779353763.7295756,
+    "ast_hash": "46d71004c9edb794a5cce910dcb24cde",
+    "semantic_hash": "46d71004c9edb794a5cce910dcb24cde"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\open-next.config.ts": {
+    "mtime": 1779353763.7295756,
+    "ast_hash": "fdc04ba6869277398553891ec43d40c3",
+    "semantic_hash": "fdc04ba6869277398553891ec43d40c3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\package.json": {
+    "mtime": 1779355963.788459,
+    "ast_hash": "513719cb4dac9c3b7d4ac360d1178e6c",
+    "semantic_hash": "513719cb4dac9c3b7d4ac360d1178e6c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\postcss.config.mjs": {
+    "mtime": 1756574735.5514336,
+    "ast_hash": "50cdf299c0baa82eedb9cebe33c2ade0",
+    "semantic_hash": "50cdf299c0baa82eedb9cebe33c2ade0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\about\\page.tsx": {
+    "mtime": 1762194413.2214508,
+    "ast_hash": "2cb0903211e03131ea7d55b6ac1490d1",
+    "semantic_hash": "2cb0903211e03131ea7d55b6ac1490d1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\banner\\actions.ts": {
+    "mtime": 1779353763.7325752,
+    "ast_hash": "d7d40474f06461594259b39306c9d6b6",
+    "semantic_hash": "d7d40474f06461594259b39306c9d6b6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\banner\\banner-management.tsx": {
+    "mtime": 1769586533.3538916,
+    "ast_hash": "59a3ec7058bb09990e67233fd6b32491",
+    "semantic_hash": "59a3ec7058bb09990e67233fd6b32491"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\banner\\loading.tsx": {
+    "mtime": 1769586533.3664377,
+    "ast_hash": "ba585c105ef8b9c1f19d2d24d648fc73",
+    "semantic_hash": "ba585c105ef8b9c1f19d2d24d648fc73"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\banner\\page.tsx": {
+    "mtime": 1779353763.7335756,
+    "ast_hash": "569c6ac8e29cbb8123adb608e0034e62",
+    "semantic_hash": "569c6ac8e29cbb8123adb608e0034e62"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\about\\about-management.tsx": {
+    "mtime": 1773602163.6249752,
+    "ast_hash": "8eee53fd5e471e130bca5a5a0e075677",
+    "semantic_hash": "8eee53fd5e471e130bca5a5a0e075677"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\about\\page.tsx": {
+    "mtime": 1773601905.008743,
+    "ast_hash": "449e1b59199758ba5b5c0a5f582b3b76",
+    "semantic_hash": "449e1b59199758ba5b5c0a5f582b3b76"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\bridges\\bridges-management.tsx": {
+    "mtime": 1773602163.644038,
+    "ast_hash": "a35166da84529e88a58878303c205c74",
+    "semantic_hash": "a35166da84529e88a58878303c205c74"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\bridges\\page.tsx": {
+    "mtime": 1773601912.2402134,
+    "ast_hash": "8321d0b3dda99e9b659a660d9cb1af20",
+    "semantic_hash": "8321d0b3dda99e9b659a660d9cb1af20"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\contact\\contact-management.tsx": {
+    "mtime": 1773602163.6592996,
+    "ast_hash": "f70ec1966d4717b55af580c86874cef8",
+    "semantic_hash": "f70ec1966d4717b55af580c86874cef8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\contact\\page.tsx": {
+    "mtime": 1773601918.2162707,
+    "ast_hash": "9ffe79eb1f39c9c25351a6281ce8683a",
+    "semantic_hash": "9ffe79eb1f39c9c25351a6281ce8683a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\faq\\faq-management.tsx": {
+    "mtime": 1773615516.3548503,
+    "ast_hash": "1faed439558679713f90f6d2bdcae10a",
+    "semantic_hash": "1faed439558679713f90f6d2bdcae10a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\faq\\page.tsx": {
+    "mtime": 1773613582.0217977,
+    "ast_hash": "e9516dd414f3d64d4ee9a72beccf18a8",
+    "semantic_hash": "e9516dd414f3d64d4ee9a72beccf18a8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\home\\home-management.tsx": {
+    "mtime": 1774202550.035656,
+    "ast_hash": "790d9859b8408966bb2a96927ddc9d20",
+    "semantic_hash": "790d9859b8408966bb2a96927ddc9d20"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\home\\page.tsx": {
+    "mtime": 1774199104.7160187,
+    "ast_hash": "a1e7ae3fad1821f6c997ae0864dbf3f6",
+    "semantic_hash": "a1e7ae3fad1821f6c997ae0864dbf3f6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\pages\\content-management.tsx": {
+    "mtime": 1773601968.4778025,
+    "ast_hash": "78098eb5accb4a50ead1f51237f1d36b",
+    "semantic_hash": "78098eb5accb4a50ead1f51237f1d36b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\content\\pages\\page.tsx": {
+    "mtime": 1779353763.7335756,
+    "ast_hash": "e853defc9fc30f88a233b2aa295f2e94",
+    "semantic_hash": "e853defc9fc30f88a233b2aa295f2e94"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\email-logs\\actions.ts": {
+    "mtime": 1770467652.4148948,
+    "ast_hash": "4d808f4939eae990e17c110b2bd4b3af",
+    "semantic_hash": "4d808f4939eae990e17c110b2bd4b3af"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\email-logs\\bulk-send-actions.ts": {
+    "mtime": 1779353763.7345755,
+    "ast_hash": "02e79643e516f125a4a6599ae0f06b1c",
+    "semantic_hash": "02e79643e516f125a4a6599ae0f06b1c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\email-logs\\bulk-send-client.tsx": {
+    "mtime": 1770548919.435886,
+    "ast_hash": "49db2af54eb0f1422feb1173ed79ff33",
+    "semantic_hash": "49db2af54eb0f1422feb1173ed79ff33"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\email-logs\\email-logs-client.tsx": {
+    "mtime": 1770485249.189122,
+    "ast_hash": "8ec8d628be85319c48ecdc3f7f70872d",
+    "semantic_hash": "8ec8d628be85319c48ecdc3f7f70872d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\email-logs\\page.tsx": {
+    "mtime": 1779353763.7345755,
+    "ast_hash": "6e4895e48eead290131025a068d939db",
+    "semantic_hash": "6e4895e48eead290131025a068d939db"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\actions.ts": {
+    "mtime": 1780013501.9829838,
+    "ast_hash": "99b1ad74be6d9d58100fc7dc790b6724",
+    "semantic_hash": "99b1ad74be6d9d58100fc7dc790b6724"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\admins\\admins-client.tsx": {
+    "mtime": 1779824756.1767356,
+    "ast_hash": "6c31b99a148e58cb36a2a3f68ba1b343",
+    "semantic_hash": "6c31b99a148e58cb36a2a3f68ba1b343"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\admins\\page.tsx": {
+    "mtime": 1779824385.4582741,
+    "ast_hash": "2cb25da7a48a9a34d8a38652ffdc2eae",
+    "semantic_hash": "2cb25da7a48a9a34d8a38652ffdc2eae"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\event-overview.tsx": {
+    "mtime": 1779823825.6464305,
+    "ast_hash": "a096d96e7be2821dfb7284aa13d491ce",
+    "semantic_hash": "a096d96e7be2821dfb7284aa13d491ce"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\landing\\landing-editor.tsx": {
+    "mtime": 1779824955.6674254,
+    "ast_hash": "6c42cdb774f4fec70c480ceb5fa03cf5",
+    "semantic_hash": "6c42cdb774f4fec70c480ceb5fa03cf5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\landing\\page.tsx": {
+    "mtime": 1779824943.2194333,
+    "ast_hash": "e825f5b885cb298dad087bd2c2f42b25",
+    "semantic_hash": "e825f5b885cb298dad087bd2c2f42b25"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\page.tsx": {
+    "mtime": 1779823805.615464,
+    "ast_hash": "7653c3bd1c82ffd51f245504e442577a",
+    "semantic_hash": "7653c3bd1c82ffd51f245504e442577a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\pages\\[pageSlug]\\page-editor.tsx": {
+    "mtime": 1779825366.0133803,
+    "ast_hash": "dc8ab0c06074dddd5f8d808a86043639",
+    "semantic_hash": "dc8ab0c06074dddd5f8d808a86043639"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\pages\\[pageSlug]\\page.tsx": {
+    "mtime": 1779825349.0786068,
+    "ast_hash": "c0bedb09fe82d163d4e8a085e6b8b33f",
+    "semantic_hash": "c0bedb09fe82d163d4e8a085e6b8b33f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\pages\\page.tsx": {
+    "mtime": 1779825317.7902834,
+    "ast_hash": "efed281d2a8be9176b9e9205bb029b10",
+    "semantic_hash": "efed281d2a8be9176b9e9205bb029b10"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\pages\\pages-list.tsx": {
+    "mtime": 1779825341.191405,
+    "ast_hash": "72a1acbec69edc79f3762f2f3cf4550a",
+    "semantic_hash": "72a1acbec69edc79f3762f2f3cf4550a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\settings\\page.tsx": {
+    "mtime": 1779824037.1958237,
+    "ast_hash": "1affd31fd5ead0dd279b5452449f8970",
+    "semantic_hash": "1affd31fd5ead0dd279b5452449f8970"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\settings\\settings-form.tsx": {
+    "mtime": 1779824056.2062707,
+    "ast_hash": "b40ac4ece0e675cf2fcfc3e1895dacd8",
+    "semantic_hash": "b40ac4ece0e675cf2fcfc3e1895dacd8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\categories\\categories-client.tsx": {
+    "mtime": 1779826068.8943355,
+    "ast_hash": "57bfada21bb5d0a64dcad6674ad9aa0f",
+    "semantic_hash": "57bfada21bb5d0a64dcad6674ad9aa0f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\categories\\page.tsx": {
+    "mtime": 1779826009.745562,
+    "ast_hash": "ff474494e7b6e03218ac37f4a71567a3",
+    "semantic_hash": "ff474494e7b6e03218ac37f4a71567a3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\orders\\page.tsx": {
+    "mtime": 1779825968.7610397,
+    "ast_hash": "d845fe1f5ec34eefa8259e1d8fc48ff9",
+    "semantic_hash": "d845fe1f5ec34eefa8259e1d8fc48ff9"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\page.tsx": {
+    "mtime": 1779825930.8309653,
+    "ast_hash": "637859cdc36c952bc324ffb0f7894324",
+    "semantic_hash": "637859cdc36c952bc324ffb0f7894324"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\products\\page.tsx": {
+    "mtime": 1779826001.6542606,
+    "ast_hash": "504ad56afb411deb10f07ba68ede4b87",
+    "semantic_hash": "504ad56afb411deb10f07ba68ede4b87"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\shop\\shop-config.tsx": {
+    "mtime": 1779825957.7298353,
+    "ast_hash": "f75a750633dee0e85bda5586488c90c0",
+    "semantic_hash": "f75a750633dee0e85bda5586488c90c0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\generate\\generate-client.tsx": {
+    "mtime": 1780013512.528478,
+    "ast_hash": "c2f36aa2be4f7aa530249434491dbb66",
+    "semantic_hash": "c2f36aa2be4f7aa530249434491dbb66"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\generate\\page.tsx": {
+    "mtime": 1779826505.974454,
+    "ast_hash": "377d43b3f6b2c01ff84b6cf519a408d8",
+    "semantic_hash": "377d43b3f6b2c01ff84b6cf519a408d8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\page.tsx": {
+    "mtime": 1779826473.7922187,
+    "ast_hash": "880542d8ba50a631a74e4a0f14fb3e44",
+    "semantic_hash": "880542d8ba50a631a74e4a0f14fb3e44"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\tickets-overview.tsx": {
+    "mtime": 1779826496.1736588,
+    "ast_hash": "9168835fe157de9aa629fce28d5077ca",
+    "semantic_hash": "9168835fe157de9aa629fce28d5077ca"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\verifiers\\page.tsx": {
+    "mtime": 1779826555.1562035,
+    "ast_hash": "f48e2e9f75814b57e6744b666ee586a5",
+    "semantic_hash": "f48e2e9f75814b57e6744b666ee586a5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\[eventSlug]\\tickets\\verifiers\\verifiers-client.tsx": {
+    "mtime": 1779826589.9125743,
+    "ast_hash": "04b8472c7b50a38c1ee2359a36a173b7",
+    "semantic_hash": "04b8472c7b50a38c1ee2359a36a173b7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\actions.ts": {
+    "mtime": 1780014450.0380368,
+    "ast_hash": "3285a936c1fe9525264fa9a37dec1a89",
+    "semantic_hash": "3285a936c1fe9525264fa9a37dec1a89"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\loading.tsx": {
+    "mtime": 1780014494.0857913,
+    "ast_hash": "0101646842044a22a47588e890df8f7b",
+    "semantic_hash": "0101646842044a22a47588e890df8f7b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\new\\page.tsx": {
+    "mtime": 1780014485.0544128,
+    "ast_hash": "96f7d3237235716f34840f493be84993",
+    "semantic_hash": "96f7d3237235716f34840f493be84993"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\events\\page.tsx": {
+    "mtime": 1780014465.1701434,
+    "ast_hash": "a8a714be1c14c9247b3bbd900195273e",
+    "semantic_hash": "a8a714be1c14c9247b3bbd900195273e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\landing\\actions.ts": {
+    "mtime": 1779353763.7357147,
+    "ast_hash": "8f28c612df822c5a247f10f394c017c3",
+    "semantic_hash": "8f28c612df822c5a247f10f394c017c3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\landing\\homepage-content-management.tsx": {
+    "mtime": 1774202550.4725115,
+    "ast_hash": "9db672a7ce2ef780978e05cc7aee4f70",
+    "semantic_hash": "9db672a7ce2ef780978e05cc7aee4f70"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\landing\\page.tsx": {
+    "mtime": 1774202550.48281,
+    "ast_hash": "5d6b9fd5ad9e471e571fe92d9befea60",
+    "semantic_hash": "5d6b9fd5ad9e471e571fe92d9befea60"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\layout.tsx": {
+    "mtime": 1779823546.893764,
+    "ast_hash": "03c58ca6357591baf3d9ebaef4a65e0c",
+    "semantic_hash": "03c58ca6357591baf3d9ebaef4a65e0c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\ClientBatchOcr.tsx": {
+    "mtime": 1765914928.3574355,
+    "ast_hash": "8215d18468b9b51b2ccc84e14e2dd124",
+    "semantic_hash": "8215d18468b9b51b2ccc84e14e2dd124"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\EditEventDataDialog.tsx": {
+    "mtime": 1770222516.8782208,
+    "ast_hash": "34935b3847de69ade28aa6223d9390df",
+    "semantic_hash": "34935b3847de69ade28aa6223d9390df"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\ExportDialog.tsx": {
+    "mtime": 1769586533.7133064,
+    "ast_hash": "9da68be1ec456e4adfd10737e8955b5e",
+    "semantic_hash": "9da68be1ec456e4adfd10737e8955b5e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\InvoiceUpload.tsx": {
+    "mtime": 1766016128.6772914,
+    "ast_hash": "4919f206838a41fe2d7429c044156aac",
+    "semantic_hash": "4919f206838a41fe2d7429c044156aac"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\ManualVerificationDashboard.tsx": {
+    "mtime": 1769937930.5808764,
+    "ast_hash": "92c8938838b8d3cfae57ede62c701c47",
+    "semantic_hash": "92c8938838b8d3cfae57ede62c701c47"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\SyncDialog.tsx": {
+    "mtime": 1769937930.641887,
+    "ast_hash": "1a3b1f66a1fc8c12dcc4e19669c17362",
+    "semantic_hash": "1a3b1f66a1fc8c12dcc4e19669c17362"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\actions.ts": {
+    "mtime": 1779353763.7367153,
+    "ast_hash": "4832e5081fb59a80fed3e136cc7031d2",
+    "semantic_hash": "4832e5081fb59a80fed3e136cc7031d2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\clientBatchOcrActions.ts": {
+    "mtime": 1779353763.7377152,
+    "ast_hash": "a9923f8382d4e3cda7256306e95e6809",
+    "semantic_hash": "a9923f8382d4e3cda7256306e95e6809"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\invoiceActions.ts": {
+    "mtime": 1779353763.7377152,
+    "ast_hash": "7532e878d448547979e2d8d4e480306e",
+    "semantic_hash": "7532e878d448547979e2d8d4e480306e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\loading.tsx": {
+    "mtime": 1762442334.3038013,
+    "ast_hash": "f428790fc584216ba1aa86971443e1a1",
+    "semantic_hash": "f428790fc584216ba1aa86971443e1a1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\orders-management.tsx": {
+    "mtime": 1780013826.220282,
+    "ast_hash": "54f0ff3fcfefbc7e3eb535fd81e20bc7",
+    "semantic_hash": "54f0ff3fcfefbc7e3eb535fd81e20bc7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\page.tsx": {
+    "mtime": 1780014183.706573,
+    "ast_hash": "f75010309e0ec669349aa2e73b63c586",
+    "semantic_hash": "f75010309e0ec669349aa2e73b63c586"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\orders\\settingsActions.ts": {
+    "mtime": 1779353763.7387145,
+    "ast_hash": "85445af97b435d3481c4b733aed808a8",
+    "semantic_hash": "85445af97b435d3481c4b733aed808a8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\packages\\actions.ts": {
+    "mtime": 1779353763.739715,
+    "ast_hash": "39a92ae4286b6c2e85986f95f2223933",
+    "semantic_hash": "39a92ae4286b6c2e85986f95f2223933"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\packages\\loading.tsx": {
+    "mtime": 1769586533.8357024,
+    "ast_hash": "67b1f9c335dbef46281859845d31e5a3",
+    "semantic_hash": "67b1f9c335dbef46281859845d31e5a3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\packages\\packages-management.tsx": {
+    "mtime": 1769914403.7147007,
+    "ast_hash": "0d0de958cd5a4e23a9ad0bb56f921e79",
+    "semantic_hash": "0d0de958cd5a4e23a9ad0bb56f921e79"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\packages\\page.tsx": {
+    "mtime": 1780013845.7524216,
+    "ast_hash": "dc42e37b25a4d3337a32f1a25a8573f5",
+    "semantic_hash": "dc42e37b25a4d3337a32f1a25a8573f5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\page.tsx": {
+    "mtime": 1779353763.739715,
+    "ast_hash": "908da039e29b8505900ce7107e470048",
+    "semantic_hash": "908da039e29b8505900ce7107e470048"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\pages\\actions.ts": {
+    "mtime": 1779353763.7407146,
+    "ast_hash": "a59bf97f035b78d484a02830574a7fd0",
+    "semantic_hash": "a59bf97f035b78d484a02830574a7fd0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\pages\\content-management.tsx": {
+    "mtime": 1773600984.3675725,
+    "ast_hash": "28958f70cc97108cc7cf7567a7f1f98a",
+    "semantic_hash": "28958f70cc97108cc7cf7567a7f1f98a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\pages\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "d73c02eb22d4202a03f1df08e4276f1c",
+    "semantic_hash": "d73c02eb22d4202a03f1df08e4276f1c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\pages\\rich-text-editor.tsx": {
+    "mtime": 1773600984.3823948,
+    "ast_hash": "280990df34911fa463294b0cb3d6270d",
+    "semantic_hash": "280990df34911fa463294b0cb3d6270d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\products\\actions.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "2d6efb0716ad73459870401c2e0d9f59",
+    "semantic_hash": "2d6efb0716ad73459870401c2e0d9f59"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\products\\loading.tsx": {
+    "mtime": 1762442343.8076212,
+    "ast_hash": "1c1debbdd2ea189017f08165895bf276",
+    "semantic_hash": "1c1debbdd2ea189017f08165895bf276"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\products\\page.tsx": {
+    "mtime": 1780013835.9970715,
+    "ast_hash": "1c98cf4295cea798a442d29bf047c422",
+    "semantic_hash": "1c98cf4295cea798a442d29bf047c422"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\products\\products-management.tsx": {
+    "mtime": 1770484818.5664113,
+    "ast_hash": "e4ef8e44b8a1d06dcf42e2d3466ecb7d",
+    "semantic_hash": "e4ef8e44b8a1d06dcf42e2d3466ecb7d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\redirects\\actions.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "f8d81b17188f46caf2be0c27c427d962",
+    "semantic_hash": "f8d81b17188f46caf2be0c27c427d962"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\redirects\\analyticsModal.tsx": {
+    "mtime": 1772368146.1145463,
+    "ast_hash": "1b506e9bc9ea630eb62f038bf2d7851d",
+    "semantic_hash": "1b506e9bc9ea630eb62f038bf2d7851d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\redirects\\dashboardClient.tsx": {
+    "mtime": 1772368146.1297722,
+    "ast_hash": "13bf82464873b714bb71c4305c8e5edd",
+    "semantic_hash": "13bf82464873b714bb71c4305c8e5edd"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\redirects\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "857b3cfab2f266df708322b4eb122cca",
+    "semantic_hash": "857b3cfab2f266df708322b4eb122cca"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\settings\\email-settings-client.tsx": {
+    "mtime": 1770485249.8827305,
+    "ast_hash": "6a1fde525bf77a4ff4e7ce1de5d8cddc",
+    "semantic_hash": "6a1fde525bf77a4ff4e7ce1de5d8cddc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\settings\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "18487124af466ee99eb52b8f4e25c48f",
+    "semantic_hash": "18487124af466ee99eb52b8f4e25c48f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\sso26\\actions.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "938912b2f8a737226f3ca15eb9eda05f",
+    "semantic_hash": "938912b2f8a737226f3ca15eb9eda05f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\sso26\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "075ee53976d10c99523caf59bc469f99",
+    "semantic_hash": "075ee53976d10c99523caf59bc469f99"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\sso26\\sso26-management.tsx": {
+    "mtime": 1777188324.1688502,
+    "ast_hash": "46debb0666db83979ec24cc3fdd79387",
+    "semantic_hash": "46debb0666db83979ec24cc3fdd79387"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\actions.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "4de5e5562c295e46d3cc3ed7c86e5ecb",
+    "semantic_hash": "4de5e5562c295e46d3cc3ed7c86e5ecb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\migration-audit\\actions.ts": {
+    "mtime": 1779823088.0112364,
+    "ast_hash": "4d875a63458b66a162c173aa36d3c7a0",
+    "semantic_hash": "4d875a63458b66a162c173aa36d3c7a0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\migration-audit\\audit-client.tsx": {
+    "mtime": 1779823113.7369895,
+    "ast_hash": "87202e81e2aad7279ea683875c2f36b4",
+    "semantic_hash": "87202e81e2aad7279ea683875c2f36b4"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\migration-audit\\page.tsx": {
+    "mtime": 1779823094.8221557,
+    "ast_hash": "2cf7fcb12d2a8ba07b8720c10418c81a",
+    "semantic_hash": "2cf7fcb12d2a8ba07b8720c10418c81a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "ec12f71453f6e39bfabaf2ce3cee1d8f",
+    "semantic_hash": "ec12f71453f6e39bfabaf2ce3cee1d8f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\super\\super-admin-management.tsx": {
+    "mtime": 1777547968.502845,
+    "ast_hash": "35c28d8eabe9a3fcc5b88b3c4f7dab11",
+    "semantic_hash": "35c28d8eabe9a3fcc5b88b3c4f7dab11"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\tickets\\actions.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "d348c36fac2534ca086efd2600a3db57",
+    "semantic_hash": "d348c36fac2534ca086efd2600a3db57"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\tickets\\page.tsx": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "5662d678cbf83ec837d2a42b2d9083d6",
+    "semantic_hash": "5662d678cbf83ec837d2a42b2d9083d6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\tickets\\tickets-management.tsx": {
+    "mtime": 1772343073.6034348,
+    "ast_hash": "8734270dc05eb467d0ae8641f41086ad",
+    "semantic_hash": "8734270dc05eb467d0ae8641f41086ad"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\admin\\unauthorized.tsx": {
+    "mtime": 1762318841.0957136,
+    "ast_hash": "c93f907fd6ac058294fb342342318926",
+    "semantic_hash": "c93f907fd6ac058294fb342342318926"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\admin\\content\\route.ts": {
+    "mtime": 1779353763.7410736,
+    "ast_hash": "cf920f3ad20a02f2c4daaead96f4bb41",
+    "semantic_hash": "cf920f3ad20a02f2c4daaead96f4bb41"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\auth\\[...all]\\route.ts": {
+    "mtime": 1762171951.1066017,
+    "ast_hash": "1904de94f5362beedc269759cad175f0",
+    "semantic_hash": "1904de94f5362beedc269759cad175f0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\cache-stats\\route.ts": {
+    "mtime": 1762446019.882686,
+    "ast_hash": "2bc2e6e2fa6234b6ad38cfa48ec7790e",
+    "semantic_hash": "2bc2e6e2fa6234b6ad38cfa48ec7790e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\health\\route.ts": {
+    "mtime": 1762225903.481568,
+    "ast_hash": "d48da5e2af30ece1b681f45fce1455b5",
+    "semantic_hash": "d48da5e2af30ece1b681f45fce1455b5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\receipts\\[filename]\\route.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "e043797a9ef972036d77320841452225",
+    "semantic_hash": "e043797a9ef972036d77320841452225"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\shop\\sync-orders\\route.ts": {
+    "mtime": 1769586533.9825647,
+    "ast_hash": "757fab5b326605fe32a2345745cb8f87",
+    "semantic_hash": "757fab5b326605fe32a2345745cb8f87"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\shop\\track\\route.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "7b43ce6d29a6e1b53ce42c5d3bac3357",
+    "semantic_hash": "7b43ce6d29a6e1b53ce42c5d3bac3357"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\tickets\\qr\\route.ts": {
+    "mtime": 1772226403.9133086,
+    "ast_hash": "3c2794319464cfe75dcf0c78975de8ea",
+    "semantic_hash": "3c2794319464cfe75dcf0c78975de8ea"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\tickets\\suggest\\route.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "ec96687aa9219597757cf526ee5f779d",
+    "semantic_hash": "ec96687aa9219597757cf526ee5f779d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\upload\\route.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "48882a5d7099ca018ff90129e382c9f3",
+    "semantic_hash": "48882a5d7099ca018ff90129e382c9f3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\api\\user\\roles\\route.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "bbe467e1fe72cca2274ebde311595080",
+    "semantic_hash": "bbe467e1fe72cca2274ebde311595080"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\archive\\sites\\arsafest\\page.tsx": {
+    "mtime": 1774195732.702468,
+    "ast_hash": "935962ae72d2ccc2dec7674ca022be85",
+    "semantic_hash": "935962ae72d2ccc2dec7674ca022be85"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\archive\\sites\\page.tsx": {
+    "mtime": 1774196225.0342834,
+    "ast_hash": "ccda9eeb0704c242da65ab1116d2627d",
+    "semantic_hash": "ccda9eeb0704c242da65ab1116d2627d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\arsafest-client.tsx": {
+    "mtime": 1774196388.7434106,
+    "ast_hash": "e4ff884612b72cdcd0212a1b79cf4b26",
+    "semantic_hash": "e4ff884612b72cdcd0212a1b79cf4b26"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\calendar\\page.tsx": {
+    "mtime": 1762194413.6277328,
+    "ast_hash": "f1a7f317479a90612613dd51a80f6d46",
+    "semantic_hash": "f1a7f317479a90612613dd51a80f6d46"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\contact\\page.tsx": {
+    "mtime": 1762194413.6415997,
+    "ast_hash": "060c1584d8d2058d4d6ce6822a4bc666",
+    "semantic_hash": "060c1584d8d2058d4d6ce6822a4bc666"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\faq\\faq-client.tsx": {
+    "mtime": 1779802211.6138747,
+    "ast_hash": "e5bbfa7561c7f73c21d8975053c4b38a",
+    "semantic_hash": "e5bbfa7561c7f73c21d8975053c4b38a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\faq\\page.tsx": {
+    "mtime": 1773613603.2201915,
+    "ast_hash": "298682a0219422c011e8bbd4e450ea94",
+    "semantic_hash": "298682a0219422c011e8bbd4e450ea94"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\home-client.tsx": {
+    "mtime": 1779809407.3149424,
+    "ast_hash": "48172edea1ed760693e15fa7d8f64e65",
+    "semantic_hash": "48172edea1ed760693e15fa7d8f64e65"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\layout.tsx": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "3f9daeeb33d8229166708be61a3c2de3",
+    "semantic_hash": "3f9daeeb33d8229166708be61a3c2de3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\major-event-section.tsx": {
+    "mtime": 1774198521.6121323,
+    "ast_hash": "90ec7ddbbc2bf71f33f02c964515c889",
+    "semantic_hash": "90ec7ddbbc2bf71f33f02c964515c889"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\merch\\page.tsx": {
+    "mtime": 1762194413.7125905,
+    "ast_hash": "9b71eb09a81885a496e5795fbbc22b6f",
+    "semantic_hash": "9b71eb09a81885a496e5795fbbc22b6f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\not-found.tsx": {
+    "mtime": 1762194413.7234397,
+    "ast_hash": "cb7b3e0b8421c603512289b054b259ea",
+    "semantic_hash": "cb7b3e0b8421c603512289b054b259ea"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\page.tsx": {
+    "mtime": 1774202551.7457187,
+    "ast_hash": "b8ef94c1b0148b907acf6c2e68016fbd",
+    "semantic_hash": "b8ef94c1b0148b907acf6c2e68016fbd"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\page\\[slug]\\content-renderer.tsx": {
+    "mtime": 1772736601.2834187,
+    "ast_hash": "0c58abd8e54aacbdc7ae2be4b04a2c0e",
+    "semantic_hash": "0c58abd8e54aacbdc7ae2be4b04a2c0e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\page\\[slug]\\page.tsx": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "163dbc59fcd2f5a67380354748c9f4dc",
+    "semantic_hash": "163dbc59fcd2f5a67380354748c9f4dc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\publications\\page.tsx": {
+    "mtime": 1762194413.7660494,
+    "ast_hash": "d05662447e9f4186ac76c05b815ec5e1",
+    "semantic_hash": "d05662447e9f4186ac76c05b815ec5e1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\resources\\page.tsx": {
+    "mtime": 1762194413.8510277,
+    "ast_hash": "a4dfa717c13e559bcd34084d860bbf21",
+    "semantic_hash": "a4dfa717c13e559bcd34084d860bbf21"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\actions.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "5342e1fd38f050ee3a094186e5772535",
+    "semantic_hash": "5342e1fd38f050ee3a094186e5772535"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\cart\\cart-client.tsx": {
+    "mtime": 1770820946.2549648,
+    "ast_hash": "095d6d008f364ef83f2bd4438c844f89",
+    "semantic_hash": "095d6d008f364ef83f2bd4438c844f89"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\cart\\loading.tsx": {
+    "mtime": 1762443426.1237915,
+    "ast_hash": "fe749cea00c6ec373e6452e12d45af1f",
+    "semantic_hash": "fe749cea00c6ec373e6452e12d45af1f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\cart\\page.tsx": {
+    "mtime": 1770820975.5667677,
+    "ast_hash": "ae385b8022cd2be6c11ed09e0a6bbe21",
+    "semantic_hash": "ae385b8022cd2be6c11ed09e0a6bbe21"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\checkout\\checkout-client.tsx": {
+    "mtime": 1774372941.5869637,
+    "ast_hash": "c292b02f80be1461138a9ac47e47cdff",
+    "semantic_hash": "c292b02f80be1461138a9ac47e47cdff"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\checkout\\daily-stock-actions.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "cbf3b1d52b8ff88b2b9e707e48e90edc",
+    "semantic_hash": "cbf3b1d52b8ff88b2b9e707e48e90edc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\checkout\\page.tsx": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "7ae006ebdee2fc709ea119aa805d1590",
+    "semantic_hash": "7ae006ebdee2fc709ea119aa805d1590"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\actions.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "bfe002a8f362dd8a519dd7e96676312c",
+    "semantic_hash": "bfe002a8f362dd8a519dd7e96676312c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\animations.tsx": {
+    "mtime": 1769802079.1153457,
+    "ast_hash": "c055fb2ef7a079b7b72dd75f01e18a2d",
+    "semantic_hash": "c055fb2ef7a079b7b72dd75f01e18a2d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\checkout\\checkout-client.tsx": {
+    "mtime": 1769610216.978362,
+    "ast_hash": "289e9f2d1d41e7baef36bdaa3f24e952",
+    "semantic_hash": "289e9f2d1d41e7baef36bdaa3f24e952"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\checkout\\page.tsx": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "6703495ebb6d04163090b61cf9b49973",
+    "semantic_hash": "6703495ebb6d04163090b61cf9b49973"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\index.tsx": {
+    "mtime": 1769914365.8512578,
+    "ast_hash": "c089928696e349bb309aacf72036c9a4",
+    "semantic_hash": "c089928696e349bb309aacf72036c9a4"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\types.ts": {
+    "mtime": 1769586534.396327,
+    "ast_hash": "6363be28749beee4edadb68b7082bd45",
+    "semantic_hash": "6363be28749beee4edadb68b7082bd45"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\sso-2026\\animations.tsx": {
+    "mtime": 1774371498.3662207,
+    "ast_hash": "03292b4011c5cf34479ee56cbbc4e9aa",
+    "semantic_hash": "03292b4011c5cf34479ee56cbbc4e9aa"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\sso-2026\\index.tsx": {
+    "mtime": 1774289693.4366643,
+    "ast_hash": "6e5d8b7c54191511f71131e7cbd53956",
+    "semantic_hash": "6e5d8b7c54191511f71131e7cbd53956"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\index.ts": {
+    "mtime": 1774289332.3228958,
+    "ast_hash": "5e8003ef28b18d1f34e9de1ed5f8fef8",
+    "semantic_hash": "5e8003ef28b18d1f34e9de1ed5f8fef8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\types.ts": {
+    "mtime": 1774370802.70243,
+    "ast_hash": "5fb9d6647ad81bbac200bc670a56cd76",
+    "semantic_hash": "5fb9d6647ad81bbac200bc670a56cd76"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\gcashActions.ts": {
+    "mtime": 1765909518.9716792,
+    "ast_hash": "6440d3dcbcb1bd3a7ba60012640e764b",
+    "semantic_hash": "6440d3dcbcb1bd3a7ba60012640e764b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\layout.tsx": {
+    "mtime": 1773603135.6181595,
+    "ast_hash": "98f695f485339a343e1cd1e0fda24f6e",
+    "semantic_hash": "98f695f485339a343e1cd1e0fda24f6e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\loading.tsx": {
+    "mtime": 1762442283.02522,
+    "ast_hash": "11391388e0119456f2af8eef9c785c96",
+    "semantic_hash": "11391388e0119456f2af8eef9c785c96"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\orders\\[orderId]\\copy-button.tsx": {
+    "mtime": 1769914794.8048248,
+    "ast_hash": "bb0f9f945fbc0f8a1f1cfb7f8f874fbe",
+    "semantic_hash": "bb0f9f945fbc0f8a1f1cfb7f8f874fbe"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\orders\\[orderId]\\page.tsx": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "6edbca54cc41b815cb80a44275e1b171",
+    "semantic_hash": "6edbca54cc41b815cb80a44275e1b171"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\orders\\loading.tsx": {
+    "mtime": 1762442314.697843,
+    "ast_hash": "021307bc8ba17deab77d4d542d73191f",
+    "semantic_hash": "021307bc8ba17deab77d4d542d73191f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\orders\\page.tsx": {
+    "mtime": 1769937700.2599382,
+    "ast_hash": "3e283a11da6431b053b29ef3c68ac8d1",
+    "semantic_hash": "3e283a11da6431b053b29ef3c68ac8d1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\page.tsx": {
+    "mtime": 1774425472.1614826,
+    "ast_hash": "232120e4246965c81404aac1232bc401",
+    "semantic_hash": "232120e4246965c81404aac1232bc401"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\shop-client.tsx": {
+    "mtime": 1774372969.80843,
+    "ast_hash": "ae78bc62e91a81cb50c8782210a924ae",
+    "semantic_hash": "ae78bc62e91a81cb50c8782210a924ae"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\actions.ts": {
+    "mtime": 1779353763.7470028,
+    "ast_hash": "a5afe11ca0da93e2d1225d887f5f78bb",
+    "semantic_hash": "a5afe11ca0da93e2d1225d887f5f78bb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\captcha\\page.tsx": {
+    "mtime": 1777143996.649893,
+    "ast_hash": "6a262195ae6c68b68ddb79b448279004",
+    "semantic_hash": "6a262195ae6c68b68ddb79b448279004"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\dday\\dday-client.tsx": {
+    "mtime": 1777184972.8276203,
+    "ast_hash": "b096ad8ef40afc7c496485c7a394d08c",
+    "semantic_hash": "b096ad8ef40afc7c496485c7a394d08c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\dday\\page.tsx": {
+    "mtime": 1777146951.497517,
+    "ast_hash": "c12bb3bded2f70eb9175bbeda3870598",
+    "semantic_hash": "c12bb3bded2f70eb9175bbeda3870598"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\sso26-gate.tsx": {
+    "mtime": 1776414461.0849345,
+    "ast_hash": "bf578f7e04559667e61311c60131bc85",
+    "semantic_hash": "bf578f7e04559667e61311c60131bc85"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\superlatives\\page.tsx": {
+    "mtime": 1776848145.8468907,
+    "ast_hash": "29a94d6daac5763d86fe6c3ef8c5629e",
+    "semantic_hash": "29a94d6daac5763d86fe6c3ef8c5629e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\sso26\\superlatives\\superlatives-client.tsx": {
+    "mtime": 1776929697.579717,
+    "ast_hash": "1246a420d58dc871b0d082cd1e1b8ae2",
+    "semantic_hash": "1246a420d58dc871b0d082cd1e1b8ae2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\ticket-verify\\actions.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "30a824f686b9d0c3c821094d62fe7f97",
+    "semantic_hash": "30a824f686b9d0c3c821094d62fe7f97"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\ticket-verify\\page.tsx": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "743d16297808af706c0e1c5b144c20d3",
+    "semantic_hash": "743d16297808af706c0e1c5b144c20d3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\ticket-verify\\ticket-verify-client.tsx": {
+    "mtime": 1772343074.686584,
+    "ast_hash": "c5c9e53502b058295a18eb830690fa80",
+    "semantic_hash": "c5c9e53502b058295a18eb830690fa80"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\admin\\admin-nav.tsx": {
+    "mtime": 1779823584.452383,
+    "ast_hash": "6eb7e1535d43ce01f424b00a8c5f3cda",
+    "semantic_hash": "6eb7e1535d43ce01f424b00a8c5f3cda"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\admin\\admin-theme-forcer.tsx": {
+    "mtime": 1772368270.0320494,
+    "ast_hash": "f19e309ac391351f493cfa785e1ce816",
+    "semantic_hash": "f19e309ac391351f493cfa785e1ce816"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\balloon-captcha-modal.tsx": {
+    "mtime": 1777143931.930832,
+    "ast_hash": "478c4859fe79f87a0e7cab4d08fbe6c2",
+    "semantic_hash": "478c4859fe79f87a0e7cab4d08fbe6c2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\balloon-svg.tsx": {
+    "mtime": 1777144640.8118913,
+    "ast_hash": "f00b433a2235c69fb3d99540ca6bfb7f",
+    "semantic_hash": "f00b433a2235c69fb3d99540ca6bfb7f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\captchas\\catch-the-floater.tsx": {
+    "mtime": 1777144665.6802542,
+    "ast_hash": "fc54bf36f3ae73ca73d7398350142cb4",
+    "semantic_hash": "fc54bf36f3ae73ca73d7398350142cb4"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\captchas\\inflate-balloon.tsx": {
+    "mtime": 1777144709.5357523,
+    "ast_hash": "1c1f9fed770e89cd40d517c9061d072e",
+    "semantic_hash": "1c1f9fed770e89cd40d517c9061d072e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\captchas\\memory-count.tsx": {
+    "mtime": 1777144682.17768,
+    "ast_hash": "fadf64156808da76af3068e27744f557",
+    "semantic_hash": "fadf64156808da76af3068e27744f557"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\captchas\\pop-in-order.tsx": {
+    "mtime": 1777144693.0481484,
+    "ast_hash": "f381d31d0135dd108eb0ea5c844c621b",
+    "semantic_hash": "f381d31d0135dd108eb0ea5c844c621b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\balloon-captcha\\captchas\\pop-the-color.tsx": {
+    "mtime": 1777144653.9120967,
+    "ast_hash": "16a9616f515ee67cb4ce28d8715d1806",
+    "semantic_hash": "16a9616f515ee67cb4ce28d8715d1806"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\cart-counter.tsx": {
+    "mtime": 1770820982.5941353,
+    "ast_hash": "4a794910dcced0424f1444dde2f4fba6",
+    "semantic_hash": "4a794910dcced0424f1444dde2f4fba6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\daily-stock-dialog.tsx": {
+    "mtime": 1770541508.170099,
+    "ast_hash": "120ba38e43edff7e779f29900ef6342a",
+    "semantic_hash": "120ba38e43edff7e779f29900ef6342a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\daily-stock-overrides.tsx": {
+    "mtime": 1770485591.3791118,
+    "ast_hash": "aff75c094d87855f82c7dc1f4ab5b7b8",
+    "semantic_hash": "aff75c094d87855f82c7dc1f4ab5b7b8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\event-calendar.tsx": {
+    "mtime": 1773662210.677814,
+    "ast_hash": "c0af770ca27be49fa076fd58342eeac5",
+    "semantic_hash": "c0af770ca27be49fa076fd58342eeac5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\event-card.tsx": {
+    "mtime": 1773605608.4446778,
+    "ast_hash": "bf50004360a1a8a6783a7e15d46815e2",
+    "semantic_hash": "bf50004360a1a8a6783a7e15d46815e2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\gacha-banner.tsx": {
+    "mtime": 1762194413.900034,
+    "ast_hash": "82573e8a58541abb65810bf23560bc8a",
+    "semantic_hash": "82573e8a58541abb65810bf23560bc8a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\image-crop-editor.tsx": {
+    "mtime": 1769914794.9503584,
+    "ast_hash": "7256a358786bdcf69cbc2e13a5d1e78b",
+    "semantic_hash": "7256a358786bdcf69cbc2e13a5d1e78b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\package-selection-modal.tsx": {
+    "mtime": 1769586534.5680938,
+    "ast_hash": "aabf53c404cc3c31db604dc58c66928b",
+    "semantic_hash": "aabf53c404cc3c31db604dc58c66928b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\features\\product-image-carousel.tsx": {
+    "mtime": 1769914180.898996,
+    "ast_hash": "4f2ede3829dafc02c6e38130c88fd3b3",
+    "semantic_hash": "4f2ede3829dafc02c6e38130c88fd3b3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\layout-wrapper.tsx": {
+    "mtime": 1774372608.682077,
+    "ast_hash": "f1a175bda3cd25aa3b927568322d7816",
+    "semantic_hash": "f1a175bda3cd25aa3b927568322d7816"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\main\\Footer.tsx": {
+    "mtime": 1767953493.6238952,
+    "ast_hash": "6f249991fc9aaa1e34982c7eddd68aae",
+    "semantic_hash": "6f249991fc9aaa1e34982c7eddd68aae"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\main\\Header.tsx": {
+    "mtime": 1773662576.1559646,
+    "ast_hash": "48956fa21417ecd238580b757d587020",
+    "semantic_hash": "48956fa21417ecd238580b757d587020"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\main\\announcement-banner.tsx": {
+    "mtime": 1763223181.5500495,
+    "ast_hash": "04b56a675103b490edd05c29f85a3477",
+    "semantic_hash": "04b56a675103b490edd05c29f85a3477"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\main\\theme-provider.tsx": {
+    "mtime": 1756582860.7482724,
+    "ast_hash": "4583d9feb616dc91584074c85a6c0ab1",
+    "semantic_hash": "4583d9feb616dc91584074c85a6c0ab1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\main\\theme-toggle.tsx": {
+    "mtime": 1762225560.587606,
+    "ast_hash": "f5849d811298ce7fd9a4ded02685a1e7",
+    "semantic_hash": "f5849d811298ce7fd9a4ded02685a1e7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\major-events\\balloon-animation.tsx": {
+    "mtime": 1774202552.7283893,
+    "ast_hash": "2231577d83ff6c76ef185798d45a5378",
+    "semantic_hash": "2231577d83ff6c76ef185798d45a5378"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\major-events\\index.ts": {
+    "mtime": 1774202552.7445323,
+    "ast_hash": "525a89b6c6853772876301ea5b72fe5f",
+    "semantic_hash": "525a89b6c6853772876301ea5b72fe5f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\major-events\\sso-2026.tsx": {
+    "mtime": 1774288987.5744097,
+    "ast_hash": "93a10d3f36ba0805cf8d4181577a4efe",
+    "semantic_hash": "93a10d3f36ba0805cf8d4181577a4efe"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\shop\\delivery-schedule-selector.tsx": {
+    "mtime": 1769586534.6429846,
+    "ast_hash": "92da739985d0098755977d6b02a52630",
+    "semantic_hash": "92da739985d0098755977d6b02a52630"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\accordion.tsx": {
+    "mtime": 1779802114.4511466,
+    "ast_hash": "8fdb239217cc597769abe82eb209038e",
+    "semantic_hash": "8fdb239217cc597769abe82eb209038e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\alert-dialog.tsx": {
+    "mtime": 1756574735.7963438,
+    "ast_hash": "5a76c670997fe423950a5271d86e6407",
+    "semantic_hash": "5a76c670997fe423950a5271d86e6407"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\alert.tsx": {
+    "mtime": 1756574735.8075018,
+    "ast_hash": "147a5a3f6868d99934fa7355d21a7233",
+    "semantic_hash": "147a5a3f6868d99934fa7355d21a7233"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\aspect-ratio.tsx": {
+    "mtime": 1756574735.815503,
+    "ast_hash": "11993c484f85c7ebdb81213ba4170d1e",
+    "semantic_hash": "11993c484f85c7ebdb81213ba4170d1e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\avatar.tsx": {
+    "mtime": 1756574735.824671,
+    "ast_hash": "388e8a619336e8bdc50ac3164a501d1a",
+    "semantic_hash": "388e8a619336e8bdc50ac3164a501d1a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\badge.tsx": {
+    "mtime": 1756574735.8336697,
+    "ast_hash": "968f0f483e26fd02e7060ffbfac1930b",
+    "semantic_hash": "968f0f483e26fd02e7060ffbfac1930b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\breadcrumb.tsx": {
+    "mtime": 1756574735.8448005,
+    "ast_hash": "65cf98725808e20957583598fb11d8b2",
+    "semantic_hash": "65cf98725808e20957583598fb11d8b2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\button.tsx": {
+    "mtime": 1756574735.8539402,
+    "ast_hash": "89250f8a6e1ed94164a3552c245402ae",
+    "semantic_hash": "89250f8a6e1ed94164a3552c245402ae"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\calendar.tsx": {
+    "mtime": 1756574735.8722262,
+    "ast_hash": "2fad7840a6df42c403296e03d340ae3e",
+    "semantic_hash": "2fad7840a6df42c403296e03d340ae3e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\card.tsx": {
+    "mtime": 1756574735.8832264,
+    "ast_hash": "99dd214463f1c8ea89592316085d26c1",
+    "semantic_hash": "99dd214463f1c8ea89592316085d26c1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\carousel.tsx": {
+    "mtime": 1756574735.9064662,
+    "ast_hash": "c812445cc5f35af1c0795a103343cd66",
+    "semantic_hash": "c812445cc5f35af1c0795a103343cd66"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\chart.tsx": {
+    "mtime": 1756574735.9427683,
+    "ast_hash": "7e555dfce91b1c97d2a83e992cd7460f",
+    "semantic_hash": "7e555dfce91b1c97d2a83e992cd7460f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\checkbox.tsx": {
+    "mtime": 1756574735.9529448,
+    "ast_hash": "c13b0b952c3de1c7fbda747ed0616590",
+    "semantic_hash": "c13b0b952c3de1c7fbda747ed0616590"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\collapsible.tsx": {
+    "mtime": 1756574735.962945,
+    "ast_hash": "05b7de3625f300d3cb6a4aeadb3de8dd",
+    "semantic_hash": "05b7de3625f300d3cb6a4aeadb3de8dd"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\command.tsx": {
+    "mtime": 1756574735.9763415,
+    "ast_hash": "0549ac42ff7a9a148eb502652a83eda0",
+    "semantic_hash": "0549ac42ff7a9a148eb502652a83eda0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\context-menu.tsx": {
+    "mtime": 1756574735.998593,
+    "ast_hash": "51d47ae75d47f871fc688fa1d684a465",
+    "semantic_hash": "51d47ae75d47f871fc688fa1d684a465"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\date-picker.tsx": {
+    "mtime": 1769810883.7896886,
+    "ast_hash": "144e25afe096439d1823de590bd6085a",
+    "semantic_hash": "144e25afe096439d1823de590bd6085a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\dialog.tsx": {
+    "mtime": 1756574736.0106657,
+    "ast_hash": "0e8bb2fe7434d17567b825be02697d4a",
+    "semantic_hash": "0e8bb2fe7434d17567b825be02697d4a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\drawer.tsx": {
+    "mtime": 1756574736.0216699,
+    "ast_hash": "2537c99e3671ab7410caf6893603c69f",
+    "semantic_hash": "2537c99e3671ab7410caf6893603c69f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\dropdown-menu.tsx": {
+    "mtime": 1756574736.0364819,
+    "ast_hash": "7ccdf1f4fd2870c932814da571af8a66",
+    "semantic_hash": "7ccdf1f4fd2870c932814da571af8a66"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\form.tsx": {
+    "mtime": 1756574736.0505867,
+    "ast_hash": "c93943bdb3dc24cee0a9fa3e8dbd4964",
+    "semantic_hash": "c93943bdb3dc24cee0a9fa3e8dbd4964"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\hover-card.tsx": {
+    "mtime": 1756574736.062586,
+    "ast_hash": "b84525d895a942be492984c6bcf265ba",
+    "semantic_hash": "b84525d895a942be492984c6bcf265ba"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\input-otp.tsx": {
+    "mtime": 1756574736.0785892,
+    "ast_hash": "f846130d4f7cd598acfa74ec06f1eb12",
+    "semantic_hash": "f846130d4f7cd598acfa74ec06f1eb12"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\input.tsx": {
+    "mtime": 1756574736.0897696,
+    "ast_hash": "2e2dd95cf10bb1b7872d79618f25bf12",
+    "semantic_hash": "2e2dd95cf10bb1b7872d79618f25bf12"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\label.tsx": {
+    "mtime": 1756574736.0987673,
+    "ast_hash": "f4f33fe7997e1f47f37e6e8c9b6e2186",
+    "semantic_hash": "f4f33fe7997e1f47f37e6e8c9b6e2186"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\menubar.tsx": {
+    "mtime": 1756574736.112875,
+    "ast_hash": "3af686e7ab351d78cdd3bb216faead7f",
+    "semantic_hash": "3af686e7ab351d78cdd3bb216faead7f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\navigation-menu.tsx": {
+    "mtime": 1756574736.1228745,
+    "ast_hash": "8343819c17fb122646661facb1d60e08",
+    "semantic_hash": "8343819c17fb122646661facb1d60e08"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\navigation-progress.tsx": {
+    "mtime": 1769586534.873231,
+    "ast_hash": "22c7a9e3905bcade4562a52d9cd93804",
+    "semantic_hash": "22c7a9e3905bcade4562a52d9cd93804"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\pagination.tsx": {
+    "mtime": 1756574736.132878,
+    "ast_hash": "754da049277235ce1bd33327369c6b22",
+    "semantic_hash": "754da049277235ce1bd33327369c6b22"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\popover.tsx": {
+    "mtime": 1756574736.1398778,
+    "ast_hash": "e2d3578d0682ceaa6081ca44b7abf303",
+    "semantic_hash": "e2d3578d0682ceaa6081ca44b7abf303"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\progress.tsx": {
+    "mtime": 1756574736.1486735,
+    "ast_hash": "897041a3c5a9230e21a2b2bfbfaf3d24",
+    "semantic_hash": "897041a3c5a9230e21a2b2bfbfaf3d24"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\radio-group.tsx": {
+    "mtime": 1756574736.157848,
+    "ast_hash": "f61a0af715f8a087677a38bdac9f7890",
+    "semantic_hash": "f61a0af715f8a087677a38bdac9f7890"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\resizable.tsx": {
+    "mtime": 1756574736.1718473,
+    "ast_hash": "cadf1176405d1bf717a423e6c87bf68b",
+    "semantic_hash": "cadf1176405d1bf717a423e6c87bf68b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\scroll-area.tsx": {
+    "mtime": 1756574736.1818473,
+    "ast_hash": "b8287092bcabfb6a473b725cfc0a3802",
+    "semantic_hash": "b8287092bcabfb6a473b725cfc0a3802"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\select.tsx": {
+    "mtime": 1756574736.1928477,
+    "ast_hash": "fc1db2aa4b86d15171fb98424308e3a5",
+    "semantic_hash": "fc1db2aa4b86d15171fb98424308e3a5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\separator.tsx": {
+    "mtime": 1756574736.2010021,
+    "ast_hash": "731c5d370a896d384c91e50b921b9acf",
+    "semantic_hash": "731c5d370a896d384c91e50b921b9acf"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\sheet.tsx": {
+    "mtime": 1756574736.217516,
+    "ast_hash": "adea8e786501c291d368dd0c585b9f88",
+    "semantic_hash": "adea8e786501c291d368dd0c585b9f88"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\sidebar.tsx": {
+    "mtime": 1756574736.2541983,
+    "ast_hash": "15b8406fdeb84d9045a5cea3b63d1ff8",
+    "semantic_hash": "15b8406fdeb84d9045a5cea3b63d1ff8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\skeleton.tsx": {
+    "mtime": 1756574736.2622166,
+    "ast_hash": "7ae993e8aaf3a3c571d841b37f467144",
+    "semantic_hash": "7ae993e8aaf3a3c571d841b37f467144"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\slider.tsx": {
+    "mtime": 1756574736.2735076,
+    "ast_hash": "66018a18b80000cac634ef36522ba095",
+    "semantic_hash": "66018a18b80000cac634ef36522ba095"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\sonner.tsx": {
+    "mtime": 1756574736.2805192,
+    "ast_hash": "3639d389743906c3c2e26c50d3ddc9b5",
+    "semantic_hash": "3639d389743906c3c2e26c50d3ddc9b5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\switch.tsx": {
+    "mtime": 1756574736.287232,
+    "ast_hash": "3f661575f9e2c1d4728a2c019c201978",
+    "semantic_hash": "3f661575f9e2c1d4728a2c019c201978"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\table.tsx": {
+    "mtime": 1756574736.303516,
+    "ast_hash": "ee2e256f53e5dfdd746d390d55dffd19",
+    "semantic_hash": "ee2e256f53e5dfdd746d390d55dffd19"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\tabs.tsx": {
+    "mtime": 1756574736.3115163,
+    "ast_hash": "2205561189efdb8acb450d0670c09833",
+    "semantic_hash": "2205561189efdb8acb450d0670c09833"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\textarea.tsx": {
+    "mtime": 1756574736.3176715,
+    "ast_hash": "a67ab6df8e57b6f21fa520a549bf116e",
+    "semantic_hash": "a67ab6df8e57b6f21fa520a549bf116e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\time-picker.tsx": {
+    "mtime": 1769920600.258649,
+    "ast_hash": "d392f2f7a832649540f5bf7f1d168752",
+    "semantic_hash": "d392f2f7a832649540f5bf7f1d168752"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\toggle-group.tsx": {
+    "mtime": 1756574736.3269815,
+    "ast_hash": "6576738f27bc250a5a812b5c4d500230",
+    "semantic_hash": "6576738f27bc250a5a812b5c4d500230"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\toggle.tsx": {
+    "mtime": 1756574736.333981,
+    "ast_hash": "12ec01e14d98715b18be310de5687fc5",
+    "semantic_hash": "12ec01e14d98715b18be310de5687fc5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\components\\ui\\tooltip.tsx": {
+    "mtime": 1756574736.3409805,
+    "ast_hash": "547606c1365698a685fe7d67e0f8706c",
+    "semantic_hash": "547606c1365698a685fe7d67e0f8706c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\db\\schema.ts": {
+    "mtime": 1779824736.7843144,
+    "ast_hash": "8bf824e132b5cb9b08d3eb7ef3d7511b",
+    "semantic_hash": "8bf824e132b5cb9b08d3eb7ef3d7511b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\hooks\\use-mobile.ts": {
+    "mtime": 1756574736.3479805,
+    "ast_hash": "83de30582f62c20e67b37e9cfc948da9",
+    "semantic_hash": "83de30582f62c20e67b37e9cfc948da9"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\auth-client.ts": {
+    "mtime": 1779785773.3376558,
+    "ast_hash": "eb366efa930e37646163d49fc4e3685b",
+    "semantic_hash": "eb366efa930e37646163d49fc4e3685b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\auth.ts": {
+    "mtime": 1779355963.7898607,
+    "ast_hash": "d0423977a1e991932e28cac96e0f3c5d",
+    "semantic_hash": "d0423977a1e991932e28cac96e0f3c5d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\cache.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "b6e1a508d2bf8c9454a6d96eef6248c4",
+    "semantic_hash": "b6e1a508d2bf8c9454a6d96eef6248c4"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\daily-stock.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "772626d736ea975adeba3baf790d2de1",
+    "semantic_hash": "772626d736ea975adeba3baf790d2de1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\db.ts": {
+    "mtime": 1779800583.2475955,
+    "ast_hash": "a22f27ccf5625abf04f2e4bae87ace02",
+    "semantic_hash": "a22f27ccf5625abf04f2e4bae87ace02"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\deliveryScheduling.ts": {
+    "mtime": 1769586535.0527778,
+    "ast_hash": "6964ac3f8fa7fb02e45ebf61b81db180",
+    "semantic_hash": "6964ac3f8fa7fb02e45ebf61b81db180"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\email-logs.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "5f0f1cdd1306a5ed2690e21062653ca1",
+    "semantic_hash": "5f0f1cdd1306a5ed2690e21062653ca1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\email.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "42de8147a1a11de3c9c355e99810628d",
+    "semantic_hash": "42de8147a1a11de3c9c355e99810628d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\eventPermissions.ts": {
+    "mtime": 1779823261.0503905,
+    "ast_hash": "4a4960885b183db39d4d769038427404",
+    "semantic_hash": "4a4960885b183db39d4d769038427404"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\gcashReaders\\parseInvoiceTable.ts": {
+    "mtime": 1766016129.7683284,
+    "ast_hash": "9e1e44abca9024a376d9216dc5fca345",
+    "semantic_hash": "9e1e44abca9024a376d9216dc5fca345"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\gcashReaders\\parseReceipt.ts": {
+    "mtime": 1765915152.546918,
+    "ast_hash": "8a7f84df1d093af4c24f24525688d21d",
+    "semantic_hash": "8a7f84df1d093af4c24f24525688d21d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\gcashReaders\\readInvoice.client.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "9c61bccb3c538ed56abbff9190747219",
+    "semantic_hash": "9c61bccb3c538ed56abbff9190747219"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\gcashReaders\\readInvoice.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "6cd2e765126c020f3af2f68154823206",
+    "semantic_hash": "6cd2e765126c020f3af2f68154823206"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\gcashReaders\\readReceipt.client.ts": {
+    "mtime": 1765906052.7727501,
+    "ast_hash": "a2800bb28544854888997dc5ed759ed0",
+    "semantic_hash": "a2800bb28544854888997dc5ed759ed0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\googleSheets.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "f940b4ecc129426e50e4e6b66b5513d6",
+    "semantic_hash": "f940b4ecc129426e50e4e6b66b5513d6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\imageCompress.ts": {
+    "mtime": 1779353763.7530994,
+    "ast_hash": "e892ea92a32dec82f891beb9da58f3a9",
+    "semantic_hash": "e892ea92a32dec82f891beb9da58f3a9"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\middleware\\redirectMiddleware.ts": {
+    "mtime": 1779800648.8729854,
+    "ast_hash": "efb141a0cb4b0c9a196f0670b95145e8",
+    "semantic_hash": "efb141a0cb4b0c9a196f0670b95145e8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\minio.ts": {
+    "mtime": 1773578573.9035308,
+    "ast_hash": "2a6cc033111b06d11a44074e160d90eb",
+    "semantic_hash": "2a6cc033111b06d11a44074e160d90eb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\r2.ts": {
+    "mtime": 1779353763.7590551,
+    "ast_hash": "e6fc21eb3712670bff5ded6dd236317b",
+    "semantic_hash": "e6fc21eb3712670bff5ded6dd236317b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\ticketSheetSync.ts": {
+    "mtime": 1779353763.7590551,
+    "ast_hash": "873badb4ef2a02c6f3416c7039fd389a",
+    "semantic_hash": "873badb4ef2a02c6f3416c7039fd389a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\ticketUtils.ts": {
+    "mtime": 1772226051.9145312,
+    "ast_hash": "f9ccf051cbd72eefe7dfd2018774e282",
+    "semantic_hash": "f9ccf051cbd72eefe7dfd2018774e282"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\lib\\utils.ts": {
+    "mtime": 1756574736.3539827,
+    "ast_hash": "1189ce390d77cff53aed00c00629b2a2",
+    "semantic_hash": "1189ce390d77cff53aed00c00629b2a2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\middleware.ts": {
+    "mtime": 1779353763.7590551,
+    "ast_hash": "9025278140b2c100d7b11beef57f8e98",
+    "semantic_hash": "9025278140b2c100d7b11beef57f8e98"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\tsconfig.json": {
+    "mtime": 1756574736.357117,
+    "ast_hash": "bbd1bcef36848a8cff480af3ca04e2ef",
+    "semantic_hash": "bbd1bcef36848a8cff480af3ca04e2ef"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\archive.md": {
+    "mtime": 1780013233.7278762,
+    "ast_hash": "0fb5a21b46ef7c064ce43227be7c4f9a",
+    "semantic_hash": "0fb5a21b46ef7c064ce43227be7c4f9a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\now.md": {
+    "mtime": 1780013437.9520402,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\recent.md": {
+    "mtime": 1780013233.7001865,
+    "ast_hash": "56c2b5c7424a23c158d99a33ae5be641",
+    "semantic_hash": "56c2b5c7424a23c158d99a33ae5be641"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\today-2026-05-20.done.md": {
+    "mtime": 1779298082.6005678,
+    "ast_hash": "e9f8e33929c485aee49c66d803fc606a",
+    "semantic_hash": "e9f8e33929c485aee49c66d803fc606a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\today-2026-05-21.done.md": {
+    "mtime": 1779353059.6603975,
+    "ast_hash": "52d31d07627b2b6ec79eb8c9440eb803",
+    "semantic_hash": "52d31d07627b2b6ec79eb8c9440eb803"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\today-2026-05-26.done.md": {
+    "mtime": 1779822338.8209553,
+    "ast_hash": "56bd57b78a896bae7c401bb0a6665d61",
+    "semantic_hash": "56bd57b78a896bae7c401bb0a6665d61"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\.remember\\today-2026-05-29.md": {
+    "mtime": 1780013437.9510398,
+    "ast_hash": "a7b786affeee9e838fe199f6b2c30f87",
+    "semantic_hash": "a7b786affeee9e838fe199f6b2c30f87"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\AGENTS.md": {
+    "mtime": 1781861595.1185064,
+    "ast_hash": "94052dbb324d81d42d828291cb80b914",
+    "semantic_hash": "94052dbb324d81d42d828291cb80b914"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\CLAUDE.md": {
+    "mtime": 1779353763.7235842,
+    "ast_hash": "125094510acdc939bc91e8f1b62593de",
+    "semantic_hash": "125094510acdc939bc91e8f1b62593de"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\DESIGN.md": {
+    "mtime": 1779801012.2189229,
+    "ast_hash": "5dad37395455917b8c66368e5c47f63e",
+    "semantic_hash": "5dad37395455917b8c66368e5c47f63e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\README.md": {
+    "mtime": 1771139159.2468433,
+    "ast_hash": "011e079fd0547dc2650445c6af9774b4",
+    "semantic_hash": "011e079fd0547dc2650445c6af9774b4"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\ADMIN_ORDERS_REDESIGN.md": {
+    "mtime": 1766016127.5869741,
+    "ast_hash": "dcdb010cc87c6d75f702f404ea89b198",
+    "semantic_hash": "dcdb010cc87c6d75f702f404ea89b198"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\BATCH_OCR_GUIDE.md": {
+    "mtime": 1765909517.6212685,
+    "ast_hash": "fdacbeaac8803a6d967d6b31fc665354",
+    "semantic_hash": "fdacbeaac8803a6d967d6b31fc665354"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\BULK_EMAIL_GUIDE.md": {
+    "mtime": 1770485248.081896,
+    "ast_hash": "a38a5e615769cd66709fd4244de54475",
+    "semantic_hash": "a38a5e615769cd66709fd4244de54475"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\CHANGELOG.md": {
+    "mtime": 1767953546.1661804,
+    "ast_hash": "4d5ef66aa755b05e5c9a5308ee04dacb",
+    "semantic_hash": "4d5ef66aa755b05e5c9a5308ee04dacb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\CLIENT_SIDE_OCR.md": {
+    "mtime": 1765914927.3300765,
+    "ast_hash": "8d36215bb8d605c153551e221279f8e5",
+    "semantic_hash": "8d36215bb8d605c153551e221279f8e5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\CLOUDFLARE_MIGRATION.md": {
+    "mtime": 1779353763.7235842,
+    "ast_hash": "91b465bf54b6de164c324c543711bb59",
+    "semantic_hash": "91b465bf54b6de164c324c543711bb59"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\CUSTOM_EVENT_PAGES.md": {
+    "mtime": 1769586532.5181222,
+    "ast_hash": "fcfb8553eee6e27f6413f8e723e2bdb7",
+    "semantic_hash": "fcfb8553eee6e27f6413f8e723e2bdb7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\DAILY_STOCK_INTEGRATION.md": {
+    "mtime": 1770485248.2099974,
+    "ast_hash": "10d6a240eba0ddecca8bcc2c584be48f",
+    "semantic_hash": "10d6a240eba0ddecca8bcc2c584be48f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\DELIVERY_CUTOFF_SETUP.md": {
+    "mtime": 1769586532.5336614,
+    "ast_hash": "34cce73e2d79523f37c435dcbcb84af6",
+    "semantic_hash": "34cce73e2d79523f37c435dcbcb84af6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\DEPLOYMENT_STEPS.md": {
+    "mtime": 1765910307.8553624,
+    "ast_hash": "d69fa61dc37135fb669bae17505a7add",
+    "semantic_hash": "d69fa61dc37135fb669bae17505a7add"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\DOCKER.md": {
+    "mtime": 1762226065.8196814,
+    "ast_hash": "14026a29a63fcba3f4bb809ec6959b34",
+    "semantic_hash": "14026a29a63fcba3f4bb809ec6959b34"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\ESHOP_SYSTEM.md": {
+    "mtime": 1769586532.6388302,
+    "ast_hash": "9d5f60951d31196144ee53d7bf185414",
+    "semantic_hash": "9d5f60951d31196144ee53d7bf185414"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\FEATURE_GUIDE.md": {
+    "mtime": 1765909517.637598,
+    "ast_hash": "2f833d4628d826faf9ec14a68421c3e5",
+    "semantic_hash": "2f833d4628d826faf9ec14a68421c3e5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\GCASH.md": {
+    "mtime": 1765913104.51773,
+    "ast_hash": "687d408d1af38ad22af85c0ab7473056",
+    "semantic_hash": "687d408d1af38ad22af85c0ab7473056"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\GCASH_OCR_SYSTEM.md": {
+    "mtime": 1769586532.7152636,
+    "ast_hash": "67d040cc1be3a85760e182ef2348f59c",
+    "semantic_hash": "67d040cc1be3a85760e182ef2348f59c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\GOOGLE_SHEETS_SYNC.md": {
+    "mtime": 1769586532.7334793,
+    "ast_hash": "73a496de0a5ad5c0f4819b64508ca0e0",
+    "semantic_hash": "73a496de0a5ad5c0f4819b64508ca0e0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\IMPLEMENTATION_SUMMARY.md": {
+    "mtime": 1765909517.7859883,
+    "ast_hash": "2308083c96f0bee775c0fdf42987a4ff",
+    "semantic_hash": "2308083c96f0bee775c0fdf42987a4ff"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\INDEX.md": {
+    "mtime": 1769586532.7625709,
+    "ast_hash": "d2936d73495cc5d730bb70e7f6518abe",
+    "semantic_hash": "d2936d73495cc5d730bb70e7f6518abe"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\MINIO_DOCKER_CONFIG.md": {
+    "mtime": 1765912753.6396801,
+    "ast_hash": "e93345b77f816137bef08bd0d5793cd2",
+    "semantic_hash": "e93345b77f816137bef08bd0d5793cd2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\PDF_IMAGE_SUPPORT.md": {
+    "mtime": 1765909517.8080394,
+    "ast_hash": "064dd020d17a5b5818e951bc4fb5b0b5",
+    "semantic_hash": "064dd020d17a5b5818e951bc4fb5b0b5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\PERFORMANCE.md": {
+    "mtime": 1762446018.653519,
+    "ast_hash": "aa70e658bccdebf1ae886cf575e1b01d",
+    "semantic_hash": "aa70e658bccdebf1ae886cf575e1b01d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\PRODUCTION_DEPLOYMENT.md": {
+    "mtime": 1765909517.8272452,
+    "ast_hash": "0cc36d5bbb2ab41e7ee7a63d4bcad6fc",
+    "semantic_hash": "0cc36d5bbb2ab41e7ee7a63d4bcad6fc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\QUICK_REFERENCE.md": {
+    "mtime": 1765909517.8416164,
+    "ast_hash": "9a13534a3f09a95111c50804f52fb0e5",
+    "semantic_hash": "9a13534a3f09a95111c50804f52fb0e5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\README.md": {
+    "mtime": 1766016276.5873947,
+    "ast_hash": "f4921e0404994fd8ee4bcd95f80c29af",
+    "semantic_hash": "f4921e0404994fd8ee4bcd95f80c29af"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\Self Hosting Docs\\SHOP_SETUP.md": {
+    "mtime": 1762194456.8001509,
+    "ast_hash": "d121ac5453df3cc31c53b1b49a1872cf",
+    "semantic_hash": "d121ac5453df3cc31c53b1b49a1872cf"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\superpowers\\plans\\2026-05-27-event-umbrella-architecture.md": {
+    "mtime": 1779815531.3065834,
+    "ast_hash": "061aeddca8e727728997fa5ecd9ce8f6",
+    "semantic_hash": "061aeddca8e727728997fa5ecd9ce8f6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\superpowers\\specs\\2026-05-27-event-umbrella-architecture-design.md": {
+    "mtime": 1779814614.1630602,
+    "ast_hash": "8d8116a8410b03fee508fbef29a00ab5",
+    "semantic_hash": "8d8116a8410b03fee508fbef29a00ab5"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\fonts\\Lexend_Deca\\OFL.txt": {
+    "mtime": 1756576251.9961042,
+    "ast_hash": "1f3188f2772c115ecffe4641a6c83365",
+    "semantic_hash": "1f3188f2772c115ecffe4641a6c83365"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\fonts\\Lexend_Deca\\README.txt": {
+    "mtime": 1756576252.004138,
+    "ast_hash": "1f21a657a321fd208579c1581f47b7d2",
+    "semantic_hash": "1f21a657a321fd208579c1581f47b7d2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\1.png": {
+    "mtime": 1779800661.0560238,
+    "ast_hash": "fd9758df88c25b1be07a036cc6fd0866",
+    "semantic_hash": "fd9758df88c25b1be07a036cc6fd0866"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\10.png": {
+    "mtime": 1779800661.1219223,
+    "ast_hash": "a928db24a4092da2cc576b54db8c1002",
+    "semantic_hash": "a928db24a4092da2cc576b54db8c1002"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\2.png": {
+    "mtime": 1779800661.064553,
+    "ast_hash": "c2806960185c70a0aad533b67bdea17c",
+    "semantic_hash": "c2806960185c70a0aad533b67bdea17c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\3.png": {
+    "mtime": 1779800661.0702758,
+    "ast_hash": "62b0b8dbc32c30314d1aa8bf4ac7055c",
+    "semantic_hash": "62b0b8dbc32c30314d1aa8bf4ac7055c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\4.png": {
+    "mtime": 1779800661.0757916,
+    "ast_hash": "72cc9e4a119ccf2e146943157223eded",
+    "semantic_hash": "72cc9e4a119ccf2e146943157223eded"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\5.png": {
+    "mtime": 1779800661.0803363,
+    "ast_hash": "8288c70a8f47e6bfeec11109bd48d3cc",
+    "semantic_hash": "8288c70a8f47e6bfeec11109bd48d3cc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\6.png": {
+    "mtime": 1779800661.087329,
+    "ast_hash": "99a3b1ef10b0225c80bf8c9f41523992",
+    "semantic_hash": "99a3b1ef10b0225c80bf8c9f41523992"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\7.png": {
+    "mtime": 1779800661.0958476,
+    "ast_hash": "b3d50372ad9af02d36cf9e4c2bf73f76",
+    "semantic_hash": "b3d50372ad9af02d36cf9e4c2bf73f76"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\8.png": {
+    "mtime": 1779800661.101353,
+    "ast_hash": "301c2f0fb3cbf4a9d6d09dff5c6eec7f",
+    "semantic_hash": "301c2f0fb3cbf4a9d6d09dff5c6eec7f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Brandbook\\9.png": {
+    "mtime": 1779800661.1073594,
+    "ast_hash": "ffbaccd11550a4eae1354942468c8435",
+    "semantic_hash": "ffbaccd11550a4eae1354942468c8435"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\1.png": {
+    "mtime": 1779800655.908471,
+    "ast_hash": "bd36c20b14989a79b3d6eb99b7533b62",
+    "semantic_hash": "bd36c20b14989a79b3d6eb99b7533b62"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\10.png": {
+    "mtime": 1779800655.9639568,
+    "ast_hash": "1d07826154627a31f389ae6520798694",
+    "semantic_hash": "1d07826154627a31f389ae6520798694"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\11.png": {
+    "mtime": 1779800655.9689596,
+    "ast_hash": "539612b720a5881acd67df1abea7f20b",
+    "semantic_hash": "539612b720a5881acd67df1abea7f20b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\12.png": {
+    "mtime": 1779800655.974957,
+    "ast_hash": "3beb5bbc0a755061e30b4252dafb291e",
+    "semantic_hash": "3beb5bbc0a755061e30b4252dafb291e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\13.png": {
+    "mtime": 1779800655.987956,
+    "ast_hash": "ba46e1bca5cf39359a330135155ac9d2",
+    "semantic_hash": "ba46e1bca5cf39359a330135155ac9d2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\2.png": {
+    "mtime": 1779800655.9189568,
+    "ast_hash": "5e1eba6a2d11d60c1c867fd165308e39",
+    "semantic_hash": "5e1eba6a2d11d60c1c867fd165308e39"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\3.png": {
+    "mtime": 1779800655.9249563,
+    "ast_hash": "1a499a316c79a922c19c5295299acf98",
+    "semantic_hash": "1a499a316c79a922c19c5295299acf98"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\4.png": {
+    "mtime": 1779800655.9299557,
+    "ast_hash": "54fe53cef971cd20b81cf91b466b2d3f",
+    "semantic_hash": "54fe53cef971cd20b81cf91b466b2d3f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\5.png": {
+    "mtime": 1779800655.934957,
+    "ast_hash": "f7915276f94cabcdaf4ac54237b5d8ee",
+    "semantic_hash": "f7915276f94cabcdaf4ac54237b5d8ee"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\6.png": {
+    "mtime": 1779800655.940956,
+    "ast_hash": "9b5419db3d27a83c4546f271bf92a602",
+    "semantic_hash": "9b5419db3d27a83c4546f271bf92a602"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\7.png": {
+    "mtime": 1779800655.9459574,
+    "ast_hash": "934a5ffa6ff915d0fcabe21caa9e021d",
+    "semantic_hash": "934a5ffa6ff915d0fcabe21caa9e021d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\8.png": {
+    "mtime": 1779800655.950956,
+    "ast_hash": "f183d7391db3a7e2ffa7f70a7bf0c3a1",
+    "semantic_hash": "f183d7391db3a7e2ffa7f70a7bf0c3a1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\docs\\branding\\[ARSA2526] Event Brandbook Guidelines\\9.png": {
+    "mtime": 1779800655.9569569,
+    "ast_hash": "6c40fb3887068be16903aa12f25913a8",
+    "semantic_hash": "6c40fb3887068be16903aa12f25913a8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\file.svg": {
+    "mtime": 1748589118.8213816,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\fonts\\farm_to_market\\Farm-to-Market-title.jpg": {
+    "mtime": 1774198271.6328886,
+    "ast_hash": "d399dbfadd9a8382063c6586bbd7144e",
+    "semantic_hash": "d399dbfadd9a8382063c6586bbd7144e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\globe.svg": {
+    "mtime": 1748589118.8223815,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\favicon.png": {
+    "mtime": 1756644055.6235864,
+    "ast_hash": "eafee396d97f7ea565d368cb2ede9de8",
+    "semantic_hash": "eafee396d97f7ea565d368cb2ede9de8"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\gcash_qr.jpg": {
+    "mtime": 1763565931.6453488,
+    "ast_hash": "8f1c358a2ae9e49c7d32ecfd7b7de768",
+    "semantic_hash": "8f1c358a2ae9e49c7d32ecfd7b7de768"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\gcash_qr2.jpg": {
+    "mtime": 1762884738.115175,
+    "ast_hash": "119cba6275369388f0452bfed032a8bf",
+    "semantic_hash": "119cba6275369388f0452bfed032a8bf"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\logo.png": {
+    "mtime": 1756574125.2741315,
+    "ast_hash": "31389dc1e428cf5d142d53d82a4253bb",
+    "semantic_hash": "31389dc1e428cf5d142d53d82a4253bb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\KulturARSA pubmat\\1.webp": {
+    "mtime": 1772478640.814,
+    "ast_hash": "15bf763a7d7dd47db8bbf90d996fc7a7",
+    "semantic_hash": "15bf763a7d7dd47db8bbf90d996fc7a7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\KulturARSA pubmat\\2.webp": {
+    "mtime": 1772478640.922,
+    "ast_hash": "dd529f0723f62115c0470a4d93b18822",
+    "semantic_hash": "dd529f0723f62115c0470a4d93b18822"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\KulturARSA pubmat\\3.webp": {
+    "mtime": 1772478641.029,
+    "ast_hash": "b05cd9fd961cacbd16ba7fe6f8859058",
+    "semantic_hash": "b05cd9fd961cacbd16ba7fe6f8859058"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\KulturARSA pubmat\\4.webp": {
+    "mtime": 1772478641.141,
+    "ast_hash": "793746981acb23725d2309b219436f2d",
+    "semantic_hash": "793746981acb23725d2309b219436f2d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[AF26] Banner.webp": {
+    "mtime": 1772478641.27,
+    "ast_hash": "41c69ea6ab13b511013d679a118a5e0c",
+    "semantic_hash": "41c69ea6ab13b511013d679a118a5e0c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\BAO (030126) (2).webp": {
+    "mtime": 1772478641.405,
+    "ast_hash": "93dd8f203abde84b0e1289ea9909a78d",
+    "semantic_hash": "93dd8f203abde84b0e1289ea9909a78d"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\BAO (030126).webp": {
+    "mtime": 1772478641.543,
+    "ast_hash": "c9adccbbbef22306ecb3bee076d73f8c",
+    "semantic_hash": "c9adccbbbef22306ecb3bee076d73f8c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\BINGO NIGHT (030226) (2).webp": {
+    "mtime": 1772478641.677,
+    "ast_hash": "48d2d3459b113c9dc2ff955bf80c96c7",
+    "semantic_hash": "48d2d3459b113c9dc2ff955bf80c96c7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\BINGO NIGHT (030226).webp": {
+    "mtime": 1772478641.823,
+    "ast_hash": "f12bdbe3a62ed4cd2053ef4bcd9d6700",
+    "semantic_hash": "f12bdbe3a62ed4cd2053ef4bcd9d6700"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\FLEA MARKET (030326) (2).webp": {
+    "mtime": 1772478641.952,
+    "ast_hash": "23263f5fa46aee7be7c1800d2c013e70",
+    "semantic_hash": "23263f5fa46aee7be7c1800d2c013e70"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\FLEA MARKET (030326) (3).webp": {
+    "mtime": 1772478642.085,
+    "ast_hash": "9349b3a1a55ddbe3249f57822b85c7ef",
+    "semantic_hash": "9349b3a1a55ddbe3249f57822b85c7ef"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\FLEA MARKET (030326).webp": {
+    "mtime": 1772478642.213,
+    "ast_hash": "15c30f4140b2acf9c23c84e299e702ec",
+    "semantic_hash": "15c30f4140b2acf9c23c84e299e702ec"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (2).webp": {
+    "mtime": 1772478642.346,
+    "ast_hash": "59c48885e24433c7406a8f8175cf5e0f",
+    "semantic_hash": "59c48885e24433c7406a8f8175cf5e0f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (3).webp": {
+    "mtime": 1772478642.481,
+    "ast_hash": "e4241082f5dd8bd9ae6d67eac9d42db2",
+    "semantic_hash": "e4241082f5dd8bd9ae6d67eac9d42db2"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (4).webp": {
+    "mtime": 1772478642.612,
+    "ast_hash": "b2d37f30778467009e9de114389124d1",
+    "semantic_hash": "b2d37f30778467009e9de114389124d1"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (5).webp": {
+    "mtime": 1772478642.746,
+    "ast_hash": "4b51427269cbbe2fc9cc04d2bf25707f",
+    "semantic_hash": "4b51427269cbbe2fc9cc04d2bf25707f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (6).webp": {
+    "mtime": 1772478642.887,
+    "ast_hash": "ca5d4bef3f78e6da996c517cecfc7bcb",
+    "semantic_hash": "ca5d4bef3f78e6da996c517cecfc7bcb"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326) (7).webp": {
+    "mtime": 1772478643.018,
+    "ast_hash": "e1671ed25347c5ab5bd52a1730993f98",
+    "semantic_hash": "e1671ed25347c5ab5bd52a1730993f98"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\GIMMICKS (030326).webp": {
+    "mtime": 1772478643.152,
+    "ast_hash": "d59029281af06e9ac4d9d68017df0013",
+    "semantic_hash": "d59029281af06e9ac4d9d68017df0013"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\HENNA (030426) (2).webp": {
+    "mtime": 1772478643.286,
+    "ast_hash": "5315aaffc14c7b0ba86feed8adfde975",
+    "semantic_hash": "5315aaffc14c7b0ba86feed8adfde975"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\HENNA (030426).webp": {
+    "mtime": 1772478643.423,
+    "ast_hash": "4f1a20ac58b7f3b18758eec51893494f",
+    "semantic_hash": "4f1a20ac58b7f3b18758eec51893494f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\PANCIT CANTON (030126) (2).webp": {
+    "mtime": 1772478643.564,
+    "ast_hash": "6541b49f7a3fb9eb26e9d4c398ba4ca0",
+    "semantic_hash": "6541b49f7a3fb9eb26e9d4c398ba4ca0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] FM&A Prog Pubmats\\PANCIT CANTON (030126).webp": {
+    "mtime": 1772478643.693,
+    "ast_hash": "784c3cda0f407be8cdf617b7f0e8bc13",
+    "semantic_hash": "784c3cda0f407be8cdf617b7f0e8bc13"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\16.webp": {
+    "mtime": 1772478644.098,
+    "ast_hash": "3fa61be892f34f6d740e80b3ae7c8db0",
+    "semantic_hash": "3fa61be892f34f6d740e80b3ae7c8db0"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\17.webp": {
+    "mtime": 1772478644.496,
+    "ast_hash": "f4e90af6ff3de34f73cba5d57c3679ec",
+    "semantic_hash": "f4e90af6ff3de34f73cba5d57c3679ec"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\18.webp": {
+    "mtime": 1772478644.901,
+    "ast_hash": "07c591871a55ea5fe20278bd9120e951",
+    "semantic_hash": "07c591871a55ea5fe20278bd9120e951"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\19.webp": {
+    "mtime": 1772478645.308,
+    "ast_hash": "9c2a2a77f6a664f22f1b5a6f074d8ca7",
+    "semantic_hash": "9c2a2a77f6a664f22f1b5a6f074d8ca7"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\20.webp": {
+    "mtime": 1772478645.702,
+    "ast_hash": "f79ad8908b7d63dda974d3e95b9628ed",
+    "semantic_hash": "f79ad8908b7d63dda974d3e95b9628ed"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Lineup (Square)\\21.webp": {
+    "mtime": 1772478646.093,
+    "ast_hash": "12cfb5c7406a8c5fc0ad426307007d6b",
+    "semantic_hash": "12cfb5c7406a8c5fc0ad426307007d6b"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\arsafest\\[ARSAFEST] Performer FB Cover.webp": {
+    "mtime": 1772478646.127,
+    "ast_hash": "bc1cf2f95fe31f280420227c28fb7f75",
+    "semantic_hash": "bc1cf2f95fe31f280420227c28fb7f75"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\Bottle_Cap_Custom-removebg-preview.webp": {
+    "mtime": 1774203187.787,
+    "ast_hash": "c4fea21c0b5f6f04fe295505a9f68a52",
+    "semantic_hash": "c4fea21c0b5f6f04fe295505a9f68a52"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\Key_Fob-removebg-preview.webp": {
+    "mtime": 1774203187.8,
+    "ast_hash": "ce8b59ad6be34602cdf2608499865453",
+    "semantic_hash": "ce8b59ad6be34602cdf2608499865453"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\Long_Logo_White-removebg-preview.webp": {
+    "mtime": 1774203187.824,
+    "ast_hash": "e5ff37a7fe2618bfc25542e15d376a07",
+    "semantic_hash": "e5ff37a7fe2618bfc25542e15d376a07"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\Main_Logo_White-removebg-preview.webp": {
+    "mtime": 1774203187.855,
+    "ast_hash": "3a0cd60a28102199ac99bf471efa0d5e",
+    "semantic_hash": "3a0cd60a28102199ac99bf471efa0d5e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\REVEAL\\1.webp": {
+    "mtime": 1774203188.255,
+    "ast_hash": "9160267a10d1622d1f2e5a9008fd2f51",
+    "semantic_hash": "9160267a10d1622d1f2e5a9008fd2f51"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\REVEAL\\2.webp": {
+    "mtime": 1774203188.597,
+    "ast_hash": "19930ab08cc503a141ff63368611f15c",
+    "semantic_hash": "19930ab08cc503a141ff63368611f15c"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\REVEAL\\3.webp": {
+    "mtime": 1774203188.949,
+    "ast_hash": "42bed5f20438e3f39f2a8c73935a5c81",
+    "semantic_hash": "42bed5f20438e3f39f2a8c73935a5c81"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\REVEAL\\4.webp": {
+    "mtime": 1774203189.299,
+    "ast_hash": "e0b5efa2816a74182e845effe6f7e343",
+    "semantic_hash": "e0b5efa2816a74182e845effe6f7e343"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\REVEAL\\5.webp": {
+    "mtime": 1774203189.65,
+    "ast_hash": "15dc2b2dab6a1b4c251877576334442a",
+    "semantic_hash": "15dc2b2dab6a1b4c251877576334442a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION (2).webp": {
+    "mtime": 1774203190.147,
+    "ast_hash": "07f314f03cf6197750a7db254af31047",
+    "semantic_hash": "07f314f03cf6197750a7db254af31047"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION (3).webp": {
+    "mtime": 1774203190.614,
+    "ast_hash": "0cb0fd3781ea447636b2cd7db6ac7cdc",
+    "semantic_hash": "0cb0fd3781ea447636b2cd7db6ac7cdc"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION (4).webp": {
+    "mtime": 1774203191.074,
+    "ast_hash": "d74a1f66daf9d0183af42dc01608704f",
+    "semantic_hash": "d74a1f66daf9d0183af42dc01608704f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION (5).webp": {
+    "mtime": 1774203191.573,
+    "ast_hash": "3e6a5b9add9dc600e1bb036730a4c2e6",
+    "semantic_hash": "3e6a5b9add9dc600e1bb036730a4c2e6"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION (6).webp": {
+    "mtime": 1774203192.068,
+    "ast_hash": "22a36d95a37916302c8123d790372efd",
+    "semantic_hash": "22a36d95a37916302c8123d790372efd"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\AFTER GRADUATION.webp": {
+    "mtime": 1774203192.535,
+    "ast_hash": "b17aafe674cdfa0e0b2ee8944784f74e",
+    "semantic_hash": "b17aafe674cdfa0e0b2ee8944784f74e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE (2).webp": {
+    "mtime": 1774203193.013,
+    "ast_hash": "60fb8208dda71da9223ea88753ebb806",
+    "semantic_hash": "60fb8208dda71da9223ea88753ebb806"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE (3).webp": {
+    "mtime": 1774203193.715,
+    "ast_hash": "ad2f59ad165fcb9113e62fafb7600a4f",
+    "semantic_hash": "ad2f59ad165fcb9113e62fafb7600a4f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE (4).webp": {
+    "mtime": 1774203194.226,
+    "ast_hash": "4792a3cd619d0fd8d44302fd055e0495",
+    "semantic_hash": "4792a3cd619d0fd8d44302fd055e0495"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE (5).webp": {
+    "mtime": 1774203194.698,
+    "ast_hash": "7fe42f04a4f30106fdd2e36a6c457f44",
+    "semantic_hash": "7fe42f04a4f30106fdd2e36a6c457f44"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE (6).webp": {
+    "mtime": 1774203195.159,
+    "ast_hash": "b0aa60d69d6e7f7834628921d2a35534",
+    "semantic_hash": "b0aa60d69d6e7f7834628921d2a35534"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\STICKERS\\DORMER EXPERIENCE.webp": {
+    "mtime": 1774203195.631,
+    "ast_hash": "aeab9a0a54e8be8813c7fd51d919c800",
+    "semantic_hash": "aeab9a0a54e8be8813c7fd51d919c800"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\TSHIRT MOCKUP\\BACK BLUE.webp": {
+    "mtime": 1774203197.054,
+    "ast_hash": "2c1390193dea51d693c4ada76a36103a",
+    "semantic_hash": "2c1390193dea51d693c4ada76a36103a"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\TSHIRT MOCKUP\\BACK WHITE.webp": {
+    "mtime": 1774203198.468,
+    "ast_hash": "b8ff3a4289905ca5034abde6a404fc91",
+    "semantic_hash": "b8ff3a4289905ca5034abde6a404fc91"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\TSHIRT MOCKUP\\FRONT BLUE.webp": {
+    "mtime": 1774203199.728,
+    "ast_hash": "c0b6079fef44d07a51a2e4b5cc39ecf3",
+    "semantic_hash": "c0b6079fef44d07a51a2e4b5cc39ecf3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\images\\major event landing\\2026\\sso\\merch\\TSHIRT MOCKUP\\FRONT WHITE.webp": {
+    "mtime": 1774203200.971,
+    "ast_hash": "079237a39dc5210269a770b528a0fb6f",
+    "semantic_hash": "079237a39dc5210269a770b528a0fb6f"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\next.svg": {
+    "mtime": 1748589118.824381,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\vercel.svg": {
+    "mtime": 1748589118.8255963,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\public\\window.svg": {
+    "mtime": 1748589118.8255963,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\Color scheme.png": {
+    "mtime": 1769792208.3456163,
+    "ast_hash": "908e9ab7e674be836eaa3e03b43b3080",
+    "semantic_hash": "908e9ab7e674be836eaa3e03b43b3080"
+  },
+  "C:\\Users\\charl\\Documents\\GitHub\\arsa-website\\src\\app\\shop\\events\\2026\\flower-fest-2026\\Reference.jpg": {
+    "mtime": 1769791542.5222,
+    "ast_hash": "71f271777c08e9fff6cf85d6c469aa1f",
+    "semantic_hash": "71f271777c08e9fff6cf85d6c469aa1f"
+  }
+}
